@@ -230,6 +230,11 @@ services:
       Ai__FaceEmbeddingsEnabled: ${Ai__FaceEmbeddingsEnabled:-false}
       Ai__FaceClusteringEnabled: ${Ai__FaceClusteringEnabled:-false}
       Ai__TagsEnabled: ${Ai__TagsEnabled:-false}
+      # Video semantic processing is explicitly opt-in. Keep both switches
+      # mirrored on api and worker: the API previews/enqueues; the worker
+      # executes FFmpeg segmentation and frame embedding jobs.
+      Ai__VideoSegmentation__Enabled: ${Ai__VideoSegmentation__Enabled:-false}
+      Ai__VideoVisualEmbeddings__Enabled: ${Ai__VideoVisualEmbeddings__Enabled:-false}
       # Active photo-similarity profile (stable AiProfile.Key). Unset → the
       # capability default (deterministic image profile in the current lab).
       # Switching the photo model = set this + restart api/worker. See
@@ -412,6 +417,9 @@ services:
       Ai__FaceEmbeddingsEnabled: ${Ai__FaceEmbeddingsEnabled:-false}
       Ai__FaceClusteringEnabled: ${Ai__FaceClusteringEnabled:-false}
       Ai__TagsEnabled: ${Ai__TagsEnabled:-false}
+      # Must match the API settings above; video jobs execute in this service.
+      Ai__VideoSegmentation__Enabled: ${Ai__VideoSegmentation__Enabled:-false}
+      Ai__VideoVisualEmbeddings__Enabled: ${Ai__VideoVisualEmbeddings__Enabled:-false}
       # Active photo-similarity profile (mirrors the api; see notes above).
       Ai__PhotoSimilarityProfileKey: ${Ai__PhotoSimilarityProfileKey:-}
       # Active face-recognition EVAL profile (see docs/ai-face-model-onnx-
