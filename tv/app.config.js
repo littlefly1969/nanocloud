@@ -37,7 +37,7 @@ const updateUrl = (
 ).replace(/\/$/, '');
 // This value identifies one exact native ABI/configuration contract. Increment
 // it before every build containing native or build-time environment changes.
-const runtimeVersion = process.env.NANOCLOUD_TV_RUNTIME_VERSION || 'tv-native-2';
+const runtimeVersion = process.env.NANOCLOUD_TV_RUNTIME_VERSION || 'tv-native-3';
 const updateChannel = process.env.NANOCLOUD_TV_OTA_CHANNEL || 'production';
 const codeSigningCertificate = process.env.NANOCLOUD_TV_OTA_CERTIFICATE;
 const codeSigningCertificateConfigPath = codeSigningCertificate
@@ -99,7 +99,7 @@ module.exports = () => ({
     },
     android: {
       package: 'it.littlefly.nanocloudtv',
-      versionCode: 2,
+      versionCode: 3,
       usesCleartextTraffic,
     },
     ios: {

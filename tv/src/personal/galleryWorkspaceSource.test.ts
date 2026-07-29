@@ -18,8 +18,9 @@ test('native gallery routes search through one workspace and typed bulk panels',
   assert.doesNotMatch(galleryScreen, /GalleryCommandPanel/);
 });
 
-test('the native video build uses the second OTA runtime contract', () => {
-  assert.match(appConfig, /NANOCLOUD_TV_RUNTIME_VERSION \|\| 'tv-native-2'/);
+test('the native video build uses the current OTA runtime contract', () => {
+  assert.match(appConfig, /NANOCLOUD_TV_RUNTIME_VERSION \|\| 'tv-native-3'/);
+  assert.match(appConfig, /versionCode: 3/);
   assert.match(appConfig, /checkAutomatically: 'NEVER'/);
   assert.match(appConfig, /fallbackToCacheTimeout: 0/);
 });

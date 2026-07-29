@@ -18,7 +18,7 @@ type, an attachment filename, and no-cache headers.
 
 Native dependency or configuration changes require a new APK and runtime. The
 current native-video release is application version `0.2.0`, Android
-`versionCode` 2, runtime `tv-native-2`.
+`versionCode` 3, runtime `tv-native-3`.
 
 Before `expo prebuild --clean`, preserve the Android signing keystore and the
 public Expo Updates certificate outside `tv/android/`, because that directory
@@ -31,7 +31,7 @@ export ANDROID_HOME="$HOME/Android/Sdk"
 export PATH="$JAVA_HOME/bin:$PATH"
 export NODE_ENV=production
 export EXPO_PUBLIC_NANOCLOUD_API_BASE_URL=https://nanocloud.littlefly.it
-export NANOCLOUD_TV_RUNTIME_VERSION=tv-native-2
+export NANOCLOUD_TV_RUNTIME_VERSION=tv-native-3
 export NANOCLOUD_TV_OTA_CHANNEL=production
 export NANOCLOUD_TV_OTA_UPDATE_URL=https://nanocloud.littlefly.it/api/tv-app/updates
 export NANOCLOUD_TV_OTA_CERTIFICATE=/absolute/path/to/expo-root.pem
@@ -74,5 +74,5 @@ without deleting its pairing/session data. Downloader can delete the APK after
 installation.
 
 The first native-video build already embeds its JavaScript bundle. Future
-JavaScript-only releases can use OTA on `tv-native-2`; never publish an
-`expo-video` bundle to the legacy `tv-native-1` runtime.
+JavaScript-only releases can use OTA on `tv-native-3`; never publish a bundle
+to a runtime built from a different native dependency/configuration contract.

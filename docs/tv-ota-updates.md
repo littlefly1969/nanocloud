@@ -1,12 +1,12 @@
 # Native TV OTA updates
 
-NanoCloud's native app in `tv/` uses `expo-updates` 56.0.21 and Expo Updates Protocol v1. The API serves only Android TV update manifests at `GET /api/tv-app/updates` and immutable files below `/api/tv-app/updates/assets/...`. These routes are anonymous and do not use owner authentication, pairing state, or `TvSession`.
+NanoCloud's native app in `tv/` uses `expo-updates` 56.0.23 and Expo Updates Protocol v1. The API serves only Android TV update manifests at `GET /api/tv-app/updates` and immutable files below `/api/tv-app/updates/assets/...`. These routes are anonymous and do not use owner authentication, pairing state, or `TvSession`.
 
 OTA can replace the JavaScript/Hermes bundle and Metro-bundled assets. It cannot change the APK, Expo SDK, React Native TV, a native dependency, a config plugin, AndroidManifest, permissions, Kotlin/Java, Gradle/native build settings, or a build-time native environment value. Those changes require a new APK and a new runtime version.
 
 ## Runtime and launch behavior
 
-`NANOCLOUD_TV_RUNTIME_VERSION` is a manually managed native contract. The legacy APK uses `tv-native-1`; the native-video APK with `expo-video` uses `tv-native-2`. This explicit value is intentionally not derived from the application version: operators must increment it for every native/configuration change listed above, including changing native environment values embedded while building. TypeScript, React UI/layout, business logic, and bundled asset changes keep the existing runtime.
+`NANOCLOUD_TV_RUNTIME_VERSION` is a manually managed native contract. The legacy APK uses `tv-native-1`; the first native-video APK with `expo-video` uses `tv-native-2`; the current Expo 56 patch-aligned APK uses `tv-native-3`. This explicit value is intentionally not derived from the application version: operators must increment it for every native/configuration change listed above, including changing native environment values embedded while building. TypeScript, React UI/layout, business logic, and bundled asset changes keep the existing runtime.
 
 The APK always embeds a bundle. `fallbackToCacheTimeout` is zero and the native automatic check is disabled, so the existing app renders immediately. App startup fires one background `checkForUpdateAsync`; overlapping/repeated checks in that JS process are suppressed. If an update exists it is downloaded, but `reloadAsync` is never called. It is selected only on a later cold launch. Network, HTTP, malformed manifest, signature, asset, storage, interruption, and damaged-update handling remains in the native `expo-updates` downloader/error-recovery path; failures are logged and the running or embedded update remains usable. Killing the app during a download leaves the prior complete update intact.
 
@@ -21,9 +21,10 @@ Build/export and server publication must use matching values:
 ```sh
 export EXPO_PUBLIC_NANOCLOUD_API_BASE_URL=https://nanocloud.littlefly.it
 export NANOCLOUD_TV_OTA_UPDATE_URL=https://nanocloud.littlefly.it/api/tv-app/updates
-export NANOCLOUD_TV_RUNTIME_VERSION=tv-native-2
+export NANOCLOUD_TV_RUNTIME_VERSION=tv-native-3
 export NANOCLOUD_TV_OTA_CHANNEL=production
 export TV_OTA_STORAGE_ROOT=/srv/nanocloud/tv-updates
+export TV_OTA_PRIVATE_KEY_PATH=/srv/nanocloud/tv-ota-signing/tv-native-3/private-key.pem
 export TV_OTA_RETENTION_COUNT=5
 ```
 
