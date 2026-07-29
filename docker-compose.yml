@@ -1,0 +1,45 @@
+services:
+  postgres:
+    # pgvector-enabled Postgres 17 (matches prod). Bundles the `vector` extension
+    # used by photo-similarity ANN search; the AddPhotoVectorIndex768 migration
+    # enables it. Without pgvector the migration skips the vector table cleanly
+    # and similarity falls back to exact-scan.
+    image: pgvector/pgvector:pg17
+    container_name: nanocloud-postgres
+    environment:
+      POSTGRES_DB: nanocloud
+      POSTGRES_USER: nanocloud
+      POSTGRES_PASSWORD: nanocloud
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nanocloud -d nanocloud"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: src/NanoCloud.Api/Dockerfile
+    container_name: nanocloud-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=nanocloud;Username=nanocloud;Password=nanocloud"
+      Storage__RootPath: "/var/lib/nanocloud/storage"
+      TvUpdates__RootPath: "/var/lib/nanocloud/tv-updates"
+    volumes:
+      - storage-data:/var/lib/nanocloud/storage
+      - tv-updates-data:/var/lib/nanocloud/tv-updates:ro
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres-data:
+  storage-data:
+  tv-updates-data:

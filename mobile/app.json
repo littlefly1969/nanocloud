@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "NanoCloud",
+    "slug": "nanocloud-mobile",
+    "version": "0.1.0",
+    "orientation": "default",
+    "platforms": ["ios", "android"],
+    "extra": {
+      "apiBaseUrl": "http://192.168.1.100:5177"
+    },
+    "android": {
+      "usesCleartextTraffic": true
+    },
+    "ios": {
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
+    }
+  }
+}
