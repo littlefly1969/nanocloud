@@ -1,26 +1,26 @@
 import { useEffect, useState } from 'react';
 import {
-  addAlbumItem,
   ApiError,
   getFileMetadata,
-  listAlbums,
-  stripFileMetadata,
   writeFileDateTaken,
-  type AlbumSummary,
   type FileMetadata,
 } from '@nanocloud/api-client';
 import { useAuth } from '../../auth/useAuth';
 import { useI18n } from '../../i18n';
+import { AlbumPickerModal } from '../../gallery/AlbumPickerModal';
 import { MediaMetadataEditor } from './MediaMetadataEditor';
 import { MediaMetadataView } from './MediaMetadataView';
 
-// The single metadata panel for BOTH galleries (it used to be defined inside
-// GalleryPage, which is why videos only ever got a read-only view).
+// The single metadata panel for BOTH galleries.
 //
 // It owns the whole interaction: load, loading/error/ready state, edit, save,
-// local refresh, 401 handling, add-to-album and the image-only byte-rewriting
-// actions. Photos and videos differ only in which rows and actions the view
-// renders — see MediaMetadataView — so there is exactly one editor.
+// local refresh, 401 handling, add-to-album and the DateTaken write. Photos and
+// videos differ only in which rows and actions the view renders — see
+// MediaMetadataView — so there is exactly one editor.
+//
+// When the host already holds the metadata document (the media viewer loads it
+// for the open item to build its summary line), it passes it as `initialData`
+// and this panel renders immediately without a second request.
 
 export type MediaKind = 'image' | 'video';
 
@@ -32,41 +32,61 @@ type Status =
 export interface MediaMetadataPanelProps {
   fileId: string;
   kind: MediaKind;
-  // Fired whenever the stored metadata changes (save, strip, DateTaken write).
-  // The galleries use it to patch the matching item in their loaded page
-  // immutably, so a title edit is reflected on the card and in the viewer
-  // header at once — no page reload, and clearing a title brings the file name
-  // straight back.
+  // Already-loaded document for `fileId`. When present the panel skips its own
+  // fetch; when it becomes available later (host still loading) the panel
+  // adopts it.
+  initialData?: FileMetadata | null;
+  // The host's load already failed, so there is nothing to wait for.
+  loadError?: boolean;
+  // Fired whenever the stored metadata changes (save, DateTaken write). Hosts
+  // use it to patch the matching item in their loaded page immutably, so a title
+  // edit shows on the card and in the viewer header at once.
   onMetadataChanged?: (fileId: string, metadata: FileMetadata) => void;
+  // Photos only: apply the library's similar-image anchor filter.
+  onFindSimilarInLibrary?: () => void;
+  // Photos only: open the dedicated Similar Photos Explorer.
+  onExploreSimilar?: () => void;
 }
 
-export function MediaMetadataPanel({ fileId, kind, onMetadataChanged }: MediaMetadataPanelProps) {
+export function MediaMetadataPanel({
+  fileId,
+  kind,
+  initialData,
+  loadError,
+  onMetadataChanged,
+  onFindSimilarInLibrary,
+  onExploreSimilar,
+}: MediaMetadataPanelProps) {
   const { invalidateAuth } = useAuth();
   const { t } = useI18n();
-  const [status, setStatus] = useState<Status>({ kind: 'loading' });
+  const [status, setStatus] = useState<Status>(
+    () => (initialData ? { kind: 'ready', data: initialData } : { kind: 'loading' }),
+  );
   const [editing, setEditing] = useState(false);
-  const [stripping, setStripping] = useState(false);
-  const [stripError, setStripError] = useState<string | null>(null);
   const [writing, setWriting] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
-  const [albums, setAlbums] = useState<AlbumSummary[]>([]);
-  const [selectedAlbumId, setSelectedAlbumId] = useState('');
-  const [addingToAlbum, setAddingToAlbum] = useState(false);
-  const [addAlbumMsg, setAddAlbumMsg] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Adopt a host-supplied document (first render, a later arrival, or a switch
+  // to another file) without issuing a request of our own.
+  useEffect(() => {
+    if (!initialData) return;
+    setStatus({ kind: 'ready', data: initialData });
+    setEditing(false);
+    setWriteError(null);
+  }, [initialData]);
 
   useEffect(() => {
-    const ctrl = new AbortController();
-    listAlbums(ctrl.signal)
-      .then((list) => { setAlbums(list); if (list.length > 0) setSelectedAlbumId(list[0].id); })
-      .catch(() => { /* non-critical: the add-to-album block just stays hidden */ });
-    return () => ctrl.abort();
-  }, [fileId]);
+    if (loadError !== true) return;
+    setStatus({ kind: 'error' });
+  }, [loadError]);
 
   useEffect(() => {
+    // The host is providing the document (or has already failed) — no fetch.
+    if (initialData || loadError === true) return;
     const controller = new AbortController();
     setStatus({ kind: 'loading' });
     setEditing(false);
-    setStripError(null);
     setWriteError(null);
     void (async () => {
       try {
@@ -79,10 +99,13 @@ export function MediaMetadataPanel({ fileId, kind, onMetadataChanged }: MediaMet
       }
     })();
     return () => controller.abort();
-  }, [fileId, invalidateAuth]);
+    // `initialData` is intentionally not a dependency here: its own effect above
+    // adopts it, and re-running this one would cancel nothing useful.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileId, loadError, invalidateAuth]);
 
   // One place where a fresh document is adopted, so every mutation path
-  // notifies the host gallery identically.
+  // notifies the host identically.
   function adopt(next: FileMetadata) {
     setStatus({ kind: 'ready', data: next });
     onMetadataChanged?.(fileId, next);
@@ -116,30 +139,6 @@ export function MediaMetadataPanel({ fileId, kind, onMetadataChanged }: MediaMet
     );
   }
 
-  async function onStrip() {
-    const confirmed = window.confirm(t('gallery.stripConfirm'));
-    if (!confirmed) return;
-    setStripping(true);
-    setStripError(null);
-    try {
-      adopt(await stripFileMetadata(fileId));
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) { invalidateAuth(); return; }
-      if (err instanceof ApiError && err.status === 415) {
-        const body = err.body as { error?: unknown } | null;
-        setStripError(
-          typeof body?.error === 'string' && body.error.length > 0
-            ? body.error
-            : t('gallery.stripCantType'),
-        );
-        return;
-      }
-      setStripError(t('gallery.stripError'));
-    } finally {
-      setStripping(false);
-    }
-  }
-
   async function onWriteDateTaken() {
     const confirmed = window.confirm(t('gallery.writeConfirm'));
     if (!confirmed) return;
@@ -164,39 +163,24 @@ export function MediaMetadataPanel({ fileId, kind, onMetadataChanged }: MediaMet
     }
   }
 
-  async function onAddToAlbum() {
-    if (!selectedAlbumId) return;
-    setAddingToAlbum(true);
-    setAddAlbumMsg(null);
-    try {
-      await addAlbumItem(selectedAlbumId, fileId);
-      const album = albums.find((a) => a.id === selectedAlbumId);
-      setAddAlbumMsg(t('gallery.addedToAlbum', { name: album?.name ?? t('gallery.albumFallback') }));
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) { invalidateAuth(); return; }
-      setAddAlbumMsg(t('gallery.addError'));
-    } finally {
-      setAddingToAlbum(false);
-    }
-  }
-
   return (
-    <MediaMetadataView
-      data={data}
-      kind={kind}
-      onEdit={() => setEditing(true)}
-      onStrip={onStrip}
-      stripping={stripping}
-      stripError={stripError}
-      onWriteDateTaken={onWriteDateTaken}
-      writing={writing}
-      writeError={writeError}
-      albums={albums}
-      selectedAlbumId={selectedAlbumId}
-      onAlbumSelect={setSelectedAlbumId}
-      onAddToAlbum={onAddToAlbum}
-      addingToAlbum={addingToAlbum}
-      addAlbumMsg={addAlbumMsg}
-    />
+    <>
+      <MediaMetadataView
+        data={data}
+        kind={kind}
+        onEdit={() => setEditing(true)}
+        onWriteDateTaken={onWriteDateTaken}
+        writing={writing}
+        writeError={writeError}
+        onAddToAlbum={() => setPickerOpen(true)}
+        onFindSimilarInLibrary={onFindSimilarInLibrary}
+        onExploreSimilar={onExploreSimilar}
+      />
+      {pickerOpen && (
+        // The same accessible picker the bulk selection bar uses — choose an
+        // existing album or create one, with success/error feedback in-dialog.
+        <AlbumPickerModal fileItemIds={[fileId]} onClose={() => setPickerOpen(false)} />
+      )}
+    </>
   );
 }

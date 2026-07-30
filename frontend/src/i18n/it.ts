@@ -691,6 +691,7 @@ const it = {
   'gallery.writing': 'Scrittura…',
   'gallery.writeBtn': 'Scrivi la data nel file',
   'gallery.downloadPrivacySafe': 'Scarica copia senza metadati',
+  'gallery.downloadOriginal': 'Scarica originale',
   'gallery.selectAlbumAria': 'Seleziona album',
   'gallery.adding': 'Aggiunta…',
   'gallery.addToAlbum': 'Aggiungi all’album',
@@ -913,6 +914,8 @@ const it = {
   'mediaFilter.similarActive': 'Ricerca per immagini simili attiva',
   'mediaFilter.removeSimilar': 'Rimuovi ricerca simili',
   'mediaWs.findSimilar': 'Trova immagini simili',
+  'mediaWs.findSimilarInLibrary': 'Trova simili nella Libreria',
+  'mediaWs.exploreSimilar': 'Esplora foto simili',
   'albumSettings.title': 'Impostazioni album',
   'albumSettings.close': 'Chiudi',
   'albumSettings.deleteAlbum': 'Elimina album',
@@ -1930,6 +1933,10 @@ const it = {
 
   // --- Pannello metadati condiviso (foto + video) ---
   'mediaMeta.panelAria': 'Dettagli del media',
+  'mediaMeta.groupMetadata': 'Metadati',
+  'mediaMeta.groupOrganize': 'Organizza',
+  'mediaMeta.groupDiscover': 'Scopri',
+  'mediaMeta.groupFile': 'File',
   'mediaMeta.title': 'Titolo',
   'mediaMeta.fileName': 'Nome file',
   'mediaMeta.tags': 'Tag',

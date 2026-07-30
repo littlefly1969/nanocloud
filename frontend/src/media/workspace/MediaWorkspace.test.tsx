@@ -34,12 +34,48 @@ function page(items: MediaItem[], extra?: Partial<MediaListResponse>): MediaList
   };
 }
 
+// Metadata for one item. The viewer loads this for whichever item is open (to
+// build its summary line) and hands it to the drawer, so any test that opens the
+// viewer needs it served.
+export function metadataFor(
+  id: string,
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id,
+    name: `${id}.jpg`,
+    mimeType: 'image/jpeg',
+    sizeBytes: 5_033_164,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: null,
+    blob: {
+      width: 100, height: 100, detectedContentType: 'image/jpeg',
+      embedded: null, video: null,
+    },
+    user: {
+      title: null, description: null, tags: [], rating: null, favorite: false,
+      dateTakenOverride: null, locationOverride: null,
+    },
+    effective: {
+      displayName: `${id}.jpg`,
+      dateTaken: '2025-07-14T18:42:00Z',
+      dateTakenSource: 'embedded',
+      location: null,
+    },
+    ...overrides,
+  };
+}
+
 function renderWorkspace(
   response: MediaListResponse,
   identity: MediaWorkspaceIdentity = emptyIdentity(LIBRARY),
 ) {
   const onIdentityChange = vi.fn();
-  installFetchMock({ 'GET /api/media': () => jsonResponse(response) });
+  installFetchMock({
+    'GET /api/media': () => jsonResponse(response),
+    'GET /api/files/i1/metadata': () => jsonResponse(metadataFor('i1')),
+    'GET /api/files/v1/metadata': () => jsonResponse(metadataFor('v1')),
+  });
   render(
     <MemoryRouter>
       <AuthedWrapper>

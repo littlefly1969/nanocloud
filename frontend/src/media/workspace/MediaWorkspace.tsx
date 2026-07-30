@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import {
   ApiError,
   bulkRemoveAlbumItems,
@@ -11,7 +12,6 @@ import { useAuth } from '../../auth/useAuth';
 import { useI18n } from '../../i18n';
 import { useMediaWallLayout } from '../../components/mediaWallLayout';
 import { MediaViewer, type MediaViewerItem } from '../../components/MediaViewer';
-import { SimilarPhotosPanel } from '../../components/SimilarPhotosPanel';
 import { MediaMetadataPanel } from '../metadata/MediaMetadataPanel';
 import { AlbumPickerModal } from '../../gallery/AlbumPickerModal';
 import { MoveToPersonalDialog } from '../actions/MoveToPersonalDialog';
@@ -76,6 +76,8 @@ export function MediaWorkspace({
 }: Props) {
   const { t, tn } = useI18n();
   const { invalidateAuth } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const people = usePeopleIndex();
   // Render inside the full-width media shell (no-op outside the app Layout).
   useMediaWallLayout();
@@ -115,7 +117,7 @@ export function MediaWorkspace({
   const removeChip = (kind: FilterChipKind) => mutate({ ...identity, filters: clearChip(identity.filters, kind) });
   const clearAll = () => mutate({ ...identity, filters: clearActiveFilters(identity) });
   const changeSort = (sort: ImageSortField, direction: ImageSortDirection) => mutate({ ...identity, sort, direction });
-  // Start a similar-image search from a real image (viewer action): pin the
+  // "Find similar in Library": stay in this workspace and filter it. Pin the
   // photo tab, set the anchor, clear any visual query (the two are mutually
   // exclusive), close the viewer. Routing to /api/images happens in the hook.
   const applySimilar = (imageId: string) => {
@@ -124,6 +126,16 @@ export function MediaWorkspace({
       ...identity,
       mediaKind: 'image',
       filters: { ...identity.filters, photo: { ...identity.filters.photo, similarTo: imageId, visualQuery: '', semanticTopK: 0 } },
+    });
+  };
+  // "Explore similar photos": leave for the dedicated explorer, which ranks by
+  // score above a chosen threshold rather than filtering this library view. The
+  // originating location travels in route state so the explorer can offer an
+  // accurate way back.
+  const exploreSimilar = (imageId: string) => {
+    viewer.close();
+    void navigate(`/gallery/files/${imageId}/similar`, {
+      state: { from: `${location.pathname}${location.search}` },
     });
   };
   const submitSearch = () => {
@@ -271,6 +283,9 @@ export function MediaWorkspace({
       name: it.name,
       displayName: it.displayName,
       kind: it.kind,
+      // The original blob size, already on the loaded item: the viewer's summary
+      // needs no request for it.
+      sizeBytes: it.sizeBytes,
       initialPositionMilliseconds: it.kind === 'video'
         ? ws.semanticEvidence.get(it.id)?.bestMatch.representativeMilliseconds ?? null
         : null,
@@ -412,33 +427,28 @@ export function MediaWorkspace({
           onClose={viewer.close}
           onIndexChange={viewer.setIndex}
           onNearEnd={() => loadMoreRef.current()}
-          renderDetails={(vi) => {
+          renderDetails={({ item: vi, metadata, metadataError, adoptMetadata }) => {
             const current = ws.items.find((it) => it.id === vi.id);
             if (!current) return null;
+            const isPhoto = current.kind === 'image';
             return (
-              <>
-                <MediaMetadataPanel fileId={current.id} kind={current.kind} onMetadataChanged={onMetadataChanged} />
-                {vi.kind === 'image' && (
-                  <>
-                    <button
-                      type="button"
-                      className="row-action"
-                      data-testid="viewer-find-similar"
-                      onClick={() => applySimilar(current.id)}
-                    >
-                      {t('mediaWs.findSimilar')}
-                    </button>
-                    <SimilarPhotosPanel
-                      key={current.id}
-                      fileId={current.id}
-                      onSelect={(id) => {
-                        const idx = ws.items.findIndex((it) => it.id === id);
-                        if (idx >= 0) viewer.setIndex(idx);
-                      }}
-                    />
-                  </>
-                )}
-              </>
+              <MediaMetadataPanel
+                fileId={current.id}
+                kind={current.kind}
+                // The viewer already loaded this document for its summary line,
+                // so the drawer opens instantly and issues no second request.
+                initialData={metadata}
+                loadError={metadataError}
+                onMetadataChanged={(id, next) => {
+                  // Keep the viewer's copy fresh too, so an edited Date Taken
+                  // shows in the summary immediately.
+                  adoptMetadata(next);
+                  onMetadataChanged(id, next);
+                }}
+                // Two distinct destinations, both photo-only.
+                onFindSimilarInLibrary={isPhoto ? () => applySimilar(current.id) : undefined}
+                onExploreSimilar={isPhoto ? () => exploreSimilar(current.id) : undefined}
+              />
             );
           }}
         />

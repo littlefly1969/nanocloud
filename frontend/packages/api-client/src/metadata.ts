@@ -151,3 +151,22 @@ export function writeFileDateTaken(
 export function privacySafeDownloadUrl(fileId: string): string {
   return `/api/files/${fileId}/content/privacy-safe`;
 }
+
+// Relative URL for downloading the IMMUTABLE ORIGINAL bytes.
+//
+// GET /api/files/{id}/content opens the file's own content-addressed
+// BlobObject and streams it verbatim as an attachment carrying the original
+// file name. It is deliberately NOT any of the derived artifacts:
+//   * /thumbnail        → small derivative (grid)
+//   * /preview          → medium derivative (viewer)
+//   * /poster           → video poster frame
+//   * /content/privacy-safe → re-encoded, metadata-stripped copy
+//
+// Named helper (rather than an inline template string at each call site) so the
+// "original, not a derivative" decision is stated in exactly one place and can
+// be asserted by a regression test. Used as an <a href> target so the browser's
+// same-origin cookie authenticates it; the backend re-checks ownership and
+// audits every download.
+export function originalDownloadUrl(fileId: string): string {
+  return `/api/files/${fileId}/content`;
+}

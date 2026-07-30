@@ -3980,6 +3980,55 @@ html.tv-scroll-stable::-webkit-scrollbar {
   justify-content: flex-end;
 }
 
+/* Grouped drawer actions: Metadata / Organize / Discover / File. */
+.metadata-action-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+.metadata-action-group__title {
+  margin: 0 0 0.4rem;
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.metadata-action-group__items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.metadata-action {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  /* ~44px touch target. */
+  min-height: 2.75rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border-default);
+  border-radius: 0.5rem;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+.metadata-action:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--surface-subtle);
+}
+.metadata-action:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+.metadata-action:disabled { opacity: 0.65; cursor: progress; }
+.metadata-action .nc-icon { color: var(--text-muted); flex: none; }
+
 /* ── Lightbox mobile polish ──────────────────────────────────────── */
 
 /* Ensure video fills lightbox stage width */
@@ -4365,12 +4414,29 @@ video.lightbox-image {
   background: linear-gradient(rgba(0, 0, 0, 0.55), transparent);
   color: #fff;
 }
+/* Identity block: display name with the original size · Date Taken directly
+   under it. The viewer keeps its intentionally dark chrome in both themes. */
+.media-viewer-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
 .media-viewer-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.media-viewer-actions { display: flex; gap: 0.5rem; }
+.media-viewer-summary {
+  font-size: 0.8125rem;
+  /* On the viewer's black scrim this reads well above AA while staying clearly
+     secondary to the file name. */
+  color: rgb(255 255 255 / 78%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.media-viewer-actions { display: flex; gap: 0.5rem; flex: none; }
 .media-viewer-actions button,
 .media-viewer-nav {
   background: rgba(0, 0, 0, 0.4);

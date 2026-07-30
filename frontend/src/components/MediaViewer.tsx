@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { getFileMetadata, type FileMetadata } from '@nanocloud/api-client';
+import { getFileMetadata, originalDownloadUrl, type FileMetadata } from '@nanocloud/api-client';
 import { formatSize } from './format';
 import { useI18n } from '../i18n';
 import { HlsVideoPlayer } from '../video/HlsVideoPlayer';
+import { resolveViewerSummary } from './mediaViewerSummary';
 
 // Slice 86: a reusable, clean full-screen media viewer for images and videos.
 // The media is centered on a dark backdrop with minimal chrome that auto-hides
@@ -12,8 +13,12 @@ import { HlsVideoPlayer } from '../video/HlsVideoPlayer';
 // Media URLs reuse the existing endpoints:
 //   image → GET /api/files/{id}/preview  (medium; never the original)
 //   video → GET /api/files/{id}/video    (Range-enabled) + /poster
-// Metadata is fetched lazily, only when the drawer is open (and re-fetched when
-// the current item changes while open) — never per-item during scrolling.
+//
+// Metadata is fetched for the CURRENTLY OPEN item only — one request per opened
+// item, never per grid card. The viewer owns that fetch (it used to live in the
+// drawer body) because the summary line under the title needs it too; the
+// loaded document is handed to `renderDetails`, so opening the drawer costs no
+// second request and shows no second loading state.
 
 export interface MediaViewerItem {
   id: string;
@@ -24,9 +29,24 @@ export interface MediaViewerItem {
   // soon as the gallery patches its item.
   displayName: string;
   kind: 'image' | 'video';
+  // Size of the IMMUTABLE ORIGINAL, when the caller already has it on the
+  // loaded item (MediaItem.sizeBytes). Lets the summary show the size with no
+  // request at all; the metadata document is used as a fallback.
+  sizeBytes?: number | null;
   // VSEM-03: open this video at a semantic match (whole ms). Absent/null =
   // normal playback from the start; the player clamps and applies it once.
   initialPositionMilliseconds?: number | null;
+}
+
+// What the viewer hands to a caller-supplied drawer body.
+export interface MediaViewerDetailsContext {
+  item: MediaViewerItem;
+  // The metadata document for this item; null while loading or on failure.
+  metadata: FileMetadata | null;
+  metadataError: boolean;
+  // Call after a mutation returns a fresh document so the viewer's copy — and
+  // therefore the summary line — updates immediately.
+  adoptMetadata: (next: FileMetadata) => void;
 }
 
 interface MediaViewerProps {
@@ -38,18 +58,17 @@ interface MediaViewerProps {
   // prefetch the next cursor page (preserves infinite-scroll behaviour).
   onNearEnd?: () => void;
   // Optional drawer body. When provided, the on-demand details drawer renders
-  // this (per current item) instead of the default minimal metadata view —
-  // the image gallery uses it to inject its full metadata panel + actions
-  // (edit / strip / write-DateTaken / privacy-safe download / add-to-album)
-  // and the duplicate-occurrences panel. The drawer shell (header, close,
-  // dialog placement) stays owned by the viewer so the chrome is consistent.
-  renderDetails?: (item: MediaViewerItem) => ReactNode;
+  // this (per current item) instead of the default minimal metadata view — the
+  // media workspace uses it to inject its full metadata panel + grouped
+  // actions. The drawer shell (header, close, dialog placement) stays owned by
+  // the viewer so the chrome is consistent.
+  renderDetails?: (context: MediaViewerDetailsContext) => ReactNode;
 }
 
 const IDLE_HIDE_MS = 2600;
 
 export function MediaViewer({ items, index, onClose, onIndexChange, onNearEnd, renderDetails }: MediaViewerProps) {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const item = items[index];
   const hasPrev = index > 0;
   const hasNext = index < items.length - 1;
@@ -58,9 +77,34 @@ export function MediaViewer({ items, index, onClose, onIndexChange, onNearEnd, r
   const [detailsOpen, setDetailsOpen] = useState(false);
   // Per-image "preview failed to load" flag; reset whenever we navigate.
   const [imageFailed, setImageFailed] = useState(false);
+  // Metadata for the current item (summary line + drawer body).
+  const [metadata, setMetadata] = useState<FileMetadata | null>(null);
+  const [metadataError, setMetadataError] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { setImageFailed(false); }, [index]);
+
+  // One metadata request per opened item. Aborted on navigation so a fast
+  // arrow-key run through the viewer does not leave stale responses landing.
+  const itemId = item?.id;
+  useEffect(() => {
+    if (itemId === undefined) return;
+    const controller = new AbortController();
+    setMetadata(null);
+    setMetadataError(false);
+    getFileMetadata(itemId, controller.signal)
+      .then((doc) => { if (!controller.signal.aborted) setMetadata(doc); })
+      .catch((e) => {
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        setMetadataError(true);
+      });
+    return () => controller.abort();
+  }, [itemId]);
+
+  const adoptMetadata = useCallback((next: FileMetadata) => {
+    setMetadata(next);
+    setMetadataError(false);
+  }, []);
 
   const showChrome = useCallback(() => {
     setChromeVisible(true);
@@ -104,6 +148,15 @@ export function MediaViewer({ items, index, onClose, onIndexChange, onNearEnd, r
   }
 
   if (!item) return null;
+
+  // Size comes from the loaded item when available (no request); the effective
+  // Date Taken needs the metadata document, and is suppressed entirely when it
+  // would only be the upload-time fallback.
+  const summary = resolveViewerSummary({ itemSizeBytes: item.sizeBytes, metadata });
+  const summaryParts = [
+    summary.sizeBytes !== null ? formatSize(summary.sizeBytes) : null,
+    summary.dateTaken !== null ? formatDate(summary.dateTaken) : null,
+  ].filter((part): part is string => part !== null);
 
   return (
     <div
@@ -156,9 +209,18 @@ export function MediaViewer({ items, index, onClose, onIndexChange, onNearEnd, r
 
       <div className={`media-viewer-chrome${chromeVisible ? '' : ' is-hidden'}`}>
         <div className="media-viewer-topbar">
-          <span className="media-viewer-title" title={item.name} data-testid="media-viewer-title">
-            {item.displayName}
-          </span>
+          {/* Identity on the left, controls on the right — unchanged. The
+              summary sits directly under the display name. */}
+          <div className="media-viewer-identity">
+            <span className="media-viewer-title" title={item.name} data-testid="media-viewer-title">
+              {item.displayName}
+            </span>
+            {summaryParts.length > 0 && (
+              <span className="media-viewer-summary" data-testid="media-viewer-summary">
+                {summaryParts.join(' · ')}
+              </span>
+            )}
+          </div>
           <div className="media-viewer-actions">
             <button type="button" aria-label={t('mediaViewer.details')} aria-pressed={detailsOpen}
               onClick={() => setDetailsOpen((v) => !v)}>ⓘ</button>
@@ -177,17 +239,19 @@ export function MediaViewer({ items, index, onClose, onIndexChange, onNearEnd, r
             <h3>{t('mediaViewer.details')}</h3>
             <button type="button" aria-label={t('mediaViewer.closeDetails')} onClick={() => setDetailsOpen(false)}>✕</button>
           </div>
-          {renderDetails ? renderDetails(item) : <DefaultMediaDetails item={item} />}
+          {renderDetails
+            ? renderDetails({ item, metadata, metadataError, adoptMetadata })
+            : <DefaultMediaDetails item={item} metadata={metadata} metadataError={metadataError} />}
         </aside>
       )}
     </div>
   );
 }
 
-// Default lazy metadata body for the details drawer. Fetches
-// GET /api/files/{id}/metadata when opened and whenever the item changes while
-// open — never for every gallery card. Used when the caller does not supply a
-// richer `renderDetails` (e.g. the video gallery).
+// Default metadata body for the details drawer. Renders the document the VIEWER
+// already loaded for the open item (it no longer fetches its own copy), so
+// opening the drawer is instant and costs no extra request. Used when the caller
+// does not supply a richer `renderDetails`.
 // Formats a fractional-seconds duration as H:MM:SS (or M:SS under an hour).
 function formatDuration(totalSeconds: number): string {
   const s = Math.max(0, Math.round(totalSeconds));
@@ -200,25 +264,21 @@ function formatDuration(totalSeconds: number): string {
     : `${minutes}:${pad(seconds)}`;
 }
 
-function DefaultMediaDetails({ item }: { item: MediaViewerItem }) {
+function DefaultMediaDetails({
+  item,
+  metadata: meta,
+  metadataError,
+}: {
+  item: MediaViewerItem;
+  metadata: FileMetadata | null;
+  metadataError: boolean;
+}) {
   const { t, tn, formatDate } = useI18n();
-  const [meta, setMeta] = useState<FileMetadata | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setMeta(null);
-    setError(null);
-    getFileMetadata(item.id, controller.signal)
-      .then(setMeta)
-      .catch((e) => { if (!(e instanceof DOMException && e.name === 'AbortError')) setError(t('mediaViewer.detailsLoadError')); });
-    return () => controller.abort();
-  }, [item.id, t]);
 
   return (
     <>
-      {error && <p className="folder-error" role="alert">{error}</p>}
-      {!meta && !error && <p role="status">{t('common.loading')}</p>}
+      {metadataError && <p className="folder-error" role="alert">{t('mediaViewer.detailsLoadError')}</p>}
+      {!meta && !metadataError && <p role="status">{t('common.loading')}</p>}
       {meta && (
         <dl className="media-viewer-meta">
           <dt>{t('common.name')}</dt><dd>{meta.effective.displayName}</dd>
@@ -273,7 +333,8 @@ function DefaultMediaDetails({ item }: { item: MediaViewerItem }) {
           )}
         </dl>
       )}
-      <a className="media-viewer-download" href={`/api/files/${item.id}/content`}>{t('common.download')}</a>
+      {/* The immutable original, never a derivative. */}
+      <a className="media-viewer-download" href={originalDownloadUrl(item.id)}>{t('common.download')}</a>
     </>
   );
 }

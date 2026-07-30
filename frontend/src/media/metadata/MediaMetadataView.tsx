@@ -1,16 +1,24 @@
-import { privacySafeDownloadUrl, type AlbumSummary, type FileMetadata } from '@nanocloud/api-client';
+import { originalDownloadUrl, privacySafeDownloadUrl, type FileMetadata } from '@nanocloud/api-client';
 import { formatSize } from '../../components/format';
+import { Icon } from '../../components/icons/Icon';
 import { useI18n } from '../../i18n';
 import type { MediaKind } from './MediaMetadataPanel';
 
 // Read-only metadata body shared by both galleries.
 //
-// The rows common to every medium (dates, size, user annotations) are built
-// once; the kind-specific blocks live in their own small builders below so
-// neither gallery grows `if (kind === …)` branches inline. Image-only ACTIONS
-// (strip embedded metadata, bake DateTaken into the JPEG, privacy-safe
-// download) are gated on kind AND on the detected content type, so they never
-// appear on a video.
+// The detail rows are unchanged. The ACTION area is now grouped by intent
+// instead of being one flat row of buttons plus an unreadable inline album
+// select:
+//
+//   Metadata  — Edit metadata, Write Date Taken (jpeg + override only)
+//   Organize  — Add to album (opens the shared album picker)
+//   Discover  — Find similar in Library / Explore similar photos (photos only)
+//   File      — Download original (+ the privacy-safe copy where supported)
+//
+// Strip/remove-metadata is deliberately NOT offered any more: it rewrites the
+// bytes into a new blob, which is far too destructive to sit one click away in a
+// viewer drawer. The backend capability is untouched — only this UI entry point
+// is gone.
 
 type Row = [string, string];
 
@@ -28,36 +36,27 @@ interface Props {
   data: FileMetadata;
   kind: MediaKind;
   onEdit(): void;
-  onStrip(): void;
-  stripping: boolean;
-  stripError: string | null;
   onWriteDateTaken(): void;
   writing: boolean;
   writeError: string | null;
-  albums: AlbumSummary[];
-  selectedAlbumId: string;
-  onAlbumSelect(id: string): void;
   onAddToAlbum(): void;
-  addingToAlbum: boolean;
-  addAlbumMsg: string | null;
+  // Photos only. Applies the library's similar-image anchor filter and returns
+  // the user to the filtered Library.
+  onFindSimilarInLibrary?(): void;
+  // Photos only. Navigates to the dedicated Similar Photos Explorer.
+  onExploreSimilar?(): void;
 }
 
 export function MediaMetadataView({
   data,
   kind,
   onEdit,
-  onStrip,
-  stripping,
-  stripError,
   onWriteDateTaken,
   writing,
   writeError,
-  albums,
-  selectedAlbumId,
-  onAlbumSelect,
   onAddToAlbum,
-  addingToAlbum,
-  addAlbumMsg,
+  onFindSimilarInLibrary,
+  onExploreSimilar,
 }: Props) {
   const { t, tn, formatDate } = useI18n();
   const { blob, user, effective } = data;
@@ -135,11 +134,14 @@ export function MediaMetadataView({
   if (effective.location) rows.push([t('gallery.mdLocation'), effective.location]);
 
   const detected = blob.detectedContentType?.toLowerCase();
-  // Image-only byte-rewriting actions. `kind === 'image'` is the primary gate so
-  // a video can never reach them even if its detected type looked image-ish.
-  const canStrip = kind === 'image' && (detected === 'image/jpeg' || detected === 'image/png');
+  // Baking a DateTaken override into the bytes only applies to a JPEG that
+  // actually has an override to write. `kind === 'image'` is the primary gate so
+  // a video can never reach it even if its detected type looked image-ish.
   const canWriteDate = kind === 'image' && detected === 'image/jpeg' && user.dateTakenOverride !== null;
-  const canPrivacySafe = canStrip;
+  // The stripped-copy download re-encodes on the fly and never mutates the
+  // file; it is offered next to the original so the two are not confusable.
+  const canPrivacySafe = kind === 'image' && (detected === 'image/jpeg' || detected === 'image/png');
+  const canDiscover = kind === 'image' && (onFindSimilarInLibrary || onExploreSimilar);
 
   const noTechnicalDetails = kind === 'image' ? e === null : v === null;
 
@@ -158,63 +160,104 @@ export function MediaMetadataView({
           </div>
         ))}
       </dl>
-      <div className="metadata-actions">
-        <button type="button" className="row-action" data-testid="media-edit-metadata" onClick={onEdit}>
-          {t('gallery.editMetadata')}
-        </button>
-        {canStrip && (
-          <button
-            type="button"
-            className="row-action row-action-destructive"
-            data-testid="media-strip-metadata"
-            onClick={onStrip}
-            disabled={stripping}
-          >
-            {stripping ? t('gallery.stripping') : t('gallery.stripBtn')}
+
+      <div className="metadata-action-groups">
+        <MetadataActionGroup title={t('mediaMeta.groupMetadata')}>
+          <button type="button" className="metadata-action" data-testid="media-edit-metadata" onClick={onEdit}>
+            <Icon name="edit" />
+            <span>{t('gallery.editMetadata')}</span>
           </button>
-        )}
-        {canWriteDate && (
+          {canWriteDate && (
+            <button
+              type="button"
+              className="metadata-action"
+              data-testid="media-write-datetaken"
+              onClick={onWriteDateTaken}
+              disabled={writing}
+            >
+              <Icon name="calendar" />
+              <span>{writing ? t('gallery.writing') : t('gallery.writeBtn')}</span>
+            </button>
+          )}
+          {writeError !== null && <p className="metadata-edit-error" role="alert">{writeError}</p>}
+        </MetadataActionGroup>
+
+        <MetadataActionGroup title={t('mediaMeta.groupOrganize')}>
+          {/* Opens the shared album picker used by the bulk selection bar —
+              replacing the inline native select that was unreadable. */}
           <button
             type="button"
-            className="row-action"
-            data-testid="media-write-datetaken"
-            onClick={onWriteDateTaken}
-            disabled={writing}
-          >
-            {writing ? t('gallery.writing') : t('gallery.writeBtn')}
-          </button>
-        )}
-        {canPrivacySafe && (
-          <a className="row-action" href={privacySafeDownloadUrl(data.id)} data-testid="privacy-safe-download">
-            {t('gallery.downloadPrivacySafe')}
-          </a>
-        )}
-      </div>
-      {stripError !== null && <p className="metadata-edit-error" role="alert">{stripError}</p>}
-      {writeError !== null && <p className="metadata-edit-error" role="alert">{writeError}</p>}
-      {albums.length > 0 && (
-        <div className="album-add-section" data-testid="add-to-album-section">
-          <select
-            value={selectedAlbumId}
-            onChange={(ev) => onAlbumSelect(ev.target.value)}
-            aria-label={t('gallery.selectAlbumAria')}
-          >
-            {albums.map((a) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="row-action"
-            onClick={onAddToAlbum}
-            disabled={addingToAlbum}
+            className="metadata-action"
             data-testid="add-to-album-btn"
+            onClick={onAddToAlbum}
           >
-            {addingToAlbum ? t('gallery.adding') : t('gallery.addToAlbum')}
+            <Icon name="album-add" />
+            <span>{t('gallery.addToAlbum')}</span>
           </button>
-          {addAlbumMsg && <p className="muted" role="status">{addAlbumMsg}</p>}
-        </div>
-      )}
+        </MetadataActionGroup>
+
+        {canDiscover && (
+          <MetadataActionGroup title={t('mediaMeta.groupDiscover')}>
+            {/* Two DIFFERENT destinations, named so the difference is obvious:
+                one filters the Library in place, the other opens the dedicated
+                explorer. */}
+            {onFindSimilarInLibrary && (
+              <button
+                type="button"
+                className="metadata-action"
+                data-testid="viewer-find-similar"
+                onClick={onFindSimilarInLibrary}
+              >
+                <Icon name="similar" />
+                <span>{t('mediaWs.findSimilarInLibrary')}</span>
+              </button>
+            )}
+            {onExploreSimilar && (
+              <button
+                type="button"
+                className="metadata-action"
+                data-testid="viewer-explore-similar"
+                onClick={onExploreSimilar}
+              >
+                <Icon name="explore" />
+                <span>{t('mediaWs.exploreSimilar')}</span>
+              </button>
+            )}
+          </MetadataActionGroup>
+        )}
+
+        <MetadataActionGroup title={t('mediaMeta.groupFile')}>
+          {/* The immutable original blob, under its original file name. Never a
+              preview, thumbnail, poster, resized artifact or rewritten copy. */}
+          <a
+            className="metadata-action"
+            href={originalDownloadUrl(data.id)}
+            data-testid="download-original"
+          >
+            <Icon name="download" />
+            <span>{t('gallery.downloadOriginal')}</span>
+          </a>
+          {canPrivacySafe && (
+            <a
+              className="metadata-action"
+              href={privacySafeDownloadUrl(data.id)}
+              data-testid="privacy-safe-download"
+            >
+              <Icon name="download" />
+              <span>{t('gallery.downloadPrivacySafe')}</span>
+            </a>
+          )}
+        </MetadataActionGroup>
+      </div>
     </section>
+  );
+}
+
+function MetadataActionGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="metadata-action-group">
+      <h4 className="metadata-action-group__title">{title}</h4>
+      <div className="metadata-action-group__items">{children}</div>
+    </div>
   );
 }

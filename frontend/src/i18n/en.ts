@@ -684,6 +684,7 @@ const en: Partial<Record<MessageKey, string>> = {
   'gallery.writing': 'Writing…',
   'gallery.writeBtn': 'Write date into file',
   'gallery.downloadPrivacySafe': 'Download privacy-safe copy',
+  'gallery.downloadOriginal': 'Download original',
   'gallery.selectAlbumAria': 'Select album',
   'gallery.adding': 'Adding…',
   'gallery.addToAlbum': 'Add to album',
@@ -906,6 +907,8 @@ const en: Partial<Record<MessageKey, string>> = {
   'mediaFilter.similarActive': 'Similar-image search active',
   'mediaFilter.removeSimilar': 'Remove similar search',
   'mediaWs.findSimilar': 'Find similar images',
+  'mediaWs.findSimilarInLibrary': 'Find similar in Library',
+  'mediaWs.exploreSimilar': 'Explore similar photos',
   'albumSettings.title': 'Album settings',
   'albumSettings.close': 'Close',
   'albumSettings.deleteAlbum': 'Delete album',
@@ -1920,6 +1923,10 @@ const en: Partial<Record<MessageKey, string>> = {
 
   // --- Shared media metadata panel (photos + videos) ---
   'mediaMeta.panelAria': 'Media details',
+  'mediaMeta.groupMetadata': 'Metadata',
+  'mediaMeta.groupOrganize': 'Organize',
+  'mediaMeta.groupDiscover': 'Discover',
+  'mediaMeta.groupFile': 'File',
   'mediaMeta.title': 'Title',
   'mediaMeta.fileName': 'File name',
   'mediaMeta.tags': 'Tags',
