@@ -1,27 +1,107 @@
+/* ===========================================================================
+   Design tokens
+   ---------------------------------------------------------------------------
+   `<html data-theme>` is stamped by the bootstrap in index.html BEFORE the
+   first paint and is then owned by ThemeProvider. It always holds a resolved
+   value — 'dark' or 'light' — never 'system'.
+
+   Dark is the product default, so the dark palette lives on bare `:root`: if
+   the attribute is somehow missing (JS disabled, bootstrap failure) the page
+   still renders dark rather than falling back to a theme nobody chose. There is
+   deliberately NO `prefers-color-scheme` rule here — the OS signal is consumed
+   by the `system` preference in JS, so an explicit Light choice can never be
+   overridden by a dark-mode OS.
+
+   Component rules consume the SEMANTIC tokens. The legacy `--bg / --fg /
+   --muted / --border / --error` names are kept as aliases so the rest of this
+   stylesheet stays theme-correct without an uncontrolled rewrite.
+   =========================================================================== */
+
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
   font-family: system-ui, -apple-system, Segoe UI, sans-serif;
-  --bg: #fafafa;
-  --fg: #1d1d1f;
-  --muted: #6b6b73;
-  --border: #d2d2d7;
-  --accent: #0a84ff;
-  --error: #d92027;
+
+  /* Surfaces, back to front. */
+  --surface-canvas: #0f1013;
+  --surface-raised: #17181d;
+  --surface-overlay: #1e2026;
+  --surface-subtle: #1a1c21;
+
+  --border-default: #2c2e37;
+  --border-strong: #3f424d;
+
+  --text-primary: #f2f3f5;
+  --text-secondary: #b9bcc4;
+  --text-muted: #8f939d;
+
+  --accent: #4c9dff;
+  --accent-hover: #74b3ff;
+  /* Text/iconography placed ON an --accent fill. */
+  --accent-contrast: #08131f;
+  --accent-subtle: rgb(76 157 255 / 16%);
+
+  --focus-ring: #8cc6ff;
+  --danger: #ff8080;
+  --danger-contrast: #1a0505;
+  --success: #5cd694;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 45%);
+  --shadow-md: 0 4px 14px rgb(0 0 0 / 45%);
+  --shadow-lg: 0 18px 48px rgb(0 0 0 / 55%);
+
+  /* Legacy aliases — do not add new usages. */
+  --bg: var(--surface-canvas);
+  --fg: var(--text-primary);
+  --muted: var(--text-muted);
+  --border: var(--border-default);
+  --error: var(--danger);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #131316;
-    --fg: #f1f1f3;
-    --muted: #8a8a92;
-    --border: #2d2d33;
-    --accent: #409cff;
-    --error: #ff6b6b;
-  }
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --surface-canvas: #f6f7f9;
+  --surface-raised: #ffffff;
+  --surface-overlay: #ffffff;
+  --surface-subtle: #eceef2;
+
+  --border-default: #d3d6dd;
+  --border-strong: #a9aeb8;
+
+  --text-primary: #15161a;
+  --text-secondary: #474b53;
+  --text-muted: #5f636b;
+
+  --accent: #0a5fd0;
+  --accent-hover: #08489f;
+  --accent-contrast: #ffffff;
+  --accent-subtle: rgb(10 95 208 / 12%);
+
+  --focus-ring: #0a5fd0;
+  --danger: #bf1220;
+  --danger-contrast: #ffffff;
+  --success: #12643a;
+
+  --shadow-sm: 0 1px 2px rgb(15 22 36 / 10%);
+  --shadow-md: 0 4px 14px rgb(15 22 36 / 12%);
+  --shadow-lg: 0 18px 48px rgb(15 22 36 / 18%);
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* Honour the OS reduced-motion preference across every animation/transition
+   this app introduces. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 body {
@@ -680,31 +760,388 @@ a {
   .tv-party-caption { font-size: 0.8rem; }
 }
 
-/* Layout */
+/* ===========================================================================
+   App shell — collapsible left navigation + compact top utility bar
+   =========================================================================== */
 
-.app-header {
+.nc-icon { flex: none; display: block; }
+
+/* Shared icon-only control. Every instance carries an aria-label. */
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* ~44px touch target while the glyph stays 20px. */
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.icon-button:hover {
+  color: var(--text-primary);
+  background: var(--surface-subtle);
+}
+.icon-button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.app-brand {
+  font-size: 1.0625rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-canvas);
+}
+
+.app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.9rem;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-raised);
+}
+
+/* The hamburger is the narrow-viewport affordance; the rail toggle is the wide
+   one. Exactly one of them is visible at any width. */
+.app-topbar__menu { display: none; }
+.app-topbar__brand { margin-inline-end: auto; }
+.app-topbar__utility {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.app-shell__body {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  min-height: 0;
+  /* Never let a wide child (grid, table, code block) push the page sideways. */
+  max-width: 100%;
+}
+
+.app-sidebar {
+  position: sticky;
+  top: 3.4rem;
+  flex: none;
+  width: 15rem;
+  max-height: calc(100vh - 3.4rem);
+  overflow-y: auto;
+  padding: 0.9rem 0.6rem 2rem;
+  border-inline-end: 1px solid var(--border-default);
+  background: var(--surface-raised);
+  transition: width 120ms ease;
+}
+.app-shell--rail .app-sidebar { width: 4.25rem; }
+
+.app-nav { display: flex; flex-direction: column; gap: 1.1rem; }
+
+.app-nav__group-title {
+  margin: 0 0 0.35rem 0.55rem;
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+/* The rail has no room for group headings, but they must stay in the
+   accessibility tree so the list keeps its accessible name. */
+.app-nav.is-collapsed .app-nav__group-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Administration is visually separated from normal-user navigation. */
+.app-nav__group--admin {
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border-default);
+}
+
+.app-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.app-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+.app-nav.is-collapsed .app-nav-link { justify-content: center; padding-inline: 0; }
+.app-nav-link__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.app-nav-link:hover {
+  color: var(--text-primary);
+  background: var(--surface-subtle);
+}
+.app-nav-link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+/* Selected state uses a fill, a left marker AND full-strength text — never
+   colour alone. */
+.app-nav-link-active {
+  position: relative;
+  color: var(--text-primary);
+  background: var(--accent-subtle);
+  font-weight: 600;
+}
+.app-nav-link-active::before {
+  content: '';
+  position: absolute;
+  inset-block: 0.45rem;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+}
+.app-nav-link-active .nc-icon { color: var(--accent); }
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  padding: 1.5rem;
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+/* --- Mobile drawer -------------------------------------------------------- */
+
+.nav-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgb(0 0 0 / 55%);
+}
+.nav-drawer {
+  width: min(19rem, 86vw);
+  height: 100%;
+  overflow-y: auto;
+  padding: 0.6rem 0.6rem 2rem;
+  background: var(--surface-raised);
+  border-inline-end: 1px solid var(--border-default);
+  box-shadow: var(--shadow-lg);
+}
+.nav-drawer:focus-visible { outline: none; }
+.nav-drawer__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg);
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+  padding-inline-start: 0.55rem;
 }
 
-.app-header h1 {
-  margin: 0;
-  font-size: 1.125rem;
+@media (max-width: 900px) {
+  .app-topbar__menu { display: inline-flex; }
+  .app-topbar__rail-toggle { display: none; }
+  .app-sidebar { display: none; }
+  .app-main { padding: 1rem; }
 }
 
-.app-header .user-info {
+/* --- User menu ------------------------------------------------------------ */
+
+.user-menu { position: relative; }
+
+.user-menu__trigger {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  max-width: 14rem;
+  min-height: 2.5rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+.user-menu__trigger:hover { background: var(--surface-subtle); }
+.user-menu__trigger:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.user-menu__avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+.user-menu__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.875rem;
 }
 
-.app-header .user-info span {
-  color: var(--muted);
+.user-menu__popover {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  inset-inline-end: 0;
+  z-index: 50;
+  width: min(19rem, calc(100vw - 1.5rem));
+  padding: 0.4rem;
+  border: 1px solid var(--border-default);
+  border-radius: 0.75rem;
+  background: var(--surface-overlay);
+  box-shadow: var(--shadow-lg);
+}
+
+.user-menu__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.55rem 0.6rem;
+}
+.user-menu__identity-name { font-weight: 600; color: var(--text-primary); }
+.user-menu__identity-email {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-menu__section {
+  padding: 0.45rem 0.6rem;
+  border-top: 1px solid var(--border-default);
+}
+
+.user-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.5rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+.user-menu__item:hover { background: var(--surface-subtle); }
+.user-menu__item:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.user-menu__item--danger { color: var(--danger); }
+
+/* --- Theme switcher ------------------------------------------------------- */
+
+.theme-switcher { display: flex; flex-direction: column; gap: 0.35rem; }
+.theme-switcher__label {
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.theme-switcher__options {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border: 1px solid var(--border-default);
+  border-radius: 0.6rem;
+  background: var(--surface-subtle);
+}
+.theme-switcher__option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 2.25rem;
+  padding: 0.3rem 0.35rem;
+  border-radius: 0.45rem;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+/* The radio itself is the accessible control; it is visually replaced by the
+   segment, not removed from the accessibility tree. */
+.theme-switcher__option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  margin: 0;
+}
+.theme-switcher__option:hover { color: var(--text-primary); }
+.theme-switcher__option.is-selected {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+.theme-switcher__option:has(input:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+.theme-switcher__icon { font-size: 0.9rem; line-height: 1; }
+.theme-switcher__check { color: var(--accent); font-size: 0.75rem; }
+
+/* --- Native selects ------------------------------------------------------- */
+
+/* Readable in BOTH themes: explicit foreground + background tokens, and an
+   explicit color-scheme so the OS-drawn option list matches. Applies to every
+   select in the app, which is why no page needs its own dark override. */
+select {
+  color: var(--text-primary);
+  background-color: var(--surface-raised);
+  color-scheme: inherit;
+}
+select:disabled {
+  /* Still legible when disabled — secondary, not a washed-out ghost. */
+  color: var(--text-secondary);
+  background-color: var(--surface-subtle);
+  opacity: 1;
+  cursor: not-allowed;
+}
+select:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+select option {
+  color: var(--text-primary);
+  background-color: var(--surface-raised);
 }
 
 /* Language selector (shared by the app shell + public party pages). */
@@ -714,19 +1151,32 @@ a {
   gap: 0.4rem;
   font-size: 0.875rem;
 }
+/* Inside the user popover the label sits above the control. */
+.language-switcher--stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+}
 .language-switcher-label {
-  color: var(--muted);
+  color: var(--text-muted);
+}
+.language-switcher--stacked .language-switcher-label {
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .language-switcher select {
-  padding: 0.25rem 0.4rem;
-  border: 1px solid var(--border);
+  min-height: 2.25rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border-default);
   border-radius: 6px;
-  background: #171a21;
-  color: inherit;
   font: inherit;
 }
 .language-switcher-error {
-  color: #ff6b6b;
+  color: var(--danger);
+  font-size: 0.8125rem;
 }
 /* Public surfaces float the switcher to the top-right of the header/card. */
 .party-header-top,
@@ -740,49 +1190,9 @@ a {
   flex: none;
 }
 
-.app-header button.logout {
-  padding: 0.375rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  background: transparent;
-  color: var(--fg);
+button.logout {
+  color: var(--danger);
   cursor: pointer;
-}
-
-.app-header-brand {
-  display: flex;
-  align-items: baseline;
-  gap: 1.25rem;
-}
-
-.app-nav {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.app-nav-link {
-  padding: 0.25rem 0.625rem;
-  border-radius: 0.375rem;
-  color: var(--muted);
-  text-decoration: none;
-  font-size: 0.9375rem;
-}
-
-.app-nav-link:hover {
-  color: var(--fg);
-  background: color-mix(in srgb, var(--fg) 6%, transparent);
-}
-
-.app-nav-link-active {
-  color: var(--fg);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-}
-
-.app-main {
-  padding: 1.5rem;
-  max-width: 64rem;
-  margin: 0 auto;
 }
 
 /* Media-wall pages (library / excluded / album workspace) use nearly the full

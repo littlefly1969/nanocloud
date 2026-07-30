@@ -24,7 +24,17 @@ const en: Partial<Record<MessageKey, string>> = {
   'language.updateError': 'Could not update the language. Please try again.',
 
   // --- Primary navigation / app shell ---
+  'app.name': 'NanoCloud',
   'nav.primary': 'Primary',
+  'nav.groupMain': 'Main',
+  'nav.groupMore': 'More',
+  'nav.groupAdmin': 'Administration',
+  'nav.openMenu': 'Open navigation menu',
+  'nav.closeMenu': 'Close navigation menu',
+  'nav.menuLabel': 'Navigation menu',
+  'nav.collapseNav': 'Collapse navigation',
+  'nav.expandNav': 'Expand navigation',
+  'nav.userMenu': 'User menu',
   'nav.files': 'Files',
   'nav.gallery': 'Gallery',
   'nav.videos': 'Videos',
@@ -44,6 +54,12 @@ const en: Partial<Record<MessageKey, string>> = {
   'nav.account': 'Account',
   'nav.signedInAs': 'Signed in as',
   'nav.signOut': 'Sign out',
+
+  // --- Theme (appearance) ---
+  'theme.label': 'Theme',
+  'theme.dark': 'Dark',
+  'theme.light': 'Light',
+  'theme.system': 'System',
 
   // --- Login ---
   'login.email': 'Email',

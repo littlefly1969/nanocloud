@@ -1,22 +1,67 @@
-import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router';
-import { updateMyLanguage } from '@nanocloud/api-client';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Outlet } from 'react-router';
 import { useAuth } from '../auth/useAuth';
-import { useI18n, type Language } from '../i18n';
-import { LanguageSwitcher } from './LanguageSwitcher';
+import { useI18n } from '../i18n';
+import { AppNav } from './nav/AppNav';
+import { NavDrawer } from './nav/NavDrawer';
+import { UserMenu } from './UserMenu';
+import { Icon } from './icons/Icon';
 import { MediaWallLayoutContext } from './mediaWallLayout';
 
-// App shell shown to authenticated users. Displays the current user's
-// display name + email, a primary nav (localized) and a logout button, plus a
-// language selector that persists the choice to the user's profile.
+// Authenticated app shell: a collapsible left navigation, a compact top utility
+// bar and a full-width content region.
+//
+// This replaces the previous single header row that wrapped a dozen nav links
+// next to the email, a language select and a logout button. The navigation is
+// now grouped (Main / More / Administration) and driven by one data model
+// (navModel), the user-scoped controls live in one popover (UserMenu), and
+// narrow viewports get the same navigation through an accessible modal drawer
+// rather than a second information architecture.
+
+// Bounded local key for the rail state. Not a preference the backend knows or
+// needs to know about.
+const RAIL_KEY = 'nanocloud.nav.collapsed';
+
+function readCollapsed(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(RAIL_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function Layout() {
   const { state, logout, updateUser } = useAuth();
   const { t } = useI18n();
-  const [langError, setLangError] = useState(false);
-  const [langBusy, setLangBusy] = useState(false);
-  // Media-wall pages opt into a full-width main via useMediaWallLayout(); every
-  // other page keeps the centred, max-width shell.
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  // Media-wall pages opt into a full-bleed main via useMediaWallLayout(); every
+  // other page keeps the centred, max-width content column.
   const [mediaFullWidth, setMediaFullWidth] = useState(false);
+
+  const toggleRail = useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(RAIL_KEY, next ? '1' : '0');
+      } catch {
+        // Non-fatal: the choice just does not survive a reload.
+      }
+      return next;
+    });
+  }, []);
+
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+
+  // The drawer is a modal; while it is open the page behind it must not scroll.
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, [drawerOpen]);
 
   if (state.status !== 'authed') {
     // ProtectedRoute already guards this; the branch keeps TS happy.
@@ -25,117 +70,62 @@ export function Layout() {
 
   const isAdmin = state.user.isAdmin;
 
-  const handleLanguage = (next: Language) => {
-    setLangError(false);
-    setLangBusy(true);
-    // Persist to the user's profile; the returned user (with the new language)
-    // is pushed into auth state, which re-applies the language via the provider.
-    updateMyLanguage(next)
-      .then((user) => updateUser(user))
-      .catch(() => setLangError(true))
-      .finally(() => setLangBusy(false));
-  };
-
   return (
-    <>
-      <header className="app-header">
-        <div className="app-header-brand">
-          <h1>NanoCloud</h1>
-          <nav className="app-nav" aria-label={t('nav.primary')}>
-            <NavLink to="/" end className={navLinkClass}>
-              {t('nav.files')}
-            </NavLink>
-            {/* Slice 5: one unified library entry (Tutti / Foto / Video live
-                inside the workspace as tabs). */}
-            <NavLink to="/media" className={navLinkClass}>
-              {t('mediaLib.title')}
-            </NavLink>
-            <NavLink to="/albums" className={navLinkClass}>
-              {t('nav.albums')}
-            </NavLink>
-            <NavLink to="/people" className={navLinkClass}>
-              {t('nav.people')}
-            </NavLink>
-            <NavLink to="/plates" className={navLinkClass}>
-              {t('nav.plates')}
-            </NavLink>
-            <NavLink to="/lab/aesthetics" className={navLinkClass}>
-              {t('nav.aestheticsLab')}
-            </NavLink>
-            <NavLink to="/shares" className={navLinkClass}>
-              {t('nav.shares')}
-            </NavLink>
-            <NavLink to="/tv-devices" className={navLinkClass}>
-              {t('nav.tvDevices')}
-            </NavLink>
-            {/* Slice 93: staged (resumable) upload. */}
-            <NavLink to="/upload" className={navLinkClass}>
-              {t('nav.upload')}
-            </NavLink>
-            <NavLink to="/cloud-functions" className={navLinkClass}>
-              {t('nav.cloudFunctions')}
-            </NavLink>
-            <NavLink to="/private" className={navLinkClass}>
-              {t('nav.private')}
-            </NavLink>
-            <NavLink to="/trash" className={navLinkClass}>
-              {t('nav.trash')}
-            </NavLink>
-            {isAdmin && (
-              // Slice 47: only admins see the Admin entry. The backend
-              // still gates `/api/admin/*` independently — this is UX,
-              // not security.
-              <NavLink to="/admin" end className={navLinkClass}>
-                {t('nav.admin')}
-              </NavLink>
-            )}
-            {isAdmin && (
-              // Slice 81: admin-only server-side import.
-              <NavLink to="/admin/import" className={navLinkClass}>
-                {t('nav.import')}
-              </NavLink>
-            )}
-            {isAdmin && (
-              // Slice 90: admin-only background-jobs dashboard.
-              <NavLink to="/admin/jobs" className={navLinkClass}>
-                {t('nav.jobs')}
-              </NavLink>
-            )}
-            {isAdmin && (
-              // Admin-only user management (list/create/reset password/
-              // grant admin/enable-disable).
-              <NavLink to="/admin/users" className={navLinkClass}>
-                {t('nav.users')}
-              </NavLink>
-            )}
-          </nav>
-        </div>
-        <div className="user-info">
-          <LanguageSwitcher onSelect={handleLanguage} disabled={langBusy} />
-          {langError && (
-            <span className="language-switcher-error" role="alert">
-              {t('language.updateError')}
-            </span>
-          )}
-          <span aria-label={t('nav.signedInAs')}>{state.user.displayName}</span>
-          <span>({state.user.email})</span>
-          <NavLink to="/account" className="app-nav-link">
-            {t('nav.account')}
-          </NavLink>
-          <button type="button" className="logout" onClick={() => void logout()}>
-            {t('nav.signOut')}
-          </button>
+    <div className={`app-shell${collapsed ? ' app-shell--rail' : ''}`}>
+      <header className="app-topbar">
+        <button
+          ref={menuButtonRef}
+          type="button"
+          className="icon-button app-topbar__menu"
+          aria-label={t('nav.openMenu')}
+          aria-expanded={drawerOpen}
+          aria-haspopup="dialog"
+          data-testid="nav-menu-button"
+          onClick={() => setDrawerOpen(true)}
+        >
+          <Icon name="menu" size={20} />
+        </button>
+
+        <button
+          type="button"
+          className="icon-button app-topbar__rail-toggle"
+          aria-label={collapsed ? t('nav.expandNav') : t('nav.collapseNav')}
+          aria-pressed={collapsed}
+          data-testid="nav-rail-toggle"
+          onClick={toggleRail}
+        >
+          <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={20} />
+        </button>
+
+        <span className="app-brand app-topbar__brand">{t('app.name')}</span>
+
+        <div className="app-topbar__utility">
+          <UserMenu
+            displayName={state.user.displayName}
+            email={state.user.email}
+            onUserUpdated={(user) => updateUser(user as Parameters<typeof updateUser>[0])}
+            onSignOut={() => void logout()}
+          />
         </div>
       </header>
-      <main className={`app-main${mediaFullWidth ? ' app-main--media' : ''}`}>
-        <MediaWallLayoutContext.Provider value={setMediaFullWidth}>
-          <Outlet />
-        </MediaWallLayoutContext.Provider>
-      </main>
-    </>
-  );
-}
 
-function navLinkClass({ isActive }: { isActive: boolean }): string {
-  return isActive ? 'app-nav-link app-nav-link-active' : 'app-nav-link';
+      <div className="app-shell__body">
+        {/* Desktop rail. CSS hides it below the drawer breakpoint; the drawer
+            renders the same AppNav there. */}
+        <nav className="app-sidebar" aria-label={t('nav.primary')} data-testid="app-sidebar">
+          <AppNav isAdmin={isAdmin} collapsed={collapsed} />
+        </nav>
+
+        <main className={`app-main${mediaFullWidth ? ' app-main--media' : ''}`}>
+          <MediaWallLayoutContext.Provider value={setMediaFullWidth}>
+            <Outlet />
+          </MediaWallLayoutContext.Provider>
+        </main>
+      </div>
+
+      {drawerOpen && (
+        <NavDrawer isAdmin={isAdmin} onClose={closeDrawer} returnFocusRef={menuButtonRef} />
+      )}
+    </div>
+  );
 }

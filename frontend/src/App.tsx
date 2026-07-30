@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { I18nProvider } from './i18n';
+import { ThemeProvider } from './theme';
 import { AuthProvider } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { Layout } from './components/Layout';
@@ -35,6 +36,9 @@ import { BeautyLabUploadPage } from './pages/BeautyLabUploadPage';
 export function App() {
   return (
     <BrowserRouter>
+      {/* The theme is already painted by the bootstrap in index.html; this
+          provider takes ownership of the same value without changing it. */}
+      <ThemeProvider>
       <I18nProvider>
       <AuthProvider>
         <Routes>
@@ -113,6 +117,7 @@ export function App() {
         </Routes>
       </AuthProvider>
       </I18nProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

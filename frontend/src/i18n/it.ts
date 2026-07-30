@@ -28,7 +28,17 @@ const it = {
   'language.updateError': 'Impossibile aggiornare la lingua. Riprova.',
 
   // --- Primary navigation / app shell ---
+  'app.name': 'NanoCloud',
   'nav.primary': 'Principale',
+  'nav.groupMain': 'Principale',
+  'nav.groupMore': 'Altro',
+  'nav.groupAdmin': 'Amministrazione',
+  'nav.openMenu': 'Apri il menu di navigazione',
+  'nav.closeMenu': 'Chiudi il menu di navigazione',
+  'nav.menuLabel': 'Menu di navigazione',
+  'nav.collapseNav': 'Comprimi la navigazione',
+  'nav.expandNav': 'Espandi la navigazione',
+  'nav.userMenu': 'Menu utente',
   'nav.files': 'File',
   'nav.gallery': 'Galleria',
   'nav.videos': 'Video',
@@ -48,6 +58,12 @@ const it = {
   'nav.account': 'Account',
   'nav.signedInAs': 'Accesso effettuato come',
   'nav.signOut': 'Esci',
+
+  // --- Theme (appearance) ---
+  'theme.label': 'Tema',
+  'theme.dark': 'Scuro',
+  'theme.light': 'Chiaro',
+  'theme.system': 'Sistema',
 
   // --- Login ---
   'login.email': 'Email',
