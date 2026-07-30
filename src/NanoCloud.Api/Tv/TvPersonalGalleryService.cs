@@ -133,6 +133,8 @@ public sealed class TvPersonalGalleryService : ITvPersonalGalleryService
 
         var page = await _files.ListVideosPageAsync(
             ownerUserId, limit, cursor, filters, sort, direction, cancellationToken);
+        // ListVideosPageAsync is the shared web/TV projection source and already
+        // exposes rotation-aware DISPLAY dimensions.
         var items = page.Items.Select(v => new TvPersonalVideoItemDto(
             v.Id, v.Name, v.Width, v.Height, v.CreatedAt, v.DurationSeconds,
             v.VideoCodec, v.AudioCodec, v.HasAudio,
@@ -156,6 +158,8 @@ public sealed class TvPersonalGalleryService : ITvPersonalGalleryService
                 .Select(u => u.FileItemId)
                 .ToListAsync(cancellationToken)).ToHashSet();
 
+        // ImageItem already carries the same EXIF-aware DISPLAY dimensions used
+        // by the frontend Library/Album projection.
         return rows
             .Select(i => new TvPersonalGalleryItemDto(
                 i.Id,
