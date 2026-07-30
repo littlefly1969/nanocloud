@@ -16,6 +16,7 @@ using NanoCloud.Api.Ai.Onnx.Face;
 using NanoCloud.Api.Ai.Photos;
 using NanoCloud.Api.Ai.Resolution;
 using NanoCloud.Api.Ai.Video;
+using NanoCloud.Api.Ai.Video.Faces;
 using NanoCloud.Api.Domain.Ai;
 using NanoCloud.Api.Auth;
 using NanoCloud.Api.Data;
@@ -2180,6 +2181,13 @@ public static class CliEntryPoint
             services.Configure<NanoCloud.Api.Ai.Video.VideoVisualEmbeddingOptions>(
                 configuration.GetSection(
                     NanoCloud.Api.Ai.Video.VideoVisualEmbeddingOptions.SectionName));
+            // VFACE-01: same section the web host binds, so the worker that runs
+            // ai.videos.faces.backfill sees the same enable flag, analysis
+            // version and sampling/tracking caps (a divergence here would
+            // silently analyse at the wrong version, or not at all).
+            services.Configure<NanoCloud.Api.Ai.Video.Faces.VideoFaceAnalysisOptions>(
+                configuration.GetSection(
+                    NanoCloud.Api.Ai.Video.Faces.VideoFaceAnalysisOptions.SectionName));
             services.AddAiSubstrate();
 
             // Plates (Targhe): the worker runs the plates.analyze ALPR job, so the
@@ -2776,7 +2784,8 @@ public static class CliEntryPoint
         {
             stderr.WriteLine(
                 "ai video semantic: missing subcommand. One of: status, segments backfill, "
-                + "embeddings backfill, retry-failed segments, retry-failed embeddings.");
+                + "embeddings backfill, faces backfill, retry-failed segments, "
+                + "retry-failed embeddings, retry-failed faces.");
             return 64;
         }
 
@@ -2798,10 +2807,17 @@ public static class CliEntryPoint
             case "retry-failed" when rest.Length > 0 && rest[0] == "embeddings":
                 return await AiVideoSemanticEmbeddingsBackfillAsync(
                     rest[1..], services, stdout, stderr, forceFailedOnly: true);
+            case "faces" when rest.Length > 0 && rest[0] == "backfill":
+                return await AiVideoFacesBackfillAsync(
+                    rest[1..], services, stdout, stderr, forceFailedOnly: false);
+            case "retry-failed" when rest.Length > 0 && rest[0] == "faces":
+                return await AiVideoFacesBackfillAsync(
+                    rest[1..], services, stdout, stderr, forceFailedOnly: true);
             default:
                 stderr.WriteLine(
                     "ai video semantic: unknown subcommand. One of: status, segments backfill, "
-                    + "embeddings backfill, retry-failed segments, retry-failed embeddings.");
+                    + "embeddings backfill, faces backfill, retry-failed segments, "
+                    + "retry-failed embeddings, retry-failed faces.");
                 return 64;
         }
     }
@@ -3131,6 +3147,140 @@ public static class CliEntryPoint
             + $"{JobTypes.AiVideosEmbeddingsBackfill} ({job.Id:N}) "
             + $"profile={profile.Key} limit={(parsed.Limit?.ToString(CultureInfo.InvariantCulture) ?? "-")} "
             + $"segmentation_version={(parsed.SegmentationVersion?.ToString(CultureInfo.InvariantCulture) ?? "active")} "
+            + $"failed_only={parsed.FailedOnly} selected_targets={preview.Examined}.");
+        return 0;
+    }
+
+    // ---- subcommand: ai video semantic faces backfill / retry-failed -------
+    // VFACE-01. Deliberately shares the video-semantic option parsing (and adds
+    // --analysis-version), so the CLI, the worker payload and the scheduler all
+    // express the SAME bounded scope. It enqueues a job; it never analyses
+    // in-process and never touches People or any person identity.
+    internal static async Task<int> AiVideoFacesBackfillAsync(
+        string[] args,
+        IServiceProvider services,
+        TextWriter stdout,
+        TextWriter stderr,
+        bool forceFailedOnly)
+    {
+        var command = forceFailedOnly
+            ? "ai video semantic retry-failed faces"
+            : "ai video semantic faces backfill";
+        var profileKeyRaw = ReadOption(args, "--profile");
+        var parsed = ParseVideoSemanticOptions(command, args, stderr, forceFailedOnly);
+        if (parsed is null)
+        {
+            return 64;
+        }
+
+        int? analysisVersion = null;
+        var analysisVersionRaw = ReadOption(args, "--analysis-version");
+        if (analysisVersionRaw is not null)
+        {
+            if (!int.TryParse(analysisVersionRaw, out var v) || v <= 0)
+            {
+                stderr.WriteLine($"{command}: --analysis-version must be a positive integer.");
+                return 64;
+            }
+
+            analysisVersion = v;
+        }
+
+        var backfill = services.GetService<VideoFaceAnalysisBackfillService>();
+        var registry = services.GetService<IAiProfileRegistry>();
+        var resolver = services.GetService<IAiBackendResolver>();
+        var aiOptions = services.GetService<IOptions<AiOptions>>();
+        var queue = services.GetService<IJobQueue>();
+        var db = services.GetService<AppDbContext>();
+        if (backfill is null || registry is null || resolver is null || aiOptions is null
+            || queue is null || db is null)
+        {
+            stderr.WriteLine($"{command}: database is not configured. Set ConnectionStrings__Postgres and retry.");
+            return 78;
+        }
+
+        AiProfile? profile;
+        if (!string.IsNullOrWhiteSpace(profileKeyRaw))
+        {
+            profile = await registry.GetProfileByKeyAsync(profileKeyRaw!);
+            if (profile is null || profile.Capability != AiCapabilities.FaceEmbedding || !profile.Enabled)
+            {
+                stderr.WriteLine(
+                    $"{command}: --profile '{profileKeyRaw}' is not a known, enabled face profile.");
+                return 64;
+            }
+        }
+        else
+        {
+            // Same resolution order as the job handler: configured
+            // Ai:FaceProfileKey wins, else the capability default.
+            var configuredKey = aiOptions.Value.FaceProfileKey;
+            var effectiveKey = !string.IsNullOrWhiteSpace(configuredKey)
+                ? configuredKey
+                : (await resolver.GetCapabilityAvailabilityAsync(AiCapabilities.FaceEmbedding)).ProfileKey;
+            profile = string.IsNullOrWhiteSpace(effectiveKey)
+                ? null
+                : await registry.GetProfileByKeyAsync(effectiveKey!);
+            if (profile is null || !profile.Enabled)
+            {
+                stdout.WriteLine($"{command}: no usable active face profile. No job enqueued.");
+                return 0;
+            }
+        }
+
+        // ALWAYS preview first (a pure count query, no writes).
+        var previewOptions = new VideoFaceAnalysisBackfillOptions
+        {
+            Limit = parsed.Limit,
+            FailedOnly = parsed.FailedOnly,
+            DryRun = true,
+            TargetBlobObjectId = parsed.BlobObjectId,
+            SegmentationVersion = parsed.SegmentationVersion,
+            AnalysisVersion = analysisVersion,
+        };
+        var preview = await backfill.RunAsync(detector: null, embedder: null, profile, previewOptions);
+
+        if (parsed.DryRun)
+        {
+            stdout.WriteLine(
+                $"{command} (dry-run): profile={profile.Key} {preview.Examined} video blob(s) would be selected. "
+                + "No FFmpeg extraction, no inference, no writes, no job enqueued.");
+            return 0;
+        }
+
+        if (preview.Examined == 0)
+        {
+            stdout.WriteLine($"{command}: profile={profile.Key} no eligible work selected. No job enqueued.");
+            return 0;
+        }
+
+        var payload = new VideoFaceAnalysisJobPayload(
+            BlobObjectId: parsed.BlobObjectId,
+            SegmentationVersion: parsed.SegmentationVersion,
+            AnalysisVersion: analysisVersion,
+            DetectionProfileKey: profile.Key,
+            EmbeddingProfileKey: profile.Key,
+            Limit: parsed.Limit,
+            FailedOnly: parsed.FailedOnly,
+            DryRun: false);
+        var idempotencyKey =
+            $"{JobTypes.AiVideosFacesBackfill}:{profile.Key}:"
+            + $"{parsed.SegmentationVersion?.ToString(CultureInfo.InvariantCulture) ?? "active"}:"
+            + $"{analysisVersion?.ToString(CultureInfo.InvariantCulture) ?? "active"}:"
+            + $"{parsed.FailedOnly}:{parsed.BlobObjectId?.ToString("N") ?? "all"}";
+
+        var alreadyQueued = await db.BackgroundJobs.AsNoTracking().AnyAsync(j =>
+            j.IdempotencyKey == idempotencyKey
+            && (j.Status == JobStatuses.Queued || j.Status == JobStatuses.Running));
+        var job = await queue.EnqueueAsync(
+            JobTypes.AiVideosFacesBackfill, payload, idempotencyKey: idempotencyKey);
+
+        stdout.WriteLine(
+            $"{command}: {(alreadyQueued ? "matched existing" : "queued")} "
+            + $"{JobTypes.AiVideosFacesBackfill} ({job.Id:N}) "
+            + $"profile={profile.Key} limit={(parsed.Limit?.ToString(CultureInfo.InvariantCulture) ?? "-")} "
+            + $"segmentation_version={(parsed.SegmentationVersion?.ToString(CultureInfo.InvariantCulture) ?? "active")} "
+            + $"analysis_version={(analysisVersion?.ToString(CultureInfo.InvariantCulture) ?? "active")} "
             + $"failed_only={parsed.FailedOnly} selected_targets={preview.Examined}.");
         return 0;
     }

@@ -163,12 +163,30 @@ public static class AiServiceRegistration
         // DISABLED by default, so registration alone does nothing.
         services.AddSingleton<IValidateOptions<Video.VideoVisualEmbeddingOptions>,
             Video.VideoVisualEmbeddingOptionsValidator>();
-        services.AddScoped<Video.IVideoSemanticFrameExtractor, Video.FfmpegVideoSemanticFrameExtractor>();
+        services.AddScoped<Video.FfmpegVideoSemanticFrameExtractor>();
+        services.AddScoped<Video.IVideoSemanticFrameExtractor>(
+            sp => sp.GetRequiredService<Video.FfmpegVideoSemanticFrameExtractor>());
+        // VFACE-01 consumes the STREAMING form of the very same extractor, so
+        // staging/timeout/cleanup can never diverge between the two callers.
+        services.AddScoped<Video.IVideoSemanticFrameStreamExtractor>(
+            sp => sp.GetRequiredService<Video.FfmpegVideoSemanticFrameExtractor>());
         services.AddScoped<Video.VideoSemanticSampleVectorIndexService>();
         services.AddScoped<Video.VideoSemanticEmbeddingService>();
         services.AddScoped<Video.VideoSemanticEmbeddingBackfillService>();
         services.AddScoped<Video.IVideoSemanticEmbeddingScheduler, Video.VideoSemanticEmbeddingScheduler>();
         services.AddScoped<IJobHandler, Video.AiVideosEmbeddingsBackfillJobHandler>();
+
+        // VFACE-01: canonical video face TRACKS. Same host-parity rules as
+        // VSEM-01/02: the graph and the options VALIDATOR live here; each host
+        // binds "Ai:VideoFaceAnalysis" itself. DISABLED by default, so
+        // registration alone does nothing. Independent of the VSEM-02 embedding
+        // graph — neither capability waits for the other.
+        services.AddSingleton<IValidateOptions<Video.Faces.VideoFaceAnalysisOptions>,
+            Video.Faces.VideoFaceAnalysisOptionsValidator>();
+        services.AddScoped<Video.Faces.VideoFaceAnalysisService>();
+        services.AddScoped<Video.Faces.VideoFaceAnalysisBackfillService>();
+        services.AddScoped<Video.Faces.IVideoFaceAnalysisScheduler, Video.Faces.VideoFaceAnalysisScheduler>();
+        services.AddScoped<IJobHandler, Video.Faces.AiVideosFacesBackfillJobHandler>();
 
         // VSEM-04: read-only operational diagnostics over the VSEM-01/02
         // substrate above (segmentation + embedding + pgvector coverage). No

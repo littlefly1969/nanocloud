@@ -673,6 +673,12 @@ builder.Services.Configure<NanoCloud.Api.Ai.Video.VideoVisualEmbeddingOptions>(
     builder.Configuration.GetSection(
         NanoCloud.Api.Ai.Video.VideoVisualEmbeddingOptions.SectionName));
 
+// VFACE-01: canonical video face tracks. Same parity rule — the CLI/worker host
+// binds the identical section; disabled by default.
+builder.Services.Configure<NanoCloud.Api.Ai.Video.Faces.VideoFaceAnalysisOptions>(
+    builder.Configuration.GetSection(
+        NanoCloud.Api.Ai.Video.Faces.VideoFaceAnalysisOptions.SectionName));
+
 builder.Services.Configure<BlobStorageOptions>(
     builder.Configuration.GetSection(BlobStorageOptions.SectionName));
 builder.Services.Configure<ImageProcessingOptions>(

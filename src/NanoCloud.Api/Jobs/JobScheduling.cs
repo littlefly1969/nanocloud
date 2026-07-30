@@ -75,6 +75,9 @@ public static class JobScheduling
         JobTypes.AiVideosSegmentsBackfill => Compute,
         // Video sample embedding is inference work — same lowest band.
         JobTypes.AiVideosEmbeddingsBackfill => Compute,
+        // Video face analysis extracts hundreds of frames and runs two models
+        // over each — same lowest band, and it must yield just as readily.
+        JobTypes.AiVideosFacesBackfill => Compute,
         // Plate ALPR is CPU/ML work — lowest band, yields to everything.
         JobTypes.PlatesAnalyze => Compute,
         // HumanAesExpert analysis is CPU/ML work — lowest band, yields to all.

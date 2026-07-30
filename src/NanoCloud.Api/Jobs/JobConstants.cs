@@ -70,6 +70,14 @@ public static class JobTypes
     // and an optional segmentation version.
     public const string AiVideosEmbeddingsBackfill = "ai.videos.embeddings.backfill";
 
+    // VFACE-01: canonical video face TRACKS (bounded temporal sampling, face
+    // detection + recognition, deterministic association). Scheduled only AFTER a
+    // manifest has COMPLETED, and independent of VSEM-02 visual embeddings. The
+    // payload carries only flags, optional profile stable keys, an optional blob
+    // id and optional segmentation/analysis versions. Evidence only — no person
+    // identity is produced or representable.
+    public const string AiVideosFacesBackfill = "ai.videos.faces.backfill";
+
     // Plates (Targhe) ALPR: analyze ONE owner-private PlateImage (detect plates +
     // OCR). One-shot, Compute band. Separate from the AI face substrate — its own
     // model profile/config (Plates:Alpr), no People/Face identity. The payload

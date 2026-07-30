@@ -26,15 +26,18 @@ public sealed class VideoSemanticSegmentationBackfillService
     private readonly AppDbContext _db;
     private readonly VideoSemanticSegmentationService _segmentation;
     private readonly IVideoSemanticEmbeddingScheduler? _embeddingScheduler;
+    private readonly Faces.IVideoFaceAnalysisScheduler? _faceScheduler;
 
     public VideoSemanticSegmentationBackfillService(
         AppDbContext db,
         VideoSemanticSegmentationService segmentation,
-        IVideoSemanticEmbeddingScheduler? embeddingScheduler = null)
+        IVideoSemanticEmbeddingScheduler? embeddingScheduler = null,
+        Faces.IVideoFaceAnalysisScheduler? faceScheduler = null)
     {
         _db = db;
         _segmentation = segmentation;
         _embeddingScheduler = embeddingScheduler;
+        _faceScheduler = faceScheduler;
     }
 
     public async Task<VideoSemanticBackfillResult> RunAsync(
@@ -119,6 +122,18 @@ public sealed class VideoSemanticSegmentationBackfillService
                         if (_embeddingScheduler is not null)
                         {
                             await _embeddingScheduler.TryScheduleForBlobAsync(
+                                blobId, version, cancellationToken);
+                        }
+
+                        // VFACE-01 chaining, on the SAME trigger but on an
+                        // INDEPENDENT axis: face analysis needs the temporal
+                        // manifest only, never the visual embeddings. Its own
+                        // scheduler gates on its own capability flag and face
+                        // profile, and a scheduling failure never affects this
+                        // outcome or the embedding scheduling above.
+                        if (_faceScheduler is not null)
+                        {
+                            await _faceScheduler.TryScheduleForBlobAsync(
                                 blobId, version, cancellationToken);
                         }
 
