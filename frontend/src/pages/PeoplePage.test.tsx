@@ -271,3 +271,37 @@ it('renders the admin Face AI settings panel in the Settings tab', async () => {
   expect(await screen.findByText(/pgvector kNN/)).toBeTruthy();
   expect(screen.getByText(/ef_search:/)).toBeTruthy();
 });
+
+// ---- VFACE-02: faces-in-videos review tab ---------------------------------
+
+it('opens the faces-in-videos tab and reviews a track', async () => {
+  renderPeople(false, {
+    'GET /api/people/video-tracks/undecided': () => jsonResponse({
+      items: [{
+        trackId: 't-1',
+        fileItemId: 'file-9',
+        name: 'clip.mp4',
+        startMilliseconds: 65_000,
+        endMilliseconds: 92_000,
+        representativeMilliseconds: 78_000,
+        detectionCount: 12,
+        qualityScore: 0.62,
+      }],
+      hasMore: false,
+    }),
+    'GET /api/people/video-tracks/t-1/suggestions': () => jsonResponse({
+      threshold: 0.4,
+      items: [{ personId: 'p-1', name: 'Alice', similarity: 0.88, supportingEvidenceCount: 3 }],
+      unavailableReason: null,
+    }),
+    'POST /api/people/video-tracks/t-1/assign': () => emptyResponse(204),
+  });
+
+  await userEvent.click(await screen.findByRole('button', { name: 'Volti nei video' }));
+
+  expect(await screen.findByText('clip.mp4')).toBeTruthy();
+  expect(await screen.findByText('1:05 – 1:32')).toBeTruthy();
+
+  await userEvent.click(await screen.findByRole('button', { name: /Conferma Alice/ }));
+  await waitFor(() => expect(screen.queryByText('clip.mp4')).toBeNull());
+});

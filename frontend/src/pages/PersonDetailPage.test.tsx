@@ -19,6 +19,10 @@ function person(name: string): MockHandler {
 function photos(): MockHandler {
   return () => jsonResponse([{ fileItemId: 'file-1', name: 'a.png', faces: [{ faceId: 'f-1', box }] }]);
 }
+// VFACE-02: the detail page also loads confirmed VIDEO results.
+function videos(items: unknown[] = []): MockHandler {
+  return () => jsonResponse(items);
+}
 function similar(available: boolean): MockHandler {
   return () =>
     jsonResponse({
@@ -49,6 +53,7 @@ it('shows the person, their photos, and similar faces', async () => {
   renderDetail({
     'GET /api/people/p-1': person('Alice'),
     'GET /api/people/p-1/photos': photos(),
+    'GET /api/people/p-1/videos': videos(),
     'GET /api/people/p-1/similar-faces': similar(true),
   });
   expect(await screen.findByRole('heading', { name: 'Alice' })).toBeTruthy();
@@ -61,6 +66,7 @@ it('renames the person', async () => {
   const mock = installFetchMock({
     'GET /api/people/p-1': person('Alice'),
     'GET /api/people/p-1/photos': photos(),
+    'GET /api/people/p-1/videos': videos(),
     'GET /api/people/p-1/similar-faces': similar(true),
     'PUT /api/people/p-1': person('Alice R'),
   });
@@ -85,6 +91,7 @@ it('shows the unavailable state when face search is not available', async () => 
   renderDetail({
     'GET /api/people/p-1': person('Alice'),
     'GET /api/people/p-1/photos': photos(),
+    'GET /api/people/p-1/videos': videos(),
     'GET /api/people/p-1/similar-faces': similar(false),
   });
   expect(await screen.findByText('Ricerca volti non disponibile in questo ambiente.')).toBeTruthy();
@@ -94,6 +101,7 @@ it('refetches similar faces when the threshold changes', async () => {
   const mock = installFetchMock({
     'GET /api/people/p-1': person('Alice'),
     'GET /api/people/p-1/photos': photos(),
+    'GET /api/people/p-1/videos': videos(),
     'GET /api/people/p-1/similar-faces': similar(true),
   });
   render(
@@ -122,6 +130,7 @@ it('adds a similar face to the person', async () => {
   const mock = installFetchMock({
     'GET /api/people/p-1': person('Alice'),
     'GET /api/people/p-1/photos': photos(),
+    'GET /api/people/p-1/videos': videos(),
     'GET /api/people/p-1/similar-faces': similar(true),
     'POST /api/people/p-1/faces': () => emptyResponse(),
   });
@@ -139,4 +148,99 @@ it('adds a similar face to the person', async () => {
   await waitFor(() =>
     expect(mock.calls.some((c) => c.method === 'POST' && c.url.endsWith('/api/people/p-1/faces'))).toBe(true),
   );
+});
+
+// ---- VFACE-02: confirmed video results ------------------------------------
+
+const videoMatch = (start: number, end: number, rep: number) => ({
+  evidenceType: 'person',
+  startMilliseconds: start,
+  endMilliseconds: end,
+  representativeMilliseconds: rep,
+});
+
+it('shows confirmed videos with their temporal interval', async () => {
+  renderDetail({
+    'GET /api/people/p-1': person('Alice'),
+    'GET /api/people/p-1/photos': photos(),
+    'GET /api/people/p-1/similar-faces': similar(false),
+    'GET /api/people/p-1/videos': videos([{
+      fileItemId: 'file-9',
+      name: 'clip.mp4',
+      bestMatch: videoMatch(65_000, 92_000, 78_000),
+      additionalMatches: [videoMatch(5_000, 7_000, 6_000)],
+    }]),
+  });
+
+  expect(await screen.findByText('Video (1)')).toBeTruthy();
+  expect(await screen.findByText('clip.mp4')).toBeTruthy();
+  // The interval reads as a video position, not a date.
+  expect(await screen.findByText('1:05 – 1:32')).toBeTruthy();
+  // The additional interval is offered as its own jump target.
+  expect(await screen.findByRole('button', { name: '0:05 – 0:07' })).toBeTruthy();
+});
+
+it('opens the player at the representative timestamp of the clicked match', async () => {
+  renderDetail({
+    'GET /api/people/p-1': person('Alice'),
+    'GET /api/people/p-1/photos': photos(),
+    'GET /api/people/p-1/similar-faces': similar(false),
+    'GET /api/people/p-1/videos': videos([{
+      fileItemId: 'file-9',
+      name: 'clip.mp4',
+      bestMatch: videoMatch(65_000, 92_000, 78_000),
+      additionalMatches: [],
+    }]),
+    'GET /api/files/file-9/metadata': () => jsonResponse({}),
+  });
+
+  const poster = await screen.findByRole('button', { name: /clip\.mp4.*1:05/ });
+  fireEvent.click(poster);
+
+  // The existing viewer opens; the video element carries the media source for
+  // the clicked file (the seek itself lives in HlsVideoPlayer).
+  await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy());
+});
+
+it('shows an empty state when no video is confirmed', async () => {
+  renderDetail({
+    'GET /api/people/p-1': person('Alice'),
+    'GET /api/people/p-1/photos': photos(),
+    'GET /api/people/p-1/similar-faces': similar(false),
+    'GET /api/people/p-1/videos': videos([]),
+  });
+
+  expect(await screen.findByText('Video (0)')).toBeTruthy();
+  expect(await screen.findByText('Nessun video ancora confermato per questa persona.')).toBeTruthy();
+});
+
+it('shows a retryable error when videos fail to load', async () => {
+  renderDetail({
+    'GET /api/people/p-1': person('Alice'),
+    'GET /api/people/p-1/photos': photos(),
+    'GET /api/people/p-1/similar-faces': similar(false),
+    'GET /api/people/p-1/videos': () => new Response('boom', { status: 500 }),
+  });
+
+  expect(await screen.findByText(/Impossibile caricare i video/)).toBeTruthy();
+});
+
+it('renders a vertical video poster without cropping it', async () => {
+  renderDetail({
+    'GET /api/people/p-1': person('Alice'),
+    'GET /api/people/p-1/photos': photos(),
+    'GET /api/people/p-1/similar-faces': similar(false),
+    'GET /api/people/p-1/videos': videos([{
+      fileItemId: 'file-tall',
+      name: 'portrait.mp4',
+      bestMatch: videoMatch(1_000, 2_000, 1_500),
+      additionalMatches: [],
+    }]),
+  });
+
+  await screen.findByText('portrait.mp4');
+  const poster = document.querySelector('.person-video-poster img') as HTMLImageElement | null;
+  expect(poster).toBeTruthy();
+  // Source-aspect tiles: the poster is contained, never cropped to a square.
+  expect(poster!.getAttribute('src')).toBe('/api/files/file-tall/poster');
 });

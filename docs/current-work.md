@@ -74,4 +74,51 @@ Decisions worth remembering:
 - Tracks are evidence only. No `OwnerUserId`, `FileItemId`, `PersonId` or person
   name is stored, and cross-track / cross-video clustering is VFACE-02.
 
-Next: VFACE-02 (owner-level identity decisions over these canonical tracks).
+## Active slice — VFACE-02 owner-level video identity
+
+Branch `feat/video-face-people`, **stacked on `feat/video-face-tracks`** (`f325e8c`),
+not on `main`. Not pushed, not merged, not deployed; no production backfill and
+no janitor run.
+
+Connects canonical `VideoFaceTrack` evidence to the existing owner-level People
+model:
+
+```text
+canonical blob-level track → owner suggestion → explicit user decision
+                           → person videos with temporal intervals
+```
+
+- New table `video_face_track_person_decisions` (migration
+  `AddVideoFaceTrackPersonDecisions`), one row per `(OwnerUserId,
+  VideoFaceTrackId)`; a missing row means undecided. **No `PersonId` was added
+  to `VideoFaceTrack`.**
+- `people` gained an alternate key `(Id, OwnerUserId)` so decisions carry a
+  COMPOSITE foreign key — a cross-owner person assignment is unrepresentable,
+  not merely rejected.
+- `VideoFaceTrackIdentitySuggestionService`: owner-scoped, profile-compatible,
+  bounded top-K over the owner's own confirmed evidence (static faces + already
+  confirmed tracks). Exact in-process cosine, so no second vector index and no
+  pgvector dependency. Threshold is the existing
+  `ai.face.candidateSimilarityThreshold`.
+- `VideoFaceTrackPeopleService`: assign / ignore / clear, the undecided review
+  queue, person video results, and co-presence.
+- API under `/api/people/video-tracks/...` plus `/api/people/{id}/videos` and
+  `/api/people/{id}/co-present/{otherId}`. `/api/people/{id}/photos` unchanged.
+- Frontend: a "Faces in videos" People tab (review + suggestions + assign +
+  ignore) and a video section on the person detail page that opens the existing
+  media viewer at the representative timestamp.
+
+Decisions worth remembering:
+
+- Nothing automated writes a decision. Suggestions are advisory and are never
+  persisted; there is no auto-assignment job and no way to create a person from
+  a track.
+- Co-presence requires temporal overlap **within one canonical analysis**, using
+  half-open intervals with a one-sampling-interval tolerance (read from
+  `Ai:VideoFaceAnalysis:FrameIntervalMilliseconds`) — appearing somewhere in the
+  same long video is not co-presence.
+- Deep EF compositions over the visibility predicate do not translate on SQLite;
+  the person-media path deliberately uses two flat queries instead.
+
+Next: production enablement planning for VFACE-01/02 (still flag-off), and real
+footage validation of tracker quality and suggestion accuracy.
