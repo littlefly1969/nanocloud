@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NanoCloud.Api.Ai;
@@ -36,13 +37,40 @@ internal static class VideoFacePeopleTestHarness
     }
 
     public static SqliteWebApplicationFactory Factory()
+        => Factory(new Dictionary<string, string?> { ["Ai:Enabled"] = "true" });
+
+    public static SqliteWebApplicationFactory Factory(Dictionary<string, string?> settings)
     {
-        var factory = new SqliteWebApplicationFactory(
-            new Dictionary<string, string?> { ["Ai:Enabled"] = "true" },
-            poolHost: true);
+        var factory = new SqliteWebApplicationFactory(settings, poolHost: true);
         factory.EnsureDatabaseCreated();
         return factory;
     }
+
+    // VFACE-02C: co-presence must be stable across sampling configuration, so its
+    // tests need to vary the very setting the answer must NOT depend on.
+    public static SqliteWebApplicationFactory FactoryWithFrameInterval(int frameIntervalMilliseconds)
+        => Factory(new Dictionary<string, string?>
+        {
+            ["Ai:Enabled"] = "true",
+            ["Ai:VideoFaceAnalysis:FrameIntervalMilliseconds"] =
+                frameIntervalMilliseconds.ToString(CultureInfo.InvariantCulture),
+        });
+
+    // VFACE-02C: generation disabled, everything else untouched. Persisted tracks
+    // and decisions must stay fully readable and decidable.
+    public static SqliteWebApplicationFactory FactoryWithAnalysisDisabled()
+        => Factory(new Dictionary<string, string?>
+        {
+            ["Ai:Enabled"] = "true",
+            ["Ai:VideoFaceAnalysis:Enabled"] = "false",
+        });
+
+    public static SqliteWebApplicationFactory FactoryWithAnalysisEnabled()
+        => Factory(new Dictionary<string, string?>
+        {
+            ["Ai:Enabled"] = "true",
+            ["Ai:VideoFaceAnalysis:Enabled"] = "true",
+        });
 
     public static async Task<Guid> SeedProfileAsync(SqliteWebApplicationFactory factory)
     {
@@ -216,6 +244,58 @@ internal static class VideoFacePeopleTestHarness
         db.People.Add(person);
         await db.SaveChangesAsync();
         return person.Id;
+    }
+
+    // A SECOND analysis of an existing manifest — another version, or another
+    // face profile. Co-presence must never compare across these.
+    public static async Task<Guid> AddAnalysisVersionAsync(
+        SqliteWebApplicationFactory factory, Guid indexId, Guid profileId, int version)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var analysis = new VideoFaceAnalysisStatus
+        {
+            Id = Guid.NewGuid(), VideoSemanticIndexId = indexId, AnalysisVersion = version,
+            DetectionProfileId = profileId, EmbeddingProfileId = profileId,
+            Status = VideoFaceAnalysisStatuses.Completed,
+            PlannedFrameCount = 10, ProcessedFrameCount = 10, TrackCount = 1,
+            AttemptCount = 1, CreatedAt = DateTime.UtcNow, CompletedAt = DateTime.UtcNow,
+        };
+        db.VideoFaceAnalysisStatuses.Add(analysis);
+        await db.SaveChangesAsync();
+        return analysis.Id;
+    }
+
+    public static async Task<Guid> AddFaceProfileAsync(SqliteWebApplicationFactory factory)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var model = new AiModel
+        {
+            Id = Guid.NewGuid(), Key = $"m-{Guid.NewGuid():N}", Provider = AiProviders.Deterministic,
+            Capability = AiCapabilities.FaceEmbedding, Modality = AiModalities.Face,
+            Dimension = Dim, DistanceMetric = "cosine", Enabled = true, CreatedAt = DateTime.UtcNow,
+        };
+        var profile = new AiProfile
+        {
+            Id = Guid.NewGuid(), Key = $"p-{Guid.NewGuid():N}", AiModelId = model.Id,
+            Capability = AiCapabilities.FaceEmbedding, Modality = AiModalities.Face,
+            Dimension = Dim, DistanceMetric = "cosine", Enabled = true, CreatedAt = DateTime.UtcNow,
+        };
+        db.AiModels.Add(model);
+        db.AiProfiles.Add(profile);
+        await db.SaveChangesAsync();
+        return profile.Id;
+    }
+
+    public static async Task MoveToVaultAsync(
+        SqliteWebApplicationFactory factory, Guid fileId, Guid vaultId)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var file = await db.FileItems.IgnoreQueryFilters().SingleAsync(f => f.Id == fileId);
+        file.PrivateVaultId = vaultId;
+        await db.SaveChangesAsync();
     }
 
     public static async Task<Guid> CreateVaultAsync(SqliteWebApplicationFactory factory, Guid ownerUserId)
