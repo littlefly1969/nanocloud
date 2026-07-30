@@ -102,6 +102,15 @@ public class AppDbContext : DbContext
     public DbSet<VideoSemanticEmbeddingStatus> VideoSemanticEmbeddingStatuses
         => Set<VideoSemanticEmbeddingStatus>();
 
+    // VFACE-01: canonical, versioned face TRACKS of a video blob plus the
+    // aggregate per-(manifest, analysis version, detection profile, embedding
+    // profile) readiness. Blob-level and owner-free like the manifest itself:
+    // pure evidence, never identity — no OwnerUserId, FileItemId, PersonId or
+    // person name is stored here.
+    public DbSet<VideoFaceAnalysisStatus> VideoFaceAnalysisStatuses
+        => Set<VideoFaceAnalysisStatus>();
+    public DbSet<VideoFaceTrack> VideoFaceTracks => Set<VideoFaceTrack>();
+
     // Owner-private Plates (Targhe) surface. Segregated from Files/Gallery/
     // People/Party/TV/Private Vault: a standalone table no library query joins.
     public DbSet<PlateImage> PlateImages => Set<PlateImage>();
