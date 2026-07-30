@@ -113,10 +113,18 @@ Decisions worth remembering:
 - Nothing automated writes a decision. Suggestions are advisory and are never
   persisted; there is no auto-assignment job and no way to create a person from
   a track.
-- Co-presence requires temporal overlap **within one canonical analysis**, using
-  half-open intervals with a one-sampling-interval tolerance (read from
-  `Ai:VideoFaceAnalysis:FrameIntervalMilliseconds`) — appearing somewhere in the
-  same long video is not co-presence.
+- Co-presence requires temporal overlap **within one canonical analysis**.
+  VFACE-02C made the predicate strict half-open and configuration-free:
+  `A.Start < B.End && B.Start < A.End`. Adjacent intervals are not co-present;
+  a 1 ms genuine overlap is. There is deliberately **no** tolerance derived from
+  `FrameIntervalMilliseconds` — a query about persisted evidence must not change
+  answer when an operator retunes sampling.
+- `Ai:VideoFaceAnalysis:Enabled` governs **generation only** (post-segmentation
+  scheduling + backfill execution). It is not a kill switch: with it off, every
+  persisted track, decision, person-video result and co-presence answer stays
+  readable, and assign/ignore/clear keep working. `VideoFaceTrackPeopleService`
+  injects neither the options nor the flag, so both dependencies are
+  structurally impossible rather than merely absent.
 - Deep EF compositions over the visibility predicate do not translate on SQLite;
   the person-media path deliberately uses two flat queries instead.
 

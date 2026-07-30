@@ -1,8 +1,6 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using NanoCloud.Api.Ai.Video.Faces;
 using NanoCloud.Api.Data;
 using NanoCloud.Api.Domain.Ai;
 
@@ -25,6 +23,16 @@ namespace NanoCloud.Api.Ai.Faces.Video;
 // DTOs carry logical FileItem ids, names, millisecond intervals and person names
 // only — never a track id outside the authenticated review surface, and never a
 // BlobObjectId, embedding, profile id, storage key or path.
+//
+// VFACE-02C — TWO DELIBERATE NON-DEPENDENCIES:
+//   * VideoFaceAnalysisOptions is NOT injected. Every answer here is a function
+//     of persisted evidence alone, so retuning sampling can never change what a
+//     historical query returns.
+//   * Ai:VideoFaceAnalysis:Enabled is NOT consulted. That flag governs
+//     GENERATION (post-segmentation scheduling and backfill execution); it is not
+//     a kill switch for People data. Turning it off stops new analysis and leaves
+//     every already-persisted track, decision, video result and co-presence
+//     answer fully readable and still decidable.
 public sealed class VideoFaceTrackPeopleService
 {
     public const int DefaultPageSize = 50;
@@ -36,18 +44,15 @@ public sealed class VideoFaceTrackPeopleService
     public const int MaxAdditionalMatches = 4;
 
     private readonly AppDbContext _db;
-    private readonly IOptions<VideoFaceAnalysisOptions> _analysisOptions;
     private readonly TimeProvider _clock;
     private readonly ILogger<VideoFaceTrackPeopleService> _logger;
 
     public VideoFaceTrackPeopleService(
         AppDbContext db,
-        IOptions<VideoFaceAnalysisOptions> analysisOptions,
         TimeProvider clock,
         ILogger<VideoFaceTrackPeopleService> logger)
     {
         _db = db;
-        _analysisOptions = analysisOptions;
         _clock = clock;
         _logger = logger;
     }
@@ -260,11 +265,18 @@ public sealed class VideoFaceTrackPeopleService
     // OVERLAP IN TIME within the same canonical analysis. Two people who merely
     // appear somewhere in the same long video are not co-present.
     //
-    // Intervals are treated as half-open [Start, End + tolerance), where the
-    // tolerance is ONE sampling interval. That is not a fudge factor: a track's
-    // End is the timestamp of its last sampled detection, so a person still on
-    // screen between two samples would otherwise read as having left. The
-    // tolerance restores exactly the sampling granularity and nothing more.
+    // Intervals are STRICT HALF-OPEN [Start, End): they overlap iff
+    //   A.Start < B.End && B.Start < A.End
+    // so adjacent intervals ([0,1000) and [1000,2000)) are NOT co-present while a
+    // one-millisecond genuine overlap is.
+    //
+    // VFACE-02C: no tolerance derived from runtime sampling configuration. An
+    // earlier version widened each interval by one FrameIntervalMilliseconds,
+    // which made a HISTORICAL query answer change whenever an operator retuned
+    // sampling — even though the persisted tracks were byte-identical. Co-presence
+    // is a question about stored evidence, so it must depend only on stored
+    // evidence. That is why this service no longer reads VideoFaceAnalysisOptions
+    // at all: the dependency is now structurally impossible, not merely unused.
     //
     // Null = either person is not the caller's; the same person twice is
     // rejected rather than trivially "co-present with themselves".
@@ -291,18 +303,22 @@ public sealed class VideoFaceTrackPeopleService
         var confirmed = await LoadConfirmedTracksAsync(
             ownerUserId, new[] { personId, otherPersonId }, cancellationToken);
 
-        var tolerance = Math.Max(0, _analysisOptions.Value.FrameIntervalMilliseconds);
         var overlapping = new List<ConfirmedTrackRow>();
 
-        // Co-presence is defined WITHIN one canonical analysis: the two tracks
-        // must describe the same video timeline.
+        // Co-presence is defined WITHIN one canonical analysis. Grouping by
+        // AnalysisId is what enforces that: a VideoFaceAnalysisStatus row is
+        // unique per (manifest, analysis version, detection profile, embedding
+        // profile), so two tracks can only be compared when they describe the
+        // same blob, the same manifest, the same version AND the same profile
+        // pair. Cross-owner comparison is already impossible — the confirmed set
+        // was loaded owner-scoped.
         foreach (var group in confirmed.GroupBy(t => t.AnalysisId))
         {
             var mine = group.Where(t => t.PersonId == personId).ToList();
             var theirs = group.Where(t => t.PersonId == otherPersonId).ToList();
             foreach (var a in mine)
             {
-                if (theirs.Any(b => Overlaps(a, b, tolerance)))
+                if (theirs.Any(b => Overlaps(a, b)))
                 {
                     overlapping.Add(a);
                 }
@@ -313,17 +329,17 @@ public sealed class VideoFaceTrackPeopleService
 
         _logger.LogInformation(
             "video-people: operation={Operation} owner={OwnerUserId} results={ResultCount} "
-            + "tolerance-ms={ToleranceMs} elapsed-ms={ElapsedMs}",
-            "video.people.co-presence", ownerUserId, results.Count, tolerance,
+            + "elapsed-ms={ElapsedMs}",
+            "video.people.co-presence", ownerUserId, results.Count,
             (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds);
         return results;
     }
 
-    // Half-open overlap with a one-sampling-interval tolerance on each end.
-    internal static bool Overlaps(
-        ConfirmedTrackRow a, ConfirmedTrackRow b, long toleranceMilliseconds)
-        => a.StartMilliseconds < b.EndMilliseconds + toleranceMilliseconds
-            && b.StartMilliseconds < a.EndMilliseconds + toleranceMilliseconds;
+    // STRICT half-open overlap of [Start, End) intervals. Configuration-free and
+    // therefore stable for the whole life of the persisted evidence.
+    internal static bool Overlaps(ConfirmedTrackRow a, ConfirmedTrackRow b)
+        => a.StartMilliseconds < b.EndMilliseconds
+            && b.StartMilliseconds < a.EndMilliseconds;
 
     // ---- internals ---------------------------------------------------------
 
