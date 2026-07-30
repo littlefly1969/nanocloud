@@ -16,13 +16,14 @@ import { FaceContextViewer } from '../components/people/FaceContextViewer';
 import { FaceAISettings } from '../components/people/FaceAISettings';
 import { UnassignedFacesTab } from '../components/people/UnassignedFacesTab';
 import { IgnoredFacesTab } from '../components/people/IgnoredFacesTab';
+import { VideoFaceReviewTab } from '../components/people/VideoFaceReviewTab';
 import { ClusterAssignDialog } from '../components/people/ClusterAssignDialog';
 import { useI18n } from '../i18n';
 
-type Tab = 'suggested' | 'people' | 'unassigned' | 'review' | 'ignored' | 'settings';
+type Tab = 'suggested' | 'people' | 'unassigned' | 'review' | 'videoFaces' | 'ignored' | 'settings';
 
 // Tabs that load their own data inside their component (not via `reload`).
-const SELF_LOADING_TABS: Tab[] = ['settings', 'unassigned', 'ignored'];
+const SELF_LOADING_TABS: Tab[] = ['settings', 'unassigned', 'ignored', 'videoFaces'];
 
 // Owner-private People page (Persone). Suggested groups → name a person; People →
 // browse; Review → low-confidence groups; Settings → admin thresholds. No raw
@@ -87,6 +88,7 @@ export function PeoplePage() {
         <TabButton active={tab === 'people'} onClick={() => setTab('people')}>{t('people.tabPeople')}</TabButton>
         <TabButton active={tab === 'unassigned'} onClick={() => setTab('unassigned')}>{t('people.tabUnassigned')}</TabButton>
         <TabButton active={tab === 'review'} onClick={() => setTab('review')}>{t('people.tabReview')}</TabButton>
+        <TabButton active={tab === 'videoFaces'} onClick={() => setTab('videoFaces')}>{t('people.tabVideoFaces')}</TabButton>
         <TabButton active={tab === 'ignored'} onClick={() => setTab('ignored')}>{t('people.tabIgnored')}</TabButton>
         {isAdmin && (
           <TabButton active={tab === 'settings'} onClick={() => setTab('settings')}>{t('people.tabSettings')}</TabButton>
@@ -97,6 +99,8 @@ export function PeoplePage() {
         <FaceAISettings />
       ) : tab === 'unassigned' ? (
         <UnassignedFacesTab onOpenFace={openFaces} invalidateAuth={invalidateAuth} />
+      ) : tab === 'videoFaces' ? (
+        <VideoFaceReviewTab invalidateAuth={invalidateAuth} />
       ) : tab === 'ignored' ? (
         <IgnoredFacesTab onOpenFace={openFaces} invalidateAuth={invalidateAuth} />
       ) : error ? (

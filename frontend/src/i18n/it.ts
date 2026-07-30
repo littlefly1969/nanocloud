@@ -1059,6 +1059,7 @@ const it = {
   'people.tabPeople': 'Persone',
   'people.tabUnassigned': 'Volti non assegnati',
   'people.tabReview': 'Da revisionare',
+  'people.tabVideoFaces': 'Volti nei video',
   'people.tabIgnored': 'Ignorati',
   'people.tabSettings': 'Impostazioni Face AI',
   'people.loadError': 'Impossibile caricare.',
@@ -1100,6 +1101,29 @@ const it = {
   'person.noMoreSimilar': 'Nessun altro volto simile.',
   'person.similarityScore': 'Similarità {pct}%',
   'person.add': 'Aggiungi',
+
+  // --- Dettaglio persona: risultati video (VFACE-02) ---
+  'person.videosAria': 'Video con questa persona',
+  'person.videosHeading': 'Video ({count})',
+  'person.videosLoading': 'Caricamento video…',
+  'person.videosError': 'Impossibile caricare i video.',
+  'person.noVideos': 'Nessun video ancora confermato per questa persona.',
+  'person.openVideoAt': 'Apri {name} a {time}',
+
+  // --- Persone: revisione volti nei video (VFACE-02) ---
+  'videoFaces.sectionAria': 'Volti trovati nei video',
+  'videoFaces.intro': 'Volti rilevati nei tuoi video. I suggerimenti sono solo indicazioni: un volto diventa una persona solo quando lo confermi tu.',
+  'videoFaces.loading': 'Caricamento volti dai video…',
+  'videoFaces.error': 'Impossibile caricare i volti dai video.',
+  'videoFaces.empty': 'Non c\u2019\u00e8 pi\u00f9 nulla da rivedere.',
+  'videoFaces.suggestionsLoading': 'Ricerca corrispondenze…',
+  'videoFaces.suggestionsError': 'Suggerimenti non disponibili.',
+  'videoFaces.noSuggestions': 'Nessun suggerimento.',
+  'videoFaces.confirmSuggestion': 'Conferma {name} ({pct}% simile)',
+  'videoFaces.assignTo': 'Assegna a',
+  'videoFaces.assignToAria': 'Assegna questo volto a una persona',
+  'videoFaces.choosePerson': 'Scegli una persona…',
+  'videoFaces.ignore': 'Ignora',
 
   // --- Admin: background jobs ---
   'adminJobs.heading': 'Processi in background',

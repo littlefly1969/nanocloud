@@ -1052,6 +1052,7 @@ const en: Partial<Record<MessageKey, string>> = {
   'people.tabPeople': 'People',
   'people.tabUnassigned': 'Unassigned faces',
   'people.tabReview': 'To review',
+  'people.tabVideoFaces': 'Faces in videos',
   'people.tabIgnored': 'Ignored',
   'people.tabSettings': 'Face AI settings',
   'people.loadError': 'Could not load.',
@@ -1093,6 +1094,29 @@ const en: Partial<Record<MessageKey, string>> = {
   'person.noMoreSimilar': 'No other similar faces.',
   'person.similarityScore': 'Similarity {pct}%',
   'person.add': 'Add',
+
+  // --- Person detail: video results (VFACE-02) ---
+  'person.videosAria': 'Videos with this person',
+  'person.videosHeading': 'Videos ({count})',
+  'person.videosLoading': 'Loading videos…',
+  'person.videosError': 'Could not load videos.',
+  'person.noVideos': 'No videos confirmed for this person yet.',
+  'person.openVideoAt': 'Open {name} at {time}',
+
+  // --- People: faces in videos review (VFACE-02) ---
+  'videoFaces.sectionAria': 'Faces found in videos',
+  'videoFaces.intro': 'Faces detected in your videos. Suggestions are only hints — a face becomes someone only when you confirm it.',
+  'videoFaces.loading': 'Loading faces from videos…',
+  'videoFaces.error': 'Could not load faces from videos.',
+  'videoFaces.empty': 'Nothing left to review.',
+  'videoFaces.suggestionsLoading': 'Looking for matches…',
+  'videoFaces.suggestionsError': 'Suggestions unavailable.',
+  'videoFaces.noSuggestions': 'No suggestion.',
+  'videoFaces.confirmSuggestion': 'Confirm {name} ({pct}% similar)',
+  'videoFaces.assignTo': 'Assign to',
+  'videoFaces.assignToAria': 'Assign this face to a person',
+  'videoFaces.choosePerson': 'Choose a person…',
+  'videoFaces.ignore': 'Ignore',
 
   // --- Admin: background jobs ---
   'adminJobs.heading': 'Background jobs',

@@ -5145,6 +5145,40 @@ video.lightbox-image {
 .people-assign { display: flex; gap: 0.35rem; width: 100%; }
 .people-assign input { flex: 1; min-width: 0; }
 .group-ignore-button { color: var(--danger, #b91c1c); }
+
+/* VFACE-02: video face evidence (person detail results + review queue).
+   The poster keeps the clip's OWN aspect on an ambient backdrop — `contain`,
+   never a square crop — so a vertical phone video renders upright and
+   uncropped, exactly like the gallery tiles. */
+.person-video-card { width: 100%; }
+.person-video-poster {
+  display: block; width: 100%; padding: 0; border: 0; cursor: pointer;
+  border-radius: 8px; overflow: hidden; background: var(--surface-sunken, #0f172a);
+  aspect-ratio: 1 / 1;
+}
+.person-video-poster img {
+  width: 100%; height: 100%; object-fit: contain; display: block;
+}
+.person-video-interval {
+  font-variant-numeric: tabular-nums; font-size: 0.85rem;
+  color: var(--muted, #64748b);
+}
+.person-video-matches {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 0.25rem; justify-content: center;
+}
+.person-video-matches button {
+  background: transparent; border: 1px solid var(--border, #e5e7eb);
+  border-radius: 999px; padding: 0.1rem 0.5rem; cursor: pointer;
+  font-variant-numeric: tabular-nums; font-size: 0.78rem;
+}
+.video-face-suggestions {
+  display: flex; flex-direction: column; gap: 0.3rem; width: 100%;
+  align-items: stretch; font-size: 0.85rem;
+}
+.video-face-suggestion { cursor: pointer; }
+.video-face-assign-any { display: flex; flex-direction: column; gap: 0.15rem; }
+.video-face-assign-any select { width: 100%; }
 .person-actions { display: flex; gap: 0.5rem; align-items: center; margin: 0.5rem 0 1rem; flex-wrap: wrap; }
 .face-settings-form { display: flex; flex-direction: column; gap: 0.5rem; max-width: 640px; }
 .face-settings-row { display: flex; align-items: center; gap: 0.5rem; }

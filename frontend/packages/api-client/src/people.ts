@@ -264,3 +264,120 @@ export function getPersonSimilarFaces(
     { signal },
   );
 }
+
+// ---- VFACE-02: owner-level identity over canonical VIDEO face tracks -------
+//
+// A track is blob-level EVIDENCE; the decision about who it shows is the
+// owner's. These DTOs carry logical file ids, millisecond intervals and person
+// names only. The `trackId` appears solely on the authenticated review surface,
+// because the client needs it to post a decision back.
+
+// One temporal match inside one video. Shaped like the VSEM-03 semantic match so
+// the same player handoff applies; `evidenceType` is 'person' here.
+export interface PersonVideoMatch {
+  evidenceType: string;
+  startMilliseconds: number;
+  endMilliseconds: number;
+  representativeMilliseconds: number;
+}
+
+export interface PersonVideo {
+  fileItemId: string;
+  name: string;
+  bestMatch: PersonVideoMatch;
+  additionalMatches: PersonVideoMatch[];
+}
+
+// One undecided track awaiting review.
+export interface VideoFaceTrackReview {
+  trackId: string;
+  fileItemId: string;
+  name: string;
+  startMilliseconds: number;
+  endMilliseconds: number;
+  representativeMilliseconds: number;
+  detectionCount: number;
+  qualityScore: number;
+}
+
+export interface VideoFaceTrackReviewPage {
+  items: VideoFaceTrackReview[];
+  hasMore: boolean;
+}
+
+// A candidate person for a track. `similarity` is a cosine similarity, NOT a
+// probability — the UI must not present it as a confidence percentage of
+// "being" someone.
+export interface VideoFaceTrackSuggestion {
+  personId: string;
+  name: string | null;
+  similarity: number;
+  supportingEvidenceCount: number;
+}
+
+export interface VideoFaceTrackSuggestions {
+  threshold: number;
+  items: VideoFaceTrackSuggestion[];
+  unavailableReason: string | null;
+}
+
+// Videos where this person has a CONFIRMED track. Undecided and ignored tracks
+// never appear.
+export function getPersonVideos(personId: string, signal?: AbortSignal): Promise<PersonVideo[]> {
+  return api<PersonVideo[]>(`/api/people/${encodeURIComponent(personId)}/videos`, { signal });
+}
+
+// Videos where both people have confirmed tracks that OVERLAP in time.
+export function getPersonCoPresentVideos(
+  personId: string,
+  otherPersonId: string,
+  signal?: AbortSignal,
+): Promise<PersonVideo[]> {
+  return api<PersonVideo[]>(
+    `/api/people/${encodeURIComponent(personId)}/co-present/${encodeURIComponent(otherPersonId)}`,
+    { signal },
+  );
+}
+
+export function listUndecidedVideoFaceTracks(
+  limit?: number,
+  signal?: AbortSignal,
+): Promise<VideoFaceTrackReviewPage> {
+  const qs = limit === undefined ? '' : `?limit=${limit}`;
+  return api<VideoFaceTrackReviewPage>(`/api/people/video-tracks/undecided${qs}`, { signal });
+}
+
+// Advisory only: asking never changes a decision.
+export function getVideoFaceTrackSuggestions(
+  trackId: string,
+  limit?: number,
+  signal?: AbortSignal,
+): Promise<VideoFaceTrackSuggestions> {
+  const qs = limit === undefined ? '' : `?limit=${limit}`;
+  return api<VideoFaceTrackSuggestions>(
+    `/api/people/video-tracks/${encodeURIComponent(trackId)}/suggestions${qs}`,
+    { signal },
+  );
+}
+
+// Confirm an EXISTING person of the caller's. There is deliberately no "create a
+// person from this track" call: naming people stays in the People flows.
+export function assignVideoFaceTrack(trackId: string, personId: string): Promise<void> {
+  return api<void>(`/api/people/video-tracks/${encodeURIComponent(trackId)}/assign`, {
+    method: 'POST',
+    json: { personId },
+  });
+}
+
+export function ignoreVideoFaceTrack(trackId: string): Promise<void> {
+  return api<void>(`/api/people/video-tracks/${encodeURIComponent(trackId)}/ignore`, {
+    method: 'POST',
+  });
+}
+
+// Back to undecided. Nothing is reassigned automatically.
+export function clearVideoFaceTrackDecision(trackId: string): Promise<void> {
+  return api<void>(`/api/people/video-tracks/${encodeURIComponent(trackId)}/decision`, {
+    method: 'DELETE',
+  });
+}

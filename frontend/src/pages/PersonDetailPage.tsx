@@ -18,6 +18,7 @@ import { useAuth } from '../auth/useAuth';
 import { FaceCrop } from '../components/people/FaceCrop';
 import { FaceContextViewer } from '../components/people/FaceContextViewer';
 import { AssignToPersonMenu } from '../components/people/AssignToPersonMenu';
+import { PersonVideosSection } from '../components/people/PersonVideosSection';
 import { useI18n } from '../i18n';
 
 const MIN_PCT = 20;
@@ -154,6 +155,10 @@ export function PersonDetailPage() {
             </ul>
           );
         })()
+      )}
+
+      {personId !== undefined && (
+        <PersonVideosSection personId={personId} invalidateAuth={invalidateAuth} />
       )}
 
       {personId !== undefined && (
