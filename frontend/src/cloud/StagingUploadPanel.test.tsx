@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
-import { StagingUploadPage } from './StagingUploadPage';
+import { StagingUploadPanel } from './StagingUploadPanel';
 import { AuthedWrapper, installFetchMock, jsonResponse } from '../test-utils';
 import type { StagingSession } from '@nanocloud/api-client';
 
@@ -15,7 +15,7 @@ function renderPage() {
   return render(
     <AuthedWrapper>
       <MemoryRouter>
-        <StagingUploadPage />
+        <StagingUploadPanel />
       </MemoryRouter>
     </AuthedWrapper>,
   );
@@ -66,7 +66,7 @@ function fileWithPath(relativePath: string, content: string, lastModified = 1_70
 
 const emptySessions = () => jsonResponse({ sessions: [], total: 0 });
 
-describe('StagingUploadPage', () => {
+describe('StagingUploadPanel', () => {
   it('shows the disabled message when staging is off', async () => {
     installFetchMock({
       'GET /api/uploads/staging/config': () => jsonResponse({ ...CONFIG, enabled: false }),

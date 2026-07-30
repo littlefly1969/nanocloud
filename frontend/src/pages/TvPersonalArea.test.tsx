@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { TvPage } from './TvPage';
 import { TvPairApprovalPage } from './TvPairApprovalPage';
-import { TvDevicesPage } from './TvDevicesPage';
+import { TvDevicesPanel } from '../cloud/TvDevicesPanel';
 import {
   AuthedWrapper,
   emptyResponse,
@@ -458,7 +458,7 @@ describe('owner Personal Area PIN panel', () => {
   function renderDevices() {
     render(
       <MemoryRouter>
-        <AuthedWrapper><TvDevicesPage /></AuthedWrapper>
+        <AuthedWrapper><TvDevicesPanel /></AuthedWrapper>
       </MemoryRouter>,
     );
   }

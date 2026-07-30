@@ -1066,6 +1066,11 @@ const it = {
   'cloud.privateVaultDesc': 'Area privata esclusa da Galleria, AI, organizer ed esportazione. Predisposta per cifratura futura.',
   'cloud.openPrivate': 'Apri Privato',
   'cloud.allPhotos': 'Tutte le foto',
+  'cloud.intro': 'Strumenti operativi per il tuo archivio. Scegli uno strumento: si apre qui sotto.',
+  'cloud.toolTabsAria': 'Strumenti delle funzioni cloud',
+  'cloud.tvDevices': 'Dispositivi TV',
+  'cloud.tvDevicesDesc': 'Gestisci le sessioni TV associate a questo account e imposta il PIN dell’area personale. Nessun token o segreto viene mostrato.',
+  'cloud.organizeHint': 'La procedura guidata mostra un’anteprima completa prima di spostare qualsiasi file.',
 
   // --- People ---
   'people.pageAria': 'Persone',

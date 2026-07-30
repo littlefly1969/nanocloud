@@ -5120,44 +5120,94 @@ video.lightbox-image {
 }
 
 /* ---------------------------------------------------------------------------
-   Cloud Functions page + photo archive export panel.
+   Cloud Functions hub (tool switcher + the selected tool) + export panel.
    --------------------------------------------------------------------------- */
-.cloud-function-card {
-  gap: 0.6rem;
+.cloud-functions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
-.cloud-function-card h3 {
-  text-transform: none;
-  font-size: 1rem;
-  color: var(--fg);
+.cloud-functions__header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.45rem;
 }
-.cloud-function-card .row-action-primary,
-.cloud-function-card .row-action {
-  align-self: flex-start;
-  text-decoration: none;
+.cloud-functions__header p { margin: 0; }
+
+.cloud-tool-tabs {
+  display: flex;
+  gap: 0.4rem;
+  /* Narrow viewports scroll the tabs horizontally instead of clipping or
+     wrapping their labels; the page itself never scrolls sideways. */
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 0.2rem;
 }
-.cloud-function-card.is-planned {
-  opacity: 0.85;
+.cloud-tool-tab {
+  position: relative;
+  display: flex;
+  flex: 1 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--border-default);
+  border-radius: 0.6rem;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
 }
-.cf-badge {
-  display: inline-block;
-  margin-left: 0.4rem;
-  padding: 0.05rem 0.4rem;
-  font-size: 0.7rem;
-  font-weight: 700;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
-  vertical-align: middle;
+.cloud-tool-tab:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
 }
-.cloud-function-detail {
-  margin-top: 1.25rem;
-  padding: 1rem 1.25rem;
-  border: 1px solid var(--border);
-  border-radius: 0.625rem;
-  background: var(--bg);
+.cloud-tool-tab:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
-.cloud-function-detail > h3 {
-  margin-top: 0;
+/* Prominent selected state: fill + border + weight + a bottom marker, so it is
+   never carried by colour alone. */
+.cloud-tool-tab.is-active {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.cloud-tool-tab.is-active .nc-icon { color: var(--accent); }
+.cloud-tool-tab__marker {
+  position: absolute;
+  inset-inline: 0.7rem;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: transparent;
+}
+.cloud-tool-tab.is-active .cloud-tool-tab__marker { background: var(--accent); }
+
+.cloud-tool-panel {
+  padding: 1.1rem 1.25rem 1.35rem;
+  border: 1px solid var(--border-default);
+  border-radius: 0.75rem;
+  background: var(--surface-raised);
+}
+.cloud-tool-panel__intro { margin-bottom: 1rem; }
+.cloud-tool-panel__intro h2 {
+  margin: 0 0 0.3rem;
+  font-size: 1.125rem;
+}
+.cloud-tool-panel__intro p { margin: 0; max-width: 62ch; }
+
+.cloud-tool-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .cloud-tool-panel { padding: 0.9rem; }
+  .cloud-tool-tab { flex: 0 0 auto; }
 }
 .export-panel {
   display: flex;

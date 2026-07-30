@@ -23,9 +23,8 @@ import { PlatesPage } from './pages/PlatesPage';
 import { AestheticsLabPage } from './pages/AestheticsLabPage';
 import { PrivateVaultPage } from './pages/PrivateVaultPage';
 import { SharesPage } from './pages/SharesPage';
-import { StagingUploadPage } from './pages/StagingUploadPage';
+import { LegacyCloudToolRedirect } from './cloud/LegacyCloudToolRedirect';
 import { TrashPage } from './pages/TrashPage';
-import { TvDevicesPage } from './pages/TvDevicesPage';
 import { TvPage } from './pages/TvPage';
 import { TvPairApprovalPage } from './pages/TvPairApprovalPage';
 import { PartyPage } from './pages/PartyPage';
@@ -93,9 +92,11 @@ export function App() {
                 experimental HumanAesExpert analysis space. */}
             <Route path="/lab/aesthetics" element={<AestheticsLabPage />} />
             <Route path="/shares" element={<SharesPage />} />
-            <Route path="/tv-devices" element={<TvDevicesPage />} />
-            {/* Slice 93: staged (resumable) upload for any authenticated user. */}
-            <Route path="/upload" element={<StagingUploadPage />} />
+            {/* Upload and TV Devices are Cloud Functions tools now. Their old
+                standalone routes stay valid and redirect to the canonical tool
+                URL, so existing bookmarks keep working. */}
+            <Route path="/tv-devices" element={<LegacyCloudToolRedirect tool="tv-devices" />} />
+            <Route path="/upload" element={<LegacyCloudToolRedirect tool="upload" />} />
             <Route path="/cloud-functions" element={<CloudFunctionsPage />} />
             <Route path="/private" element={<PrivateVaultPage />} />
             <Route path="/trash" element={<TrashPage />} />

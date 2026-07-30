@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
-import { TvDevicesPage } from './TvDevicesPage';
+import { TvDevicesPanel } from './TvDevicesPanel';
 import { AuthedWrapper, emptyResponse, installFetchMock, jsonResponse } from '../test-utils';
 
 afterEach(() => {
@@ -25,12 +25,12 @@ const activeDevice = {
 function wrapper() {
   return (
     <AuthedWrapper>
-      <MemoryRouter><TvDevicesPage /></MemoryRouter>
+      <MemoryRouter><TvDevicesPanel /></MemoryRouter>
     </AuthedWrapper>
   );
 }
 
-describe('TvDevicesPage', () => {
+describe('TvDevicesPanel', () => {
   it('shows the empty state when no TVs are paired', async () => {
     installFetchMock({ 'GET /api/tv-personal/pin': () => jsonResponse({ configured: true, updatedAt: '2026-07-01T10:00:00Z' }), 'GET /api/tv-devices': () => jsonResponse([]) });
     render(wrapper());

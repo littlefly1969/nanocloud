@@ -32,7 +32,7 @@ const STATUS_LABEL_KEY: Record<TvDevice['status'], MessageKey> = {
 // Owner-facing management of paired TV sessions. Lists this owner's TV devices
 // and lets them revoke one — which immediately terminates that limited TV
 // session server-side. No tokens/hashes/secrets are shown.
-export function TvDevicesPage() {
+export function TvDevicesPanel() {
   const { state, invalidateAuth } = useAuth();
   const { t, formatDate } = useI18n();
   const [status, setStatus] = useState<LoadState>({ kind: 'loading' });
@@ -103,8 +103,9 @@ export function TvDevicesPage() {
 
   return (
     <section className="tv-devices-page" aria-busy={status.kind === 'loading'}>
+      {/* The Cloud Functions hub owns the tool title + description; only the
+          panel's own refresh control stays here. */}
       <header className="tv-devices-header">
-        <h2>{t('tvDevices.title')}</h2>
         <button
           type="button"
           className="refresh-button"

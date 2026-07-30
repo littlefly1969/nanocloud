@@ -61,7 +61,7 @@ function selectFiles(list: FileList | null): SelectedFile[] {
   });
 }
 
-export function StagingUploadPage() {
+export function StagingUploadPanel() {
   const { state } = useAuth();
   const { t } = useI18n();
 
@@ -290,10 +290,9 @@ export function StagingUploadPage() {
   if (state.status !== 'authed') return null;
 
   return (
+    // The Cloud Functions hub owns the tool title + description, so this panel
+    // does not repeat them.
     <section className="staging-upload-page" aria-busy={configState.kind === 'loading'}>
-      <header className="admin-header">
-        <h2>{t('staging.heading')}</h2>
-      </header>
       <p className="muted">{t('staging.intro')}</p>
       <p className="muted staging-standby-note">{t('staging.standbyNote')}</p>
 

@@ -1059,6 +1059,11 @@ const en: Partial<Record<MessageKey, string>> = {
   'cloud.privateVaultDesc': 'A private area excluded from Gallery, AI, organizer and export. Ready for future encryption.',
   'cloud.openPrivate': 'Open Private',
   'cloud.allPhotos': 'All photos',
+  'cloud.intro': 'Operational tools for your archive. Pick a tool — it opens right below.',
+  'cloud.toolTabsAria': 'Cloud Functions tools',
+  'cloud.tvDevices': 'TV devices',
+  'cloud.tvDevicesDesc': 'Manage the TV sessions paired with this account and set your personal-area PIN. No tokens or secrets are shown.',
+  'cloud.organizeHint': 'The wizard shows a full preview before any file is moved.',
 
   // --- People ---
   'people.pageAria': 'People',
