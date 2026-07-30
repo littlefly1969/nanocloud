@@ -31,6 +31,52 @@ baseline and active work; do not use it as a chronological work log.
 - Read `deploy/FAST_DEPLOY.md` in full immediately before any production
   deployment, rebuild, release-pin change or production migration.
 
+## Active slice — UX-01 app shell, cloud functions and media experience
+
+Branch `feat/frontend-experience-refresh`, started from `main` (`ee09591`). Not
+pushed, not merged, not deployed. Frontend-only except ONE new backend test
+file; no migration, no DTO change, no AI/media/TV pipeline change.
+
+- **Theme**: semantic tokens under `:root` (dark, the default) and
+  `:root[data-theme='light']`; legacy `--bg/--fg/--muted/--border/--error` are
+  aliases so the 6k-line stylesheet stays theme-correct without a rewrite.
+  Preference is local-only under the bounded key `nanocloud.theme`
+  (`dark|light|system`) — no backend field. A pre-render bootstrap in
+  `index.html` stamps `<html data-theme>` before first paint; `ThemeProvider`
+  then owns the same value.
+- **Shell**: collapsible grouped left nav from one model (`navModel`), compact
+  top bar, one user popover (identity / account / language / theme / sign out),
+  accessible mobile drawer rendering the SAME nav.
+- **Cloud Functions**: four tools (Upload, Organize, Archive, TV Devices) behind
+  a tablist, selected tool in `?tool=`, complete tool rendered below. Private
+  Vault removed from the hub (it stays in primary nav). `/upload` and
+  `/tv-devices` redirect to the canonical tool URL.
+- **Library chrome**: segmented kind switcher with a reserved count slot,
+  Active/Excluded demoted into the command bar, one toolbar with an
+  active-filter count. Grid, paging, selection and query semantics untouched.
+- **Viewer/drawer**: size + effective Date Taken under the display name (the
+  upload-time fallback is never shown as Date Taken); grouped actions;
+  strip-metadata removed from the UI (backend capability untouched); shared
+  album picker; Library-filter vs Explorer as two distinct actions.
+- **Similar Photos**: now renders on the shared `MediaGrid`/`MediaViewer`;
+  `MediaGrid` gained one optional `badges` prop (not forked).
+
+Decisions worth remembering:
+
+- `MediaItem.takenAt` is `EffectiveDateTaken`, which FALLS BACK to `CreatedAt`.
+  Only `FileMetadata.effective.dateTakenSource` distinguishes a real capture
+  date, so the viewer summary needs the metadata document and suppresses the
+  `uploaded` source entirely.
+- `GET /api/files/{id}/content` already streamed the immutable original
+  (`OpenContentAsync` → `BlobService`, attachment + original name), so the
+  download decision gate required NO backend change.
+  `OriginalDownloadContractTests` pins it.
+- React Router's `replace: true` DROPS route state. The explorer syncs its
+  threshold that way, so its return target is captured once on mount.
+- The similar-photo DTO carries no pixel dimensions, so explorer tiles use the
+  shared square fallback ratio rather than each photo's real ratio. Closing that
+  needs a DTO addition — deliberately out of this slice.
+
 ## Active slice — VFACE-01 canonical video face tracks
 
 Branch `feat/video-face-tracks`, started from `main` (`8d49d4c`). Not pushed,

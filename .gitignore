@@ -81,3 +81,6 @@ __pycache__/
 
 # Graphify generated files
 graphify-out/
+
+# Node (root-level tool caches; frontend/ has its own ignore file)
+node_modules/
