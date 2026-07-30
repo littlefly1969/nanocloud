@@ -827,6 +827,7 @@ const en: Partial<Record<MessageKey, string>> = {
   'mediaWs.searchLibrary': 'Search the library',
   'mediaWs.searchAlbum': 'Search this album',
   'mediaWs.filters': 'Filters',
+  'mediaWs.filtersWithCount': 'Filters ({count} active)',
   'mediaWs.sort': 'Sort',
   'mediaWs.albumSettings': 'Album settings',
   'mediaWs.removeFromAlbum': 'Remove from this album',

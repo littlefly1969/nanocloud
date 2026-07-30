@@ -57,4 +57,35 @@ describe('MediaKindTabs', () => {
     expect(screen.getByTestId('media-kind-tab-image')).toHaveAttribute('tabindex', '0');
     expect(screen.getByTestId('media-kind-tab-all')).toHaveAttribute('tabindex', '-1');
   });
+
+  it('reserves the count slot before the counts arrive, so nothing shifts', () => {
+    render(
+      <AuthedWrapper>
+        <MediaKindTabs value="all" onChange={vi.fn()} counts={null} />
+      </AuthedWrapper>,
+    );
+    // The slot exists in both states — the control does not gain an element (and
+    // therefore does not resize) when the server total lands.
+    for (const kind of ['all', 'image', 'video']) {
+      const slot = screen.getByTestId(`media-kind-count-${kind}`);
+      expect(slot).toBeInTheDocument();
+      expect(slot).toHaveAttribute('data-pending', 'true');
+      // Nothing meaningless is announced while the count is unknown.
+      expect(slot).toHaveAttribute('aria-hidden', 'true');
+      expect(slot).toHaveTextContent('');
+    }
+  });
+
+  it('drops the pending marker once counts are known', () => {
+    renderTabs('all');
+    const slot = screen.getByTestId('media-kind-count-all');
+    expect(slot).not.toHaveAttribute('data-pending');
+    expect(slot).not.toHaveAttribute('aria-hidden');
+  });
+
+  it('marks the selected kind with a state class as well as aria-selected', () => {
+    renderTabs('video');
+    expect(screen.getByTestId('media-kind-tab-video').className).toContain('is-active');
+    expect(screen.getByTestId('media-kind-tab-all').className).not.toContain('is-active');
+  });
 });

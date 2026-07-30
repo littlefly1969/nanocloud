@@ -1966,30 +1966,39 @@ button.logout {
 }
 
 /* Slice 3: Library / Excluded scope tabs shared by the photo + video galleries. */
+/* Library scope (In libreria | Esclusi). A COMPACT segmented control that lives
+   inside the command bar — it used to be a second full-width tab row competing
+   with the media-kind switcher above it. */
 .media-scope-tabs {
-  display: flex;
-  gap: 0.25rem;
-  margin-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border);
+  display: inline-flex;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background: var(--surface-subtle);
 }
 .media-scope-tab {
-  padding: 0.4rem 0.9rem;
-  border-radius: 8px 8px 0 0;
-  color: var(--muted);
+  min-height: 2.1rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
   text-decoration: none;
-  font-size: 0.9rem;
-  border-bottom: 2px solid transparent;
+  font: inherit;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  cursor: pointer;
 }
-.media-scope-tab:hover {
-  background: color-mix(in srgb, var(--fg) 6%, transparent);
-}
+.media-scope-tab:hover { color: var(--text-primary); }
 .media-scope-tab.is-active {
-  color: var(--fg);
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
   font-weight: 600;
-  border-bottom-color: var(--accent);
 }
 .media-scope-tab:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
 }
 
@@ -6407,37 +6416,155 @@ video.lightbox-image {
 .album-detail-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
 .album-detail-title-row h1 { margin: 0; }
 
-/* Primary in-workspace navigation: Tutti | Foto | Video */
-.media-kind-tabs { display: flex; gap: 0.15rem; border-bottom: 1px solid var(--border); }
+/* Primary in-workspace navigation: Tutti | Foto | Video — a segmented control
+   with icons and server counts. */
+.media-kind-tabs {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border-default);
+  border-radius: 0.7rem;
+  background: var(--surface-subtle);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
 .media-kind-tab {
   display: inline-flex; align-items: center; gap: 0.45rem;
-  padding: 0.55rem 0.95rem; border: none; background: transparent;
-  border-bottom: 2px solid transparent; color: var(--muted);
-  font-size: 0.98rem; font-weight: 500; cursor: pointer;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.95rem; font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
 }
-.media-kind-tab:hover { color: var(--fg); }
-.media-kind-tab.is-active { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
-.media-kind-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
+.media-kind-tab:hover { color: var(--text-primary); }
+/* Selected: fill + border + weight, never colour alone. */
+.media-kind-tab.is-active {
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+  font-weight: 650;
+  box-shadow: var(--shadow-sm);
+}
+.media-kind-tab.is-active .nc-icon { color: var(--accent); }
+.media-kind-tab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .media-kind-tab-count {
-  font-size: 0.72rem; font-weight: 600; color: var(--muted);
-  background: color-mix(in srgb, var(--fg) 9%, transparent);
-  padding: 0.05rem 0.45rem; border-radius: 999px; min-width: 1.3rem; text-align: center;
+  font-size: 0.72rem; font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-default);
+  padding: 0.05rem 0.45rem; border-radius: 999px;
+  /* Reserved even while empty, so the control does not resize when the server
+     counts arrive and shift a tab out from under the pointer. */
+  min-width: 2.4rem;
+  text-align: center;
 }
+.media-kind-tab-count[data-pending='true'] { color: transparent; }
 .media-kind-tab.is-active .media-kind-tab-count {
-  color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  background: var(--accent-subtle);
+  border-color: transparent;
 }
 
-/* Toolbar: search + filters button + sort */
-.ws-toolbar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
-.ws-search { flex: 1 1 240px; min-width: 180px; margin: 0; }
-.ws-search input,
-.ws-sort select {
-  width: 100%; padding: 0.45rem 0.7rem; border: 1px solid var(--border);
-  border-radius: 8px; background: var(--bg); color: var(--fg); font-size: 0.9rem;
+/* Command bar: search + filters + sort + library scope, in one toolbar. */
+.ws-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
 }
-.ws-sort select { width: auto; }
+.ws-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+.ws-search {
+  position: relative;
+  flex: 1 1 240px;
+  min-width: 160px;
+  margin: 0;
+}
+.ws-search__icon {
+  position: absolute;
+  inset-inline-start: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.ws-search input {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.7rem 0.45rem 2.1rem;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+.ws-tool-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.ws-tool-button:hover { border-color: var(--border-strong); }
+.ws-tool-button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+/* Active filters are signalled by the accent border AND the count badge. */
+.ws-tool-button.has-active { border-color: var(--accent); }
+.ws-tool-button.has-active .nc-icon { color: var(--accent); }
+.ws-filter-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.ws-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  position: relative;
+}
+.ws-sort__icon { color: var(--text-muted); }
+.ws-sort select {
+  width: auto;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
 .ws-search input:focus-visible,
-.ws-sort select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ws-sort select:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+
+@media (max-width: 640px) {
+  /* Search takes the full first row; the actions wrap below it rather than
+     overflowing the viewport. */
+  .ws-search { flex: 1 1 100%; }
+  .ws-toolbar__actions { width: 100%; }
+  .ws-tool-button__label { display: none; }
+  .ws-tool-button { padding-inline: 0.6rem; }
+  .media-kind-tab { padding-inline: 0.7rem; }
+}
 
 /* Applied-filter chips */
 .media-filter-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }

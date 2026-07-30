@@ -137,6 +137,81 @@ describe('MediaWorkspace', () => {
     expect(await screen.findByTestId('ws-empty')).toBeInTheDocument();
   });
 
+  it('organizes the chrome as kind switcher, one command bar, then chips', async () => {
+    renderWorkspace(page([imageItem, videoItem]));
+    await screen.findByText('photo.jpg');
+
+    const kind = screen.getByTestId('media-kind-tabs');
+    const bar = screen.getByTestId('ws-command-bar');
+    const grid = screen.getByTestId('media-grid');
+
+    // Kind switcher above the command bar, command bar above the grid.
+    expect(kind.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(bar.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // The library scope is INSIDE the command bar — it is no longer a second
+    // full-width tab row of its own between the kind tabs and the toolbar.
+    expect(bar.contains(screen.getByTestId('media-scope-tabs'))).toBe(true);
+  });
+
+  it('shows no filter badge when no filter is applied', async () => {
+    renderWorkspace(page([imageItem]));
+    await screen.findByText('photo.jpg');
+    expect(screen.queryByTestId('ws-filter-count')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('media-filter-chips')).not.toBeInTheDocument();
+  });
+
+  it('counts applied filters on the trigger, matching the visible chips', async () => {
+    const identity = emptyIdentity(LIBRARY);
+    identity.filters.common.favorite = true;
+    identity.filters.common.minRating = 4;
+    renderWorkspace(page([imageItem]), identity);
+    await screen.findByText('photo.jpg');
+
+    expect(screen.getByTestId('ws-filter-count')).toHaveTextContent('2');
+    // Exactly the chips the badge counted, still rendered below the toolbar.
+    const chips = screen.getByTestId('media-filter-chips');
+    expect(chips.querySelectorAll('.media-filter-chip')).toHaveLength(2);
+    expect(screen.getByTestId('media-chip-favorite')).toBeInTheDocument();
+    expect(screen.getByTestId('media-chip-min-rating')).toBeInTheDocument();
+    // Clear-all stays reachable.
+    expect(screen.getByTestId('media-chips-clear-all')).toBeInTheDocument();
+  });
+
+  it('keeps Active/Excluded scope semantics unchanged', async () => {
+    const onIdentityChange = renderWorkspace(page([imageItem]));
+    await screen.findByText('photo.jpg');
+    await userEvent.click(screen.getByTestId('media-scope-tab-excluded'));
+    expect(onIdentityChange).toHaveBeenCalledWith(
+      expect.objectContaining({ libraryScope: 'excluded' }),
+    );
+  });
+
+  it('keeps search semantics unchanged through the command bar', async () => {
+    const onIdentityChange = renderWorkspace(page([imageItem]));
+    await screen.findByText('photo.jpg');
+    const input = screen.getByTestId('ws-search-input');
+    await userEvent.type(input, 'sunset');
+    await userEvent.tab();
+    expect(onIdentityChange).toHaveBeenCalledWith(expect.objectContaining({
+      filters: expect.objectContaining({
+        common: expect.objectContaining({ metadataQuery: 'sunset' }),
+      }),
+    }));
+  });
+
+  it('keeps sort semantics unchanged through the command bar', async () => {
+    const onIdentityChange = renderWorkspace(page([imageItem]));
+    await screen.findByText('photo.jpg');
+    await userEvent.selectOptions(
+      screen.getByTestId('ws-sort').querySelector('select')!,
+      'name:asc',
+    );
+    expect(onIdentityChange).toHaveBeenCalledWith(
+      expect.objectContaining({ sort: 'name', direction: 'asc' }),
+    );
+  });
+
   it('selecting an item reveals the capability-gated selection bar', async () => {
     renderWorkspace(page([imageItem, videoItem]));
     await screen.findByText('photo.jpg');

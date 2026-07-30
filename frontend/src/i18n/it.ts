@@ -834,6 +834,7 @@ const it = {
   'mediaWs.searchLibrary': 'Cerca nella libreria',
   'mediaWs.searchAlbum': 'Cerca nell’album',
   'mediaWs.filters': 'Filtri',
+  'mediaWs.filtersWithCount': 'Filtri ({count} attivi)',
   'mediaWs.sort': 'Ordina',
   'mediaWs.albumSettings': 'Impostazioni album',
   'mediaWs.removeFromAlbum': 'Rimuovi da questo album',

@@ -1,9 +1,16 @@
 import { useI18n } from '../../i18n';
 import type { MediaLibraryScope } from './mediaWorkspaceQuery';
 
-// "In libreria | Esclusi" scope selector for the workspace. Controlled — the
-// page reflects it in the URL (path for the library, ?scope= for an album) so
-// back/forward and deep links behave. Rendered as a two-option tablist.
+// "In libreria | Esclusi" scope selector for the workspace.
+//
+// This used to render as a second full-width tab row directly under the
+// media-kind tabs, so two competing primary navigations sat on top of each
+// other. It is now a COMPACT segmented control that lives inside the command
+// bar, subordinate to the kind switcher.
+//
+// Behaviour is unchanged: controlled, two options, and the page still reflects
+// the choice in the URL (path for the library, ?scope= for an album) so
+// back/forward and deep links keep working.
 
 interface Props {
   value: MediaLibraryScope;

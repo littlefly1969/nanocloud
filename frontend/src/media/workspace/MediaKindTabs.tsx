@@ -1,13 +1,26 @@
 import { useRef, type KeyboardEvent } from 'react';
 import { useI18n } from '../../i18n';
+import { Icon, type IconName } from '../../components/icons/Icon';
 import type { MediaKindScope } from './mediaWorkspaceQuery';
 
-// Primary in-workspace navigation: "Tutti | Foto | Video". A real ARIA tablist
-// (roving tabindex, arrow/Home/End keyboard nav) so the kind selection reads as
-// navigation, not a hidden filter. Counts come from the server response so the
-// labels never trigger extra queries. Controlled: the page owns the URL sync.
+// Primary in-workspace navigation: "Tutti | Foto | Video", as an accessible
+// segmented control. A real ARIA tablist (roving tabindex, arrow/Home/End
+// keyboard nav) so the kind selection reads as navigation, not a hidden filter.
+// Counts come from the server response so the labels never trigger extra
+// queries. Controlled: the page owns the URL sync. Query semantics are
+// unchanged — this component only decides how the choice looks.
+//
+// The count slot is ALWAYS rendered, even before the server total arrives, so
+// the control does not resize when counts land: a tab the user is about to
+// click cannot shift out from under the pointer.
 
 const ORDER: MediaKindScope[] = ['all', 'image', 'video'];
+
+const ICON: Record<MediaKindScope, IconName> = {
+  all: 'media',
+  image: 'photo',
+  video: 'video',
+};
 
 interface Props {
   value: MediaKindScope;
@@ -17,7 +30,7 @@ interface Props {
 }
 
 export function MediaKindTabs({ value, onChange, counts, panelId }: Props) {
-  const { t } = useI18n();
+  const { t, formatNumber } = useI18n();
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const label = (kind: MediaKindScope): string =>
@@ -66,12 +79,18 @@ export function MediaKindTabs({ value, onChange, counts, panelId }: Props) {
             onClick={() => onChange(kind)}
             onKeyDown={(e) => onKeyDown(e, i)}
           >
+            <Icon name={ICON[kind]} />
             <span className="media-kind-tab-label">{label(kind)}</span>
-            {c !== null && (
-              <span className="media-kind-tab-count" data-testid={`media-kind-count-${kind}`}>
-                {c.toLocaleString()}
-              </span>
-            )}
+            {/* Reserved slot: present (and equally wide) whether or not the
+                count is known yet, so nothing moves when it arrives. */}
+            <span
+              className="media-kind-tab-count"
+              data-testid={`media-kind-count-${kind}`}
+              data-pending={c === null ? 'true' : undefined}
+              aria-hidden={c === null ? true : undefined}
+            >
+              {c === null ? '' : formatNumber(c)}
+            </span>
           </button>
         );
       })}

@@ -34,13 +34,14 @@ export interface MediaPhotoDestination {
 }
 import { useMediaWorkspace } from './useMediaWorkspace';
 import { MediaKindTabs } from './MediaKindTabs';
-import { MediaLibraryScopeTabs } from './MediaLibraryScopeTabs';
+import { MediaCommandBar } from './MediaCommandBar';
 import { MediaFilterChips } from './MediaFilterChips';
 import { MediaFilterSheet } from './MediaFilterSheet';
 import { MediaGrid } from './MediaGrid';
 import { MediaWorkspaceSelectionBar } from './MediaWorkspaceSelectionBar';
 import { getMediaSelectionCapabilities } from './mediaSelectionCapabilities';
 import {
+  buildFilterChips,
   clearActiveFilters,
   clearChip,
   isSemanticActive,
@@ -53,7 +54,6 @@ import {
 } from './mediaWorkspaceQuery';
 
 const PANEL_ID = 'media-workspace-panel';
-const SORT_FIELDS: ImageSortField[] = ['created', 'datetaken', 'name', 'size'];
 
 interface Props {
   source: MediaWorkspaceSource;
@@ -316,6 +316,9 @@ export function MediaWorkspace({
   });
 
   const semantic = isSemanticActive(identity);
+  // Same source as the chips rendered below the command bar, so the badge on
+  // the filter trigger and the visible chips can never disagree.
+  const activeFilterCount = buildFilterChips(identity).length;
   const isEmpty = ws.items.length === 0;
   const hasActiveText = identity.filters.common.metadataQuery.length > 0
     || identity.filters.photo.visualQuery.trim().length > 0;
@@ -337,53 +340,21 @@ export function MediaWorkspace({
         counts={ws.total !== null ? { all: ws.total, image: ws.photoCount ?? 0, video: ws.videoCount ?? 0 } : null}
       />
 
-      <MediaLibraryScopeTabs value={identity.libraryScope} onChange={changeScope} />
-
-      <div className="ws-toolbar">
-        <form
-          className="ws-search"
-          onSubmit={(e) => { e.preventDefault(); submitSearch(); }}
-          role="search"
-        >
-          <input
-            type="search"
-            aria-label={searchPlaceholder}
-            placeholder={searchPlaceholder}
-            data-testid="ws-search-input"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            onBlur={submitSearch}
-          />
-        </form>
-        <button
-          type="button"
-          ref={filtersButtonRef}
-          className="row-action"
-          data-testid="ws-open-filters"
-          onClick={() => setSheetOpen(true)}
-        >
-          {t('mediaWs.filters')}
-        </button>
-        {!semantic && (
-          <label className="ws-sort" data-testid="ws-sort">
-            <span className="visually-hidden">{t('mediaSort.label')}</span>
-            <select
-              value={`${identity.sort}:${identity.direction}`}
-              onChange={(e) => {
-                const [s, d] = e.target.value.split(':') as [ImageSortField, ImageSortDirection];
-                changeSort(s, d);
-              }}
-            >
-              {SORT_FIELDS.map((f) => (
-                <optgroup key={f} label={t(`mediaSort.${f}` as 'mediaSort.created')}>
-                  <option value={`${f}:desc`}>{t(`mediaSort.${f}` as 'mediaSort.created')} · {t('mediaSort.desc')}</option>
-                  <option value={`${f}:asc`}>{t(`mediaSort.${f}` as 'mediaSort.created')} · {t('mediaSort.asc')}</option>
-                </optgroup>
-              ))}
-            </select>
-          </label>
-        )}
-      </div>
+      <MediaCommandBar
+        searchPlaceholder={searchPlaceholder}
+        searchText={searchText}
+        onSearchText={setSearchText}
+        onSubmitSearch={submitSearch}
+        activeFilterCount={activeFilterCount}
+        onOpenFilters={() => setSheetOpen(true)}
+        filtersButtonRef={filtersButtonRef}
+        showSort={!semantic}
+        sort={identity.sort}
+        direction={identity.direction}
+        onChangeSort={changeSort}
+        scope={identity.libraryScope}
+        onChangeScope={changeScope}
+      />
 
       <MediaFilterChips identity={identity} people={people} items={ws.items} onRemove={removeChip} onClearAll={clearAll} />
 
