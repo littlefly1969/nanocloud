@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NanoCloud.Api.Ai.Backends;
 using NanoCloud.Api.Ai.Photos;
 using NanoCloud.Api.Ai.Resolution;
@@ -39,6 +40,7 @@ public sealed class VideoSemanticEmbeddingService
     private readonly IVideoSemanticFrameExtractor _extractor;
     private readonly IAiVectorSerializer _serializer;
     private readonly VideoSemanticSampleVectorIndexService _vectors;
+    private readonly IOptions<VideoVisualEmbeddingOptions> _options;
     private readonly TimeProvider _clock;
     private readonly ILogger<VideoSemanticEmbeddingService> _logger;
 
@@ -48,6 +50,7 @@ public sealed class VideoSemanticEmbeddingService
         IVideoSemanticFrameExtractor extractor,
         IAiVectorSerializer serializer,
         VideoSemanticSampleVectorIndexService vectors,
+        IOptions<VideoVisualEmbeddingOptions> options,
         TimeProvider clock,
         ILogger<VideoSemanticEmbeddingService> logger)
     {
@@ -56,6 +59,7 @@ public sealed class VideoSemanticEmbeddingService
         _extractor = extractor;
         _serializer = serializer;
         _vectors = vectors;
+        _options = options;
         _clock = clock;
         _logger = logger;
     }
@@ -156,8 +160,11 @@ public sealed class VideoSemanticEmbeddingService
 
         if (pending.Count > 0)
         {
+            // Frame resolution is THIS pipeline's setting: the SigLIP2 tower's
+            // input edge decides it, never the face-analysis configuration.
             var batch = await _extractor.ExtractFramesAsync(
-                ct => _blobs.OpenContentAsync(blobObjectId, ct), pending, cancellationToken);
+                ct => _blobs.OpenContentAsync(blobObjectId, ct), pending,
+                _options.Value.FrameMaxEdge, cancellationToken);
 
             if (!batch.Staged)
             {

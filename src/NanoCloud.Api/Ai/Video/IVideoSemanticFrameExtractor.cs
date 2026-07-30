@@ -12,11 +12,18 @@ namespace NanoCloud.Api.Ai.Video;
 // This interface is also the REPLACEMENT SEAM for future extraction
 // strategies (chunked / one-pass); callers depend only on the per-request
 // results, not on how many processes produced them.
+//
+// FRAME RESOLUTION IS THE CALLER'S: `frameMaxEdge` is passed per invocation and
+// never read from configuration here. The extractor is shared by pipelines with
+// genuinely different resolution needs (SigLIP2 semantic embedding vs face
+// detection), and each owns its own setting — changing one must never move the
+// other.
 public interface IVideoSemanticFrameExtractor
 {
     Task<VideoSemanticFrameBatchResult> ExtractFramesAsync(
         Func<CancellationToken, Task<Stream>> openBlobContent,
         IReadOnlyList<VideoSemanticFrameRequest> requests,
+        int frameMaxEdge,
         CancellationToken cancellationToken);
 }
 
@@ -39,6 +46,7 @@ public interface IVideoSemanticFrameStreamExtractor
     Task<string?> ExtractFramesStreamingAsync(
         Func<CancellationToken, Task<Stream>> openBlobContent,
         IReadOnlyList<VideoSemanticFrameRequest> requests,
+        int frameMaxEdge,
         Func<VideoSemanticFrameResult, CancellationToken, Task> onFrame,
         CancellationToken cancellationToken);
 }

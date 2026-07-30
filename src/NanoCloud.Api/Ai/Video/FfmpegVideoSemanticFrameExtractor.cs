@@ -24,7 +24,10 @@ namespace NanoCloud.Api.Ai.Video;
 //   * the input is an opaque GUID-named temp file; the frame goes to stdout
 //     (`pipe:1`), so there is no output filename at all;
 //   * the filter graph is a CONSTANT with exactly one interpolated value, the
-//     validator-bounded integer FrameMaxEdge — no user-controlled filters;
+//     caller-supplied validator-bounded integer frameMaxEdge — no user-controlled
+//     filters. The VALUE belongs to the calling pipeline (VSEM-02 and VFACE-01
+//     have independent resolution settings); only the process/output caps below
+//     are shared transport limits;
 //   * autorotation stays enabled (FFmpeg default; `-noautorotate` is never
 //     passed), the scale filter preserves source aspect (no crop, no pad, no
 //     16:9 staging) and applies `setsar=1`;
@@ -58,6 +61,7 @@ public sealed class FfmpegVideoSemanticFrameExtractor
     public async Task<VideoSemanticFrameBatchResult> ExtractFramesAsync(
         Func<CancellationToken, Task<Stream>> openBlobContent,
         IReadOnlyList<VideoSemanticFrameRequest> requests,
+        int frameMaxEdge,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(requests);
@@ -66,6 +70,7 @@ public sealed class FfmpegVideoSemanticFrameExtractor
         var stagingError = await ExtractFramesStreamingAsync(
             openBlobContent,
             requests,
+            frameMaxEdge,
             (frame, _) =>
             {
                 results.Add(frame);
@@ -81,6 +86,7 @@ public sealed class FfmpegVideoSemanticFrameExtractor
     public async Task<string?> ExtractFramesStreamingAsync(
         Func<CancellationToken, Task<Stream>> openBlobContent,
         IReadOnlyList<VideoSemanticFrameRequest> requests,
+        int frameMaxEdge,
         Func<VideoSemanticFrameResult, CancellationToken, Task> onFrame,
         CancellationToken cancellationToken)
     {
@@ -131,7 +137,7 @@ public sealed class FfmpegVideoSemanticFrameExtractor
                     run = await _runner.RunAsync(
                         new ProcessRunRequest(
                             _media.Value.FfmpegPath,
-                            BuildFrameArguments(tempFile, request.TimestampMilliseconds, options.FrameMaxEdge),
+                            BuildFrameArguments(tempFile, request.TimestampMilliseconds, frameMaxEdge),
                             options.FrameTimeoutSeconds,
                             options.MaximumFrameOutputBytes),
                         cancellationToken);

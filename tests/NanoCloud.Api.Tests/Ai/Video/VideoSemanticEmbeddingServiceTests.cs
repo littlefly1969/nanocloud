@@ -32,6 +32,7 @@ public sealed class VideoSemanticEmbeddingServiceTests : IDisposable
     private readonly AiVectorSerializer _serializer = new();
     private readonly FakeFrameExtractor _extractor = new();
     private readonly FakeImageEmbedder _embedder = new();
+    private readonly VideoVisualEmbeddingOptions _videoOptions = new();
 
     public VideoSemanticEmbeddingServiceTests()
     {
@@ -69,6 +70,7 @@ public sealed class VideoSemanticEmbeddingServiceTests : IDisposable
         => new(
             _db, _blobs, _extractor, _serializer,
             new VideoSemanticSampleVectorIndexService(_db, _serializer, TimeProvider.System),
+            Options.Create(_videoOptions),
             TimeProvider.System, NullLogger<VideoSemanticEmbeddingService>.Instance);
 
     // ---- seeding -----------------------------------------------------------
@@ -199,6 +201,34 @@ public sealed class VideoSemanticEmbeddingServiceTests : IDisposable
         Assert.Null(aggregate.ErrorCode);
         Assert.NotNull(aggregate.CompletedAt);
         Assert.Equal(1, aggregate.AttemptCount);
+    }
+
+    [Fact]
+    public async Task Extraction_Uses_The_Video_Embedding_Frame_Edge()
+    {
+        // VFACE-01C: VSEM-02 keeps its OWN resolution setting. The face-analysis
+        // section cannot reach this pipeline — it is not even bound here.
+        var owner = await SeedUserAsync();
+        var video = await SeedVideoWithManifestAsync(owner, samples: 1);
+        var profile = await SeedProfileAsync();
+        _videoOptions.FrameMaxEdge = 1024;
+
+        await NewService().ProcessBlobAsync(_embedder, profile, video.BlobId, 1);
+
+        Assert.Equal(1024, _extractor.LastFrameMaxEdge);
+    }
+
+    [Fact]
+    public async Task The_Default_Video_Embedding_Frame_Edge_Is_Unchanged()
+    {
+        var owner = await SeedUserAsync();
+        var video = await SeedVideoWithManifestAsync(owner, samples: 1);
+        var profile = await SeedProfileAsync();
+
+        await NewService().ProcessBlobAsync(_embedder, profile, video.BlobId, 1);
+
+        Assert.Equal(768, new VideoVisualEmbeddingOptions().FrameMaxEdge);
+        Assert.Equal(768, _extractor.LastFrameMaxEdge);
     }
 
     [Fact]
@@ -510,13 +540,17 @@ public sealed class VideoSemanticEmbeddingServiceTests : IDisposable
         public bool ThrowCancelled { get; set; }
         public IReadOnlyList<VideoSemanticFrameRequest>? LastRequests { get; set; }
 
+        public int? LastFrameMaxEdge { get; private set; }
+
         public Task<VideoSemanticFrameBatchResult> ExtractFramesAsync(
             Func<CancellationToken, Task<Stream>> openBlobContent,
             IReadOnlyList<VideoSemanticFrameRequest> requests,
+            int frameMaxEdge,
             CancellationToken cancellationToken)
         {
             Batches++;
             LastRequests = requests;
+            LastFrameMaxEdge = frameMaxEdge;
             if (ThrowCancelled)
             {
                 throw new OperationCanceledException();

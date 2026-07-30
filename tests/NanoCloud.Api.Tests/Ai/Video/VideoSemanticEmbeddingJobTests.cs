@@ -84,6 +84,7 @@ public sealed class VideoSemanticEmbeddingJobTests : IDisposable
             new VideoSemanticEmbeddingService(
                 _db, _blobs, _extractor, _serializer,
                 new VideoSemanticSampleVectorIndexService(_db, _serializer, TimeProvider.System),
+                Options.Create(_videoOptions),
                 TimeProvider.System, NullLogger<VideoSemanticEmbeddingService>.Instance),
             Options.Create(_segmentationOptions));
 
@@ -644,12 +645,16 @@ public sealed class VideoSemanticEmbeddingJobTests : IDisposable
 
         public int Batches { get; set; }
 
+        public int? LastFrameMaxEdge { get; private set; }
+
         public Task<VideoSemanticFrameBatchResult> ExtractFramesAsync(
             Func<CancellationToken, Task<Stream>> openBlobContent,
             IReadOnlyList<VideoSemanticFrameRequest> requests,
+            int frameMaxEdge,
             CancellationToken cancellationToken)
         {
             Batches++;
+            LastFrameMaxEdge = frameMaxEdge;
             var frames = requests
                 .Select(r => new VideoSemanticFrameResult(r.SampleId, r.TimestampMilliseconds, Jpeg, null))
                 .ToList();

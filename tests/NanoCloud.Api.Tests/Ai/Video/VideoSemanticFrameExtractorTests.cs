@@ -17,6 +17,11 @@ public sealed class VideoSemanticFrameExtractorTests
 {
     private static readonly byte[] Jpeg = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10];
 
+    // The extractor no longer reads a resolution from configuration: every
+    // caller supplies its own. These tests pass an explicit edge, and
+    // Frame_Resolution_Comes_From_The_Caller pins that it is honoured.
+    private const int Edge = 768;
+
     private static FfmpegVideoSemanticFrameExtractor Build(
         IProcessRunner runner, VideoVisualEmbeddingOptions? options = null)
         => new(
@@ -37,7 +42,7 @@ public sealed class VideoSemanticFrameExtractorTests
     public async Task Arguments_Are_Separate_Tokens_With_Stdout_Output_And_Autorotation_On()
     {
         var runner = new SequencedProcessRunner(new ProcessRunResult(0, Jpeg, false));
-        await Build(runner).ExtractFramesAsync(Content(), [Request(12_345)], CancellationToken.None);
+        await Build(runner).ExtractFramesAsync(Content(), [Request(12_345)], Edge, CancellationToken.None);
 
         var request = Assert.Single(runner.Requests);
         Assert.Equal("ffmpeg", request.Executable);
@@ -57,7 +62,7 @@ public sealed class VideoSemanticFrameExtractorTests
     public async Task Seek_Is_Input_Side_And_Invariantly_Formatted()
     {
         var runner = new SequencedProcessRunner(new ProcessRunResult(0, Jpeg, false));
-        await Build(runner).ExtractFramesAsync(Content(), [Request(12_345)], CancellationToken.None);
+        await Build(runner).ExtractFramesAsync(Content(), [Request(12_345)], Edge, CancellationToken.None);
 
         var args = runner.Requests[0].Arguments.ToList();
         var ss = args.IndexOf("-ss");
@@ -76,7 +81,7 @@ public sealed class VideoSemanticFrameExtractorTests
     public async Task First_And_Final_Timestamps_Format_Exactly(long ms, string expected)
     {
         var runner = new SequencedProcessRunner(new ProcessRunResult(0, Jpeg, false));
-        await Build(runner).ExtractFramesAsync(Content(), [Request(ms)], CancellationToken.None);
+        await Build(runner).ExtractFramesAsync(Content(), [Request(ms)], Edge, CancellationToken.None);
 
         var args = runner.Requests[0].Arguments.ToList();
         Assert.Equal(expected, args[args.IndexOf("-ss") + 1]);
@@ -93,6 +98,42 @@ public sealed class VideoSemanticFrameExtractorTests
         Assert.DoesNotContain("pad", filter);
     }
 
+    [Theory]
+    [InlineData(640)]
+    [InlineData(768)]
+    [InlineData(1280)]
+    public async Task Frame_Resolution_Comes_From_The_Caller_Not_From_Configuration(int edge)
+    {
+        // VFACE-01C: the extractor is shared by pipelines with different
+        // resolution needs, so the edge is an ARGUMENT. A configuration object
+        // whose own historical FrameMaxEdge disagrees must not influence it.
+        var runner = new SequencedProcessRunner(new ProcessRunResult(0, Jpeg, false));
+        var options = new VideoVisualEmbeddingOptions { FrameMaxEdge = 4096 };
+
+        await Build(runner, options).ExtractFramesAsync(
+            Content(), [Request(1000)], edge, CancellationToken.None);
+
+        var args = runner.Requests[0].Arguments.ToList();
+        Assert.Equal(
+            $"scale={edge}:{edge}:force_original_aspect_ratio=decrease,setsar=1",
+            args[args.IndexOf("-vf") + 1]);
+        Assert.DoesNotContain("4096", args[args.IndexOf("-vf") + 1]);
+    }
+
+    [Fact]
+    public async Task The_Streaming_Form_Honours_The_Caller_Resolution_Too()
+    {
+        var runner = new SequencedProcessRunner(new ProcessRunResult(0, Jpeg, false));
+
+        await Build(runner).ExtractFramesStreamingAsync(
+            Content(), [Request(1000)], 1024, (_, _) => Task.CompletedTask, CancellationToken.None);
+
+        var args = runner.Requests[0].Arguments.ToList();
+        Assert.Equal(
+            "scale=1024:1024:force_original_aspect_ratio=decrease,setsar=1",
+            args[args.IndexOf("-vf") + 1]);
+    }
+
     [Fact]
     public async Task Timeout_And_Output_Cap_Come_From_Options()
     {
@@ -100,7 +141,7 @@ public sealed class VideoSemanticFrameExtractorTests
         await Build(runner, new VideoVisualEmbeddingOptions
         {
             FrameTimeoutSeconds = 42, MaximumFrameOutputBytes = 8192,
-        }).ExtractFramesAsync(Content(), [Request(1000)], CancellationToken.None);
+        }).ExtractFramesAsync(Content(), [Request(1000)], Edge, CancellationToken.None);
 
         Assert.Equal(42, runner.Requests[0].TimeoutSeconds);
         Assert.Equal(8192, runner.Requests[0].MaxStdoutBytes);
@@ -123,7 +164,7 @@ public sealed class VideoSemanticFrameExtractorTests
             new ProcessRunResult(0, Jpeg, false),
             new ProcessRunResult(0, Jpeg, false));
         await Build(runner).ExtractFramesAsync(
-            content, [Request(1000), Request(2000), Request(3000)], CancellationToken.None);
+            content, [Request(1000), Request(2000), Request(3000)], Edge, CancellationToken.None);
 
         Assert.Equal(1, opened);   // one staging, three seeks
         var inputs = runner.Requests
@@ -139,7 +180,7 @@ public sealed class VideoSemanticFrameExtractorTests
             new ProcessRunResult(0, Jpeg, false),
             new ProcessRunResult(0, Jpeg, false));
         var result = await Build(runner).ExtractFramesAsync(
-            Content(), [Request(1000), Request(2000)], CancellationToken.None);
+            Content(), [Request(1000), Request(2000)], Edge, CancellationToken.None);
 
         Assert.Equal(2, runner.Requests.Count);
         Assert.Equal(2, result.Frames.Count);
@@ -152,7 +193,7 @@ public sealed class VideoSemanticFrameExtractorTests
         var runner = new SequencedProcessRunner();
         var result = await Build(runner).ExtractFramesAsync(
             _ => throw new FileNotFoundException("/storage/objects/ab/cd/deadbeef"),
-            [Request(1000)], CancellationToken.None);
+            [Request(1000)], Edge, CancellationToken.None);
 
         Assert.False(result.Staged);
         Assert.Equal(VideoSemanticErrorCodes.BlobStorage, result.StagingErrorCode);
@@ -170,7 +211,7 @@ public sealed class VideoSemanticFrameExtractorTests
             new ProcessRunResult(1, [], false),                  // decode failure
             new ProcessRunResult(0, Jpeg, false));
         var result = await Build(runner).ExtractFramesAsync(
-            Content(), [Request(1000), Request(2000), Request(3000)], CancellationToken.None);
+            Content(), [Request(1000), Request(2000), Request(3000)], Edge, CancellationToken.None);
 
         Assert.True(result.Frames[0].Succeeded);
         Assert.False(result.Frames[1].Succeeded);
@@ -186,7 +227,7 @@ public sealed class VideoSemanticFrameExtractorTests
             new ProcessRunResult(0, [], false, OutputTruncated: true),
             new ProcessRunResult(0, [0x00, 0x01, 0x02, 0x03], false));   // not a JPEG
         var result = await Build(runner).ExtractFramesAsync(
-            Content(), [Request(1000), Request(2000), Request(3000)], CancellationToken.None);
+            Content(), [Request(1000), Request(2000), Request(3000)], Edge, CancellationToken.None);
 
         Assert.Equal(VideoSemanticErrorCodes.ProcessTimeout, result.Frames[0].ErrorCode);
         Assert.Equal(VideoSemanticErrorCodes.ProcessOutputLimit, result.Frames[1].ErrorCode);
@@ -198,7 +239,7 @@ public sealed class VideoSemanticFrameExtractorTests
     {
         var runner = new SequencedProcessRunner(new ProcessRunResult(0, Jpeg, false));
         var result = await Build(runner).ExtractFramesAsync(
-            Content(), [Request(-1), Request(1000)], CancellationToken.None);
+            Content(), [Request(-1), Request(1000)], Edge, CancellationToken.None);
 
         Assert.False(result.Frames[0].Succeeded);
         Assert.Equal(VideoSemanticErrorCodes.FrameExtraction, result.Frames[0].ErrorCode);
@@ -211,7 +252,7 @@ public sealed class VideoSemanticFrameExtractorTests
     {
         var runner = new CountingThrowingRunner();
         var result = await Build(runner).ExtractFramesAsync(
-            Content(), [Request(1000), Request(2000), Request(3000)], CancellationToken.None);
+            Content(), [Request(1000), Request(2000), Request(3000)], Edge, CancellationToken.None);
 
         Assert.Equal(1, runner.Calls);   // the missing binary is not retried per sample
         Assert.All(result.Frames, f =>
@@ -229,7 +270,7 @@ public sealed class VideoSemanticFrameExtractorTests
         var runner = new CancellingRunner(cts);
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             Build(runner).ExtractFramesAsync(
-                Content(), [Request(1000), Request(2000)], cts.Token));
+                Content(), [Request(1000), Request(2000)], Edge, cts.Token));
 
         Assert.Equal(before, CountTempInputs());
     }
@@ -240,9 +281,9 @@ public sealed class VideoSemanticFrameExtractorTests
         var before = CountTempInputs();
 
         await Build(new SequencedProcessRunner(new ProcessRunResult(0, Jpeg, false)))
-            .ExtractFramesAsync(Content(), [Request(1000)], CancellationToken.None);
+            .ExtractFramesAsync(Content(), [Request(1000)], Edge, CancellationToken.None);
         await Build(new SequencedProcessRunner(new ProcessRunResult(1, [], false)))
-            .ExtractFramesAsync(Content(), [Request(1000)], CancellationToken.None);
+            .ExtractFramesAsync(Content(), [Request(1000)], Edge, CancellationToken.None);
 
         Assert.Equal(before, CountTempInputs());
     }
@@ -258,7 +299,7 @@ public sealed class VideoSemanticFrameExtractorTests
         };
 
         var runner = new SequencedProcessRunner();
-        var result = await Build(runner).ExtractFramesAsync(content, [], CancellationToken.None);
+        var result = await Build(runner).ExtractFramesAsync(content, [], Edge, CancellationToken.None);
 
         Assert.True(result.Staged);
         Assert.Empty(result.Frames);

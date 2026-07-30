@@ -20,10 +20,13 @@ namespace NanoCloud.Api.Ai.Video.Faces;
 // capability default), so video tracks always live in the SAME recognition space
 // as the photo face substrate.
 //
-// FRAME TRANSPORT knobs (per-process timeout, stdout cap, frame max edge) are
-// deliberately NOT duplicated here: face analysis reuses the VSEM-02 frame
-// extractor and therefore its "Ai:VideoVisualEmbeddings" transport settings. Only
-// the face-specific bounds live in this section.
+// Face analysis reuses the VSEM-02 FFmpeg frame extractor, but NOT its
+// resolution: FrameMaxEdge below is this pipeline's own setting and is passed to
+// the extractor per invocation. The two pipelines have genuinely different needs
+// (a SigLIP2 tower resizes to 384 anyway, while a face detector's usable minimum
+// face size scales directly with the frame edge), so changing one must never
+// move the other. Only the per-process TRANSPORT limits (timeout, stdout cap)
+// remain shared with "Ai:VideoVisualEmbeddings".
 public class VideoFaceAnalysisOptions
 {
     public const string SectionName = "Ai:VideoFaceAnalysis";
@@ -53,6 +56,17 @@ public class VideoFaceAnalysisOptions
     public int MaximumFramesPerVideo { get; set; } = 900;
 
     public int MaximumFacesPerFrame { get; set; } = 8;
+
+    // Frames are downscaled to fit within this box, SOURCE ASPECT PRESERVED
+    // (never cropped, padded or stretched). It is the single biggest lever on
+    // both cost and detection reach: MinimumFaceSizePixels is measured against
+    // the resulting frame, so raising this makes distant faces detectable and
+    // makes every frame more expensive to decode and detect on.
+    //
+    // INDEPENDENT of Ai:VideoVisualEmbeddings:FrameMaxEdge by construction.
+    public int FrameMaxEdge { get; set; } = DefaultFrameMaxEdge;
+
+    public const int DefaultFrameMaxEdge = 768;
 
     // ---- detection acceptance ----------------------------------------------
 
@@ -107,6 +121,17 @@ public class VideoFaceAnalysisOptions
 public sealed class VideoFaceAnalysisOptionsValidator
     : IValidateOptions<VideoFaceAnalysisOptions>
 {
+    // The detector's own letterboxed input edge (SCRFD in both antelopev2 and
+    // buffalo packages). A frame smaller than this is upsampled into the
+    // detector, so nothing is gained and small faces are lost outright — the
+    // same reasoning VSEM-02 applies with the SigLIP2 384 input edge.
+    public const int MinimumFrameEdge = 640;
+
+    // Mirrors the repository's existing ceiling for a derived image edge
+    // (MediaDerivativesOptions.MaxMediumPreviewMaxEdge): beyond it a single
+    // decoded frame stops being a bounded cost.
+    public const int MaximumFrameEdge = 8192;
+
     public ValidateOptionsResult Validate(string? name, VideoFaceAnalysisOptions o)
     {
         var errors = new List<string>();
@@ -148,6 +173,19 @@ public sealed class VideoFaceAnalysisOptionsValidator
         if (!double.IsFinite(o.MaximumAssociationScaleRatio) || o.MaximumAssociationScaleRatio < 1d)
         {
             errors.Add("MaximumAssociationScaleRatio must be a finite value of at least 1.");
+        }
+
+        if (o.FrameMaxEdge < MinimumFrameEdge || o.FrameMaxEdge > MaximumFrameEdge)
+        {
+            errors.Add(
+                $"FrameMaxEdge must be within [{MinimumFrameEdge}, {MaximumFrameEdge}] pixels.");
+        }
+
+        // A gate no face could ever clear makes the whole analysis silently
+        // empty at this resolution.
+        if (o.FrameMaxEdge > 0 && o.MinimumFaceSizePixels > o.FrameMaxEdge)
+        {
+            errors.Add("MinimumFaceSizePixels must not exceed FrameMaxEdge.");
         }
 
         if (o.MinimumFaceSizePixels > o.QualityReferenceFaceSizePixels)

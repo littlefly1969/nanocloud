@@ -689,14 +689,17 @@ public sealed class VideoFaceAnalysisJobTests : IDisposable
         private static readonly byte[] Frame = Jpeg();
 
         public int Runs { get; private set; }
+        public int? LastFrameMaxEdge { get; private set; }
 
         public async Task<string?> ExtractFramesStreamingAsync(
             Func<CancellationToken, Task<Stream>> openBlobContent,
             IReadOnlyList<VideoSemanticFrameRequest> requests,
+            int frameMaxEdge,
             Func<VideoSemanticFrameResult, CancellationToken, Task> onFrame,
             CancellationToken cancellationToken)
         {
             Runs++;
+            LastFrameMaxEdge = frameMaxEdge;
             foreach (var request in requests)
             {
                 await onFrame(

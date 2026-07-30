@@ -333,6 +333,10 @@ public sealed class VideoFaceAnalysisService
         var stagingError = await _extractor.ExtractFramesStreamingAsync(
             ct => _blobs.OpenContentAsync(blobObjectId, ct),
             requests,
+            // Frame resolution is THIS pipeline's setting: the face detector's
+            // input edge and the pixel-size gate decide it, never the SigLIP2
+            // video-embedding configuration.
+            options.FrameMaxEdge,
             async (frame, ct) =>
             {
                 var frameIndex = frameIndexById[frame.SampleId];

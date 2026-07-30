@@ -726,6 +726,39 @@ public sealed class VideoFaceAnalysisServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Extraction_Uses_The_Face_Frame_Edge_Not_The_Video_Embedding_One()
+    {
+        var owner = await SeedUserAsync();
+        var video = await SeedVideoWithManifestAsync(owner);
+        var profile = await SeedProfileAsync();
+        _options = NewOptions();
+        _options.FrameMaxEdge = 1280;
+        _backend.NoFaces();
+
+        await NewService().ProcessBlobAsync(_backend, _backend, profile, video.BlobId, 1, 1);
+
+        Assert.Equal(1280, _extractor.RequestedFrameMaxEdge);
+        // The SigLIP2 video-embedding default plays no part in this pipeline.
+        Assert.NotEqual(
+            new VideoVisualEmbeddingOptions().FrameMaxEdge, _extractor.RequestedFrameMaxEdge);
+    }
+
+    [Fact]
+    public async Task The_Default_Face_Frame_Edge_Reaches_The_Extractor()
+    {
+        var owner = await SeedUserAsync();
+        var video = await SeedVideoWithManifestAsync(owner);
+        var profile = await SeedProfileAsync();
+        _options = NewOptions();
+        _options.FrameMaxEdge = VideoFaceAnalysisOptions.DefaultFrameMaxEdge;
+        _backend.NoFaces();
+
+        await NewService().ProcessBlobAsync(_backend, _backend, profile, video.BlobId, 1, 1);
+
+        Assert.Equal(768, _extractor.RequestedFrameMaxEdge);
+    }
+
+    [Fact]
     public async Task Faces_Per_Frame_Are_Capped()
     {
         var owner = await SeedUserAsync();
@@ -758,14 +791,17 @@ public sealed class VideoFaceAnalysisServiceTests : IDisposable
         public Action? OnFrame { get; set; }
         public TimeSpan DelayPerFrame { get; set; } = TimeSpan.Zero;
         public int RequestedFrames { get; private set; }
+        public int? RequestedFrameMaxEdge { get; private set; }
 
         public async Task<string?> ExtractFramesStreamingAsync(
             Func<CancellationToken, Task<Stream>> openBlobContent,
             IReadOnlyList<VideoSemanticFrameRequest> requests,
+            int frameMaxEdge,
             Func<VideoSemanticFrameResult, CancellationToken, Task> onFrame,
             CancellationToken cancellationToken)
         {
             RequestedFrames = requests.Count;
+            RequestedFrameMaxEdge = frameMaxEdge;
             if (StagingErrorCode is not null)
             {
                 return StagingErrorCode;

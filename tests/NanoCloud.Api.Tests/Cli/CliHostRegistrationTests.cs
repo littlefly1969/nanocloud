@@ -170,6 +170,48 @@ public sealed class CliHostRegistrationTests : IDisposable
         Assert.IsType<NanoCloud.Api.Ai.Video.AiVideosSegmentsBackfillJobHandler>(handler);
     }
 
+    // VFACE-01/01C: the worker runs ai.videos.faces.backfill, so it must both
+    // REGISTER the handler and BIND the same "Ai:VideoFaceAnalysis" section the
+    // web host binds — including FrameMaxEdge, which is this pipeline's OWN
+    // resolution and must not be taken from Ai:VideoVisualEmbeddings.
+    [Fact]
+    public void Worker_Host_Binds_Video_Face_Options_And_Registers_Its_Handler()
+    {
+        using var sp = BuildCliHost(new Dictionary<string, string?>
+        {
+            ["Ai:VideoFaceAnalysis:Enabled"] = "true",
+            ["Ai:VideoFaceAnalysis:AnalysisVersion"] = "4",
+            ["Ai:VideoFaceAnalysis:FrameMaxEdge"] = "1280",
+            ["Ai:VideoVisualEmbeddings:FrameMaxEdge"] = "4096",
+        });
+
+        var face = sp.GetRequiredService<
+            IOptions<NanoCloud.Api.Ai.Video.Faces.VideoFaceAnalysisOptions>>().Value;
+        Assert.True(face.Enabled);
+        Assert.Equal(4, face.AnalysisVersion);
+        Assert.Equal(1280, face.FrameMaxEdge);
+
+        // The two sections are independent: the video-embedding value is bound
+        // too, and neither leaks into the other.
+        var semantic = sp.GetRequiredService<
+            IOptions<NanoCloud.Api.Ai.Video.VideoVisualEmbeddingOptions>>().Value;
+        Assert.Equal(4096, semantic.FrameMaxEdge);
+
+        using var scope = sp.CreateScope();
+        var handler = scope.ServiceProvider.GetServices<IJobHandler>()
+            .SingleOrDefault(h => h.JobType == JobTypes.AiVideosFacesBackfill);
+        Assert.IsType<NanoCloud.Api.Ai.Video.Faces.AiVideosFacesBackfillJobHandler>(handler);
+    }
+
+    [Fact]
+    public void Worker_Host_Defaults_The_Face_Frame_Edge_To_768()
+    {
+        using var sp = BuildCliHost();
+
+        Assert.Equal(768, sp.GetRequiredService<
+            IOptions<NanoCloud.Api.Ai.Video.Faces.VideoFaceAnalysisOptions>>().Value.FrameMaxEdge);
+    }
+
     [Fact]
     public void Cli_Host_Resolves_Every_Service_A_Cli_Verb_Dispatches_To()
     {

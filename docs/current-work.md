@@ -65,6 +65,12 @@ Decisions worth remembering:
   and normalized bounding box are stored instead, so a crop can be regenerated
   from the immutable original on demand. `RepresentativeCropBlobObjectId` exists
   and is always null, reserved for VFACE-02.
+- Cost per analysed video: **0 persistent frame/crop bytes**; persistent
+  database cost is limited to the analysis status row and the track embeddings.
+- VFACE-01C: face frame resolution is `Ai:VideoFaceAnalysis:FrameMaxEdge`
+  (default 768, range [640, 8192]), passed to the shared FFmpeg extractor per
+  invocation. VSEM-02 keeps `Ai:VideoVisualEmbeddings:FrameMaxEdge`; changing
+  one cannot move the other.
 - Tracks are evidence only. No `OwnerUserId`, `FileItemId`, `PersonId` or person
   name is stored, and cross-track / cross-video clustering is VFACE-02.
 

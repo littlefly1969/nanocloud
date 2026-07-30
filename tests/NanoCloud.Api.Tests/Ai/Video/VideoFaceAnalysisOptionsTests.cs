@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+using NanoCloud.Api.Ai.Video;
 using NanoCloud.Api.Ai.Video.Faces;
 using Xunit;
 
@@ -130,6 +132,76 @@ public sealed class VideoFaceAnalysisOptionsTests
         options.MaximumTrackGapMilliseconds = 500;
 
         Assert.Contains(Validate(options), e => e.Contains("MaximumTrackGapMilliseconds"));
+    }
+
+    // ---- VFACE-01C: frame resolution is this pipeline's own -----------------
+
+    [Fact]
+    public void The_Default_Face_Frame_Edge_Is_768()
+    {
+        Assert.Equal(768, Valid().FrameMaxEdge);
+        Assert.Equal(768, VideoFaceAnalysisOptions.DefaultFrameMaxEdge);
+    }
+
+    [Theory]
+    [InlineData(639)]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(8193)]
+    public void An_Out_Of_Range_Face_Frame_Edge_Is_Rejected(int edge)
+    {
+        var options = Valid();
+        options.FrameMaxEdge = edge;
+
+        Assert.Contains(Validate(options), e => e.Contains("FrameMaxEdge"));
+    }
+
+    [Theory]
+    [InlineData(640)]
+    [InlineData(768)]
+    [InlineData(8192)]
+    public void An_In_Range_Face_Frame_Edge_Is_Accepted(int edge)
+    {
+        var options = Valid();
+        options.FrameMaxEdge = edge;
+
+        Assert.Empty(Validate(options));
+    }
+
+    [Fact]
+    public void A_Pixel_Gate_Larger_Than_The_Frame_Is_Rejected()
+    {
+        // No face could ever clear it — the analysis would be silently empty.
+        var options = Valid();
+        options.FrameMaxEdge = 640;
+        options.MinimumFaceSizePixels = 1024;
+        options.QualityReferenceFaceSizePixels = 2048;
+
+        Assert.Contains(Validate(options), e => e.Contains("MinimumFaceSizePixels"));
+    }
+
+    [Fact]
+    public void The_Face_Frame_Edge_Is_Independent_Of_The_Video_Embedding_One()
+    {
+        // Two separate option objects bound from two separate sections: neither
+        // default nor validation of one can move the other.
+        var face = new VideoFaceAnalysisOptions { FrameMaxEdge = 1280 };
+        var semantic = new VideoVisualEmbeddingOptions { FrameMaxEdge = 384 };
+
+        Assert.Empty(Validate(face));
+        Assert.Equal(1280, face.FrameMaxEdge);
+        Assert.Equal(384, semantic.FrameMaxEdge);
+        Assert.NotEqual(
+            VideoFaceAnalysisOptions.SectionName, VideoVisualEmbeddingOptions.SectionName);
+
+        // A value VSEM-02 accepts (its floor is the 384 SigLIP2 input edge) is
+        // NOT automatically valid for face analysis, whose floor is the 640
+        // detector input edge. The two contracts are genuinely different.
+        var tooSmallForFaces = new VideoFaceAnalysisOptions { FrameMaxEdge = 384 };
+        Assert.NotEmpty(Validate(tooSmallForFaces));
+        Assert.Equal(
+            ValidateOptionsResult.Success,
+            new VideoVisualEmbeddingOptionsValidator().Validate(null, semantic));
     }
 
     [Fact]
