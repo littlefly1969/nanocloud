@@ -707,24 +707,41 @@ public sealed class FileItemService : IFileItemService
                 f.SizeBytes,
                 f.Width,
                 f.Height,
+                BlobWidth = _db.BlobMetadata
+                    .Where(m => m.BlobObjectId == f.BlobObjectId)
+                    .Select(m => m.Width)
+                    .FirstOrDefault(),
+                BlobHeight = _db.BlobMetadata
+                    .Where(m => m.BlobObjectId == f.BlobObjectId)
+                    .Select(m => m.Height)
+                    .FirstOrDefault(),
+                Orientation = _db.BlobMetadata
+                    .Where(m => m.BlobObjectId == f.BlobObjectId)
+                    .Select(m => m.Orientation)
+                    .FirstOrDefault(),
                 f.CreatedAt,
                 f.UpdatedAt,
             })
             .ToListAsync(cancellationToken);
 
         return rows
-            .Select(r => new ImageItem(
-                r.Id,
-                r.Name,
-                r.Title,
-                MediaDisplayName.Resolve(r.Title, r.Name),
-                r.MimeType,
-                r.SizeBytes,
-                r.Width,
-                r.Height,
-                r.CreatedAt,
-                r.UpdatedAt,
-                $"/api/files/{r.Id}/thumbnail?size=small"))
+            .Select(r =>
+            {
+                var (width, height) = ImageDisplayDimensions.Resolve(
+                    r.Width ?? r.BlobWidth, r.Height ?? r.BlobHeight, r.Orientation);
+                return new ImageItem(
+                    r.Id,
+                    r.Name,
+                    r.Title,
+                    MediaDisplayName.Resolve(r.Title, r.Name),
+                    r.MimeType,
+                    r.SizeBytes,
+                    width,
+                    height,
+                    r.CreatedAt,
+                    r.UpdatedAt,
+                    $"/api/files/{r.Id}/thumbnail?size=small");
+            })
             .ToList();
     }
 
@@ -804,12 +821,19 @@ public sealed class FileItemService : IFileItemService
             ownerUserId, limit, cursor, filters, sort, direction, MediaKindScope.Image, cancellationToken);
 
         var items = rows
-            .Select(r => new ImageItem(
-                r.Id, r.Name, r.Title, MediaDisplayName.Resolve(r.Title, r.Name),
-                r.MimeType, r.SizeBytes, r.Width, r.Height,
-                r.CreatedAt, r.UpdatedAt,
-                $"/api/files/{r.Id}/thumbnail?size=small",
-                r.OccurrenceCount))
+            .Select(r =>
+            {
+                var (width, height) = ImageDisplayDimensions.Resolve(
+                    r.Width ?? r.BlobWidth,
+                    r.Height ?? r.BlobHeight,
+                    r.Orientation);
+                return new ImageItem(
+                    r.Id, r.Name, r.Title, MediaDisplayName.Resolve(r.Title, r.Name),
+                    r.MimeType, r.SizeBytes, width, height,
+                    r.CreatedAt, r.UpdatedAt,
+                    $"/api/files/{r.Id}/thumbnail?size=small",
+                    r.OccurrenceCount);
+            })
             .ToList();
 
         return new ImagePage(items, nextCursor, hasMore, totalCount);
@@ -838,17 +862,34 @@ public sealed class FileItemService : IFileItemService
                 f.SizeBytes,
                 f.Width,
                 f.Height,
+                BlobWidth = _db.BlobMetadata
+                    .Where(m => m.BlobObjectId == f.BlobObjectId)
+                    .Select(m => m.Width)
+                    .FirstOrDefault(),
+                BlobHeight = _db.BlobMetadata
+                    .Where(m => m.BlobObjectId == f.BlobObjectId)
+                    .Select(m => m.Height)
+                    .FirstOrDefault(),
+                Orientation = _db.BlobMetadata
+                    .Where(m => m.BlobObjectId == f.BlobObjectId)
+                    .Select(m => m.Orientation)
+                    .FirstOrDefault(),
                 f.CreatedAt,
                 f.UpdatedAt,
             })
             .ToListAsync(cancellationToken);
 
         var rows = fetched
-            .Select(r => new ImageItem(
-                r.Id, r.Name, r.Title, MediaDisplayName.Resolve(r.Title, r.Name),
-                r.MimeType, r.SizeBytes, r.Width, r.Height,
-                r.CreatedAt, r.UpdatedAt,
-                $"/api/files/{r.Id}/thumbnail?size=small"))
+            .Select(r =>
+            {
+                var (width, height) = ImageDisplayDimensions.Resolve(
+                    r.Width ?? r.BlobWidth, r.Height ?? r.BlobHeight, r.Orientation);
+                return new ImageItem(
+                    r.Id, r.Name, r.Title, MediaDisplayName.Resolve(r.Title, r.Name),
+                    r.MimeType, r.SizeBytes, width, height,
+                    r.CreatedAt, r.UpdatedAt,
+                    $"/api/files/{r.Id}/thumbnail?size=small");
+            })
             .ToList();
 
         var byId = rows.ToDictionary(x => x.Id);
@@ -976,6 +1017,7 @@ public sealed class FileItemService : IFileItemService
                 m.AudioCodec,
                 m.HasAudio,
                 m.FrameRate,
+                m.Rotation,
             })
             .ToDictionaryAsync(x => x.Id, cancellationToken);
 
@@ -983,13 +1025,16 @@ public sealed class FileItemService : IFileItemService
             .Select(r =>
             {
                 var vm = videoMeta.GetValueOrDefault(r.Id);
+                var (width, height) = VideoDisplayDimensions.Resolve(
+                    vm?.Width ?? r.Width, vm?.Height ?? r.Height, vm?.Rotation);
                 return new VideoItem(
                     r.Id, r.Name, r.Title, MediaDisplayName.Resolve(r.Title, r.Name),
                     r.MimeType, r.SizeBytes,
-                    // Dimensions come from the probe (FileItem-level dims are null
-                    // for video); fall back to the row's copy if unprobed.
-                    vm?.Width ?? r.Width,
-                    vm?.Height ?? r.Height,
+                    // Same DISPLAY dimensions as the unified Library/Album
+                    // projection and TV Party: apply the probe rotation to coded
+                    // pixels so the tile matches the autorotated poster.
+                    width,
+                    height,
                     r.CreatedAt, r.UpdatedAt,
                     $"/api/files/{r.Id}/poster",
                     DurationSeconds: vm?.DurationSeconds,
@@ -1327,6 +1372,22 @@ public sealed class FileItemService : IFileItemService
                 SizeBytes = f.SizeBytes,
                 Width = f.Width,
                 Height = f.Height,
+                // Keep display-dimension inputs in the SAME page statement.
+                // Besides avoiding an extra round-trip, query-shape tests pin
+                // this statement as the source of title, album predicates and
+                // ordering.
+                BlobWidth = _db.BlobMetadata
+                    .Where(m => m.BlobObjectId == f.BlobObjectId)
+                    .Select(m => m.Width)
+                    .FirstOrDefault(),
+                BlobHeight = _db.BlobMetadata
+                    .Where(m => m.BlobObjectId == f.BlobObjectId)
+                    .Select(m => m.Height)
+                    .FirstOrDefault(),
+                Orientation = _db.BlobMetadata
+                    .Where(m => m.BlobObjectId == f.BlobObjectId)
+                    .Select(m => m.Orientation)
+                    .FirstOrDefault(),
                 CreatedAt = f.CreatedAt,
                 UpdatedAt = f.UpdatedAt,
                 EffectiveDateTaken = f.EffectiveDateTaken,
@@ -1388,6 +1449,9 @@ public sealed class FileItemService : IFileItemService
         public long SizeBytes { get; set; }
         public int? Width { get; set; }
         public int? Height { get; set; }
+        public int? BlobWidth { get; set; }
+        public int? BlobHeight { get; set; }
+        public int? Orientation { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         // Effective DateTaken (user override → embedded → CreatedAt) computed

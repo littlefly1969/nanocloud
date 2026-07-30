@@ -229,6 +229,116 @@ public sealed class TvPersonalGalleryTests : IDisposable
     }
 
     [Fact]
+    public async Task Library_Album_Party_And_Personal_Tv_Agree_On_Media_Display_Projection()
+    {
+        var (_, owner, cookie, token) = await PairedUnlockedOwnerAsync();
+        var photoId = await UploadAsync(owner, "portrait.png", PngBytes(320, 180));
+        var videoId = await UploadAsync(
+            owner, "portrait.mp4", ImageFixtures.MinimalMp4(), "video/mp4");
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var blobs = await db.FileItems
+                .Where(f => f.Id == photoId || f.Id == videoId)
+                .Select(f => new { f.Id, f.BlobObjectId })
+                .ToDictionaryAsync(x => x.Id);
+
+            await db.BlobMetadata
+                .Where(m => m.BlobObjectId == blobs[photoId].BlobObjectId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(m => m.Width, 320)
+                    .SetProperty(m => m.Height, 180)
+                    .SetProperty(m => m.Orientation, 6));
+            await db.BlobMetadata
+                .Where(m => m.BlobObjectId == blobs[videoId].BlobObjectId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(m => m.Width, 1920)
+                    .SetProperty(m => m.Height, 1080)
+                    .SetProperty(m => m.Rotation, 90));
+        }
+
+        var created = await owner.PostAsJsonAsync("/api/albums", new { name = "Projection parity" });
+        created.EnsureSuccessStatusCode();
+        var albumId = JsonDocument.Parse(await created.Content.ReadAsStringAsync())
+            .RootElement.GetProperty("id").GetGuid();
+        (await owner.PostAsJsonAsync(
+            $"/api/albums/{albumId}/items/bulk",
+            new { fileItemIds = new[] { photoId, videoId } })).EnsureSuccessStatusCode();
+        (await owner.PatchAsJsonAsync(
+            $"/api/albums/{albumId}/tv-settings",
+            new { showOnTv = true })).EnsureSuccessStatusCode();
+
+        // Frontend Library and frontend Album are backed by the same media
+        // collection service and must expose byte-for-byte-equivalent media facts.
+        var library = (await owner.GetFromJsonAsync<MediaListResponse>(
+            "/api/media?kind=all&limit=20"))!;
+        var album = (await owner.GetFromJsonAsync<MediaListResponse>(
+            $"/api/albums/{albumId}/media?kind=all&limit=20"))!;
+        var libraryPhoto = Assert.Single(library.Items, item => item.Id == photoId);
+        var albumPhoto = Assert.Single(album.Items, item => item.Id == photoId);
+        var libraryVideo = Assert.Single(library.Items, item => item.Id == videoId);
+        var albumVideo = Assert.Single(album.Items, item => item.Id == videoId);
+
+        Assert.Equal((180, 320, "image"), (libraryPhoto.Width, libraryPhoto.Height, libraryPhoto.Kind));
+        Assert.Equal(
+            (libraryPhoto.Width, libraryPhoto.Height, libraryPhoto.Kind, libraryPhoto.ThumbnailUrl),
+            (albumPhoto.Width, albumPhoto.Height, albumPhoto.Kind, albumPhoto.ThumbnailUrl));
+        Assert.Equal((1080, 1920, "video"), (libraryVideo.Width, libraryVideo.Height, libraryVideo.Kind));
+        Assert.Equal(
+            (libraryVideo.Width, libraryVideo.Height, libraryVideo.Kind, libraryVideo.ThumbnailUrl),
+            (albumVideo.Width, albumVideo.Height, albumVideo.Kind, albumVideo.ThumbnailUrl));
+        Assert.Equal($"/api/files/{videoId}/poster", libraryVideo.ThumbnailUrl);
+
+        // The legacy web endpoints still back narrower frontend paths (including
+        // filtered/semantic photo results) and TV Personal. They must not drift
+        // from the unified Library/Album projection.
+        var legacyImages = (await owner.GetFromJsonAsync<ImageListResponse>(
+            "/api/images?limit=20"))!;
+        var legacyVideos = (await owner.GetFromJsonAsync<VideoListResponse>(
+            "/api/videos?limit=20"))!;
+        var legacyPhoto = Assert.Single(legacyImages.Items, item => item.Id == photoId);
+        var legacyVideo = Assert.Single(legacyVideos.Items, item => item.Id == videoId);
+        Assert.Equal(
+            (libraryPhoto.Width, libraryPhoto.Height, libraryPhoto.ThumbnailUrl),
+            (legacyPhoto.Width, legacyPhoto.Height, legacyPhoto.ThumbnailUrl));
+        Assert.Equal(
+            (libraryVideo.Width, libraryVideo.Height, libraryVideo.ThumbnailUrl),
+            (legacyVideo.Width, legacyVideo.Height, legacyVideo.PosterUrl));
+
+        // TV Party applies a different authorization prefix, but classification,
+        // display dimensions and derivative KIND must be identical.
+        var partyResponse = await TvSendAsync(
+            cookie, HttpMethod.Get, $"/api/tv/albums/{albumId}/items");
+        partyResponse.EnsureSuccessStatusCode();
+        var party = (await partyResponse.Content.ReadFromJsonAsync<TvAlbumItemsDto>())!;
+        var partyPhoto = Assert.Single(party.Items, item => item.Id == photoId);
+        var partyVideo = Assert.Single(party.Items, item => item.Id == videoId);
+        Assert.Equal((libraryPhoto.Width, libraryPhoto.Height, "image"),
+            (partyPhoto.Width, partyPhoto.Height, partyPhoto.MediaType));
+        Assert.Equal((libraryVideo.Width, libraryVideo.Height, "video"),
+            (partyVideo.Width, partyVideo.Height, partyVideo.MediaType));
+        Assert.Equal($"/api/tv/media/{photoId}/thumbnail", partyPhoto.ThumbnailUrl);
+        Assert.Equal($"/api/tv/media/{videoId}/poster", partyVideo.PosterUrl);
+
+        // Personal TV Photo/Video are narrower, grant-gated DTOs over the same
+        // projection facts.
+        var gallery = await TvGalleryAsync(cookie, token, "");
+        var photo = Assert.Single(gallery.Items, item => item.Id == photoId);
+        Assert.Equal((libraryPhoto.Width, libraryPhoto.Height, "image"),
+            (photo.Width, photo.Height, photo.MediaType));
+        Assert.Equal($"/api/tv/personal/media/{photoId}/thumbnail", photo.ThumbnailUrl);
+
+        var videosResponse = await TvSendAsync(
+            cookie, HttpMethod.Get, "/api/tv/personal/videos?limit=20", token);
+        videosResponse.EnsureSuccessStatusCode();
+        var videos = (await videosResponse.Content.ReadFromJsonAsync<TvPersonalVideoPageDto>())!;
+        var video = Assert.Single(videos.Items, item => item.Id == videoId);
+        Assert.Equal((libraryVideo.Width, libraryVideo.Height), (video.Width, video.Height));
+        Assert.Equal($"/api/tv/personal/media/{videoId}/poster", video.PosterUrl);
+    }
+
+    [Fact]
     public async Task A_File_Deleted_After_Listing_Stops_Serving_Immediately()
     {
         var (_, owner, cookie, token) = await PairedUnlockedOwnerAsync();

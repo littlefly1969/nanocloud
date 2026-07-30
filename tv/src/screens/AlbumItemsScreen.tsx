@@ -21,7 +21,7 @@ import {
   type TvAlbumItems,
 } from '../api/tv';
 import { ApiError } from '../api/client';
-import { FocusableTile } from '../components/FocusableTile';
+import { FocusableMediaTile } from '../components/FocusableMediaTile';
 import { FocusableButton } from '../components/FocusableButton';
 import { AuthedTilePreview } from '../components/AuthedTilePreview';
 import { FaceFilterIndicator } from '../components/FaceFilterIndicator';
@@ -30,6 +30,13 @@ import { useMenuOverlay } from '../lib/useMenuOverlay';
 import { sameItemIds } from '../lib/liveItems';
 import { getTvMediaAspectRatio } from '../lib/mediaAspectRatio';
 import { buildTvJustifiedRows, type TvJustifiedRow } from '../lib/justifiedMediaRows';
+import {
+  MEDIA_GRID_FOCUS_BLEED,
+  MEDIA_GRID_PACKING_GAP,
+  MEDIA_GRID_VISUAL_GAP,
+  mediaGridTargetRowHeight,
+} from '../lib/mediaGridPresentation';
+import { useTvMediaGridFocus, type TvMediaFocusTargets } from '../lib/mediaGridFocus';
 import { remapFocusIndexById } from '../lib/focusRemap';
 import { useI18n } from '../i18n';
 import { tvDebug } from '../debug';
@@ -47,17 +54,8 @@ const FACE_SEARCH_POLL_MS = 6_000;
 // vertical tile). The target row height is derived from the surface height so a
 // 1080p-class layout shows ~3.5-4 rows and a 720p-class layout at least 3. The
 // FlatList virtualizes ROWS, so only tiles near the viewport mount (and download).
-const GRID_GAP = spacing.sm;
-// Chrome the FocusableTile reserves around the image (outer 4dp white border +
-// inner 2dp accent ring, per side) — subtracted so the media fills the tile box.
-const TILE_CHROME = 12;
-// Vertical breathing room per row so the focused tile's 1.07 scale-up is never
-// clipped by the row/list bounds.
-const ROW_FOCUS_BLEED = 6;
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
+const GRID_GAP = MEDIA_GRID_VISUAL_GAP;
+const ROW_FOCUS_BLEED = MEDIA_GRID_FOCUS_BLEED;
 
 interface Props {
   album: TvAlbum;
@@ -89,16 +87,18 @@ const ItemTile = memo(function ItemTile({
   width,
   height,
   preferred,
+  focusTargets,
   onOpen,
   onFocusIndex,
 }: {
   item: TvAlbumItem;
   index: number;
   total: number;
-  // Outer tile box from the justified layout (includes the FocusableTile chrome).
+  // Outer tile box from the justified layout.
   width: number;
   height: number;
   preferred: boolean;
+  focusTargets: TvMediaFocusTargets;
   onOpen: (index: number) => void;
   // Reports which tile the remote is on (index + id), so a later transition can
   // restore focus to the SAME item even after the list/rows change.
@@ -106,22 +106,23 @@ const ItemTile = memo(function ItemTile({
 }) {
   const [focused, setFocused] = useState(false);
   const isVideo = item.mediaType === 'video';
-  // Videos show the source-aspect poster (fallback thumbnail); photos show the
-  // small thumbnail (fallback preview).
+  // Videos show the source-aspect poster (fallback thumbnail); photos stay on
+  // the small grid thumbnail, never the medium viewer preview.
   const path = isVideo ? (item.posterUrl ?? item.thumbnailUrl) : item.thumbnailUrl;
-  const fallbackPath = isVideo ? item.thumbnailUrl : item.previewUrl;
+  const fallbackPath = isVideo ? item.thumbnailUrl : null;
   return (
-    <FocusableTile
+    <FocusableMediaTile
       accessibilityLabel={item.name}
       style={{ width }}
       hasTVPreferredFocus={preferred}
+      focusTargets={focusTargets}
       onSelect={() => onOpen(index)}
       onFocusChange={(f) => { setFocused(f); if (f) onFocusIndex(index, item.id); }}
     >
       <AuthedTilePreview
         path={path}
         fallbackPath={fallbackPath}
-        style={{ width: '100%', height: Math.max(1, height - TILE_CHROME), borderRadius: 8 }}
+        style={{ width: '100%', height, borderRadius: 8 }}
       />
       {isVideo && <Text style={styles.badge}>▶</Text>}
       {focused && (
@@ -129,7 +130,7 @@ const ItemTile = memo(function ItemTile({
           <Text style={styles.posBadgeText}>{index + 1} / {total}</Text>
         </View>
       )}
-    </FocusableTile>
+    </FocusableMediaTile>
   );
 });
 
@@ -239,10 +240,13 @@ export function AlbumItemsScreen({ album, onBack, onOpenItem, onSessionInvalid }
   // the same photo after a face-filter swap / live append / width change.
   const lastFocusedIndexRef = useRef(0);
   const lastFocusedIdRef = useRef<string | null>(null);
-  const [restoreIndex, setRestoreIndex] = useState(0);
+  const [restoreIndex, setRestoreIndex] = useState<number | null>(0);
   const onTileFocus = useCallback((index: number, id: string) => {
     lastFocusedIndexRef.current = index;
     lastFocusedIdRef.current = id;
+    // hasTVPreferredFocus is a one-shot restoration request. Leaving it true on
+    // a clipped row lets Android request focus again when that row remounts.
+    setRestoreIndex((current) => (current === null ? current : null));
   }, []);
 
   useEffect(() => {
@@ -399,7 +403,7 @@ export function AlbumItemsScreen({ album, onBack, onOpenItem, onSessionInvalid }
   // row height scales with the surface so ~3.5-4 rows show on 1080p and ≥3 on
   // 720p, clamped to a prudent band.
   const contentWidth = Math.max(1, width - 2 * inset.x);
-  const targetRowHeight = clamp(Math.round(height * 0.18), 125, 185);
+  const targetRowHeight = mediaGridTargetRowHeight(height);
   const total = displayItems.length;
   const rows = useMemo(
     () => buildTvJustifiedRows({
@@ -407,11 +411,13 @@ export function AlbumItemsScreen({ album, onBack, onOpenItem, onSessionInvalid }
       contentWidth,
       targetRowHeight,
       gap: GRID_GAP,
+      packingGap: MEDIA_GRID_PACKING_GAP,
       getAspectRatio: getTvMediaAspectRatio,
       getId: (it) => it.id,
     }),
     [displayItems, contentWidth, targetRowHeight],
   );
+  const focusForItem = useTvMediaGridFocus(rows, GRID_GAP);
 
   const renderRow = useCallback(({ item: row }: ListRenderItemInfo<TvJustifiedRow<TvAlbumItem>>) => (
     <View style={styles.row}>
@@ -426,13 +432,18 @@ export function AlbumItemsScreen({ album, onBack, onOpenItem, onSessionInvalid }
           // No tile holds the preferred flag while the overlay is up (the bar's
           // first command takes it); on close the restore tile flips false→true,
           // pulling focus back to where the user was.
-          preferred={!overlayVisible && tile.originalIndex === restoreIndex}
+          preferred={
+            !overlayVisible
+            && restoreIndex !== null
+            && tile.originalIndex === restoreIndex
+          }
+          focusTargets={focusForItem(tile.item.id)}
           onOpen={openAt}
           onFocusIndex={onTileFocus}
         />
       ))}
     </View>
-  ), [openAt, total, overlayVisible, restoreIndex, onTileFocus]);
+  ), [openAt, total, overlayVisible, restoreIndex, focusForItem, onTileFocus]);
 
   return (
     <View style={[styles.container, { paddingTop: inset.y, paddingHorizontal: inset.x }]}>
@@ -530,7 +541,7 @@ const styles = StyleSheet.create({
   stateBox: { marginTop: spacing.xl, alignItems: 'center', gap: spacing.md },
   grid: { gap: GRID_GAP },
   // A justified row: tiles laid left→right at their computed widths, with a
-  // little vertical bleed so the focused tile's 1.07 scale is not clipped.
+  // little vertical bleed so the focused tile's scale is not clipped.
   row: {
     flexDirection: 'row',
     gap: GRID_GAP,
