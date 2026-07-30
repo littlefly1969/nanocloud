@@ -6,24 +6,31 @@ import { MediaCommandBar } from './MediaCommandBar';
 
 afterEach(cleanup);
 
-function renderBar(overrides: Partial<Parameters<typeof MediaCommandBar>[0]> = {}) {
-  const props = {
-    searchPlaceholder: 'Cerca nella libreria',
-    searchText: '',
+type BarProps = Parameters<typeof MediaCommandBar>[0];
+
+// The spies are kept OUT of the props spread so their Mock types survive the
+// `Partial<BarProps>` override merge and stay assertable.
+function renderBar(overrides: Partial<BarProps> = {}) {
+  const spies = {
     onSearchText: vi.fn(),
     onSubmitSearch: vi.fn(),
-    activeFilterCount: 0,
     onOpenFilters: vi.fn(),
-    showSort: true,
-    sort: 'created' as const,
-    direction: 'desc' as const,
     onChangeSort: vi.fn(),
-    scope: 'active' as const,
     onChangeScope: vi.fn(),
+  };
+  const props: BarProps = {
+    searchPlaceholder: 'Cerca nella libreria',
+    searchText: '',
+    activeFilterCount: 0,
+    showSort: true,
+    sort: 'created',
+    direction: 'desc',
+    scope: 'active',
+    ...spies,
     ...overrides,
   };
   render(<AuthedWrapper><MediaCommandBar {...props} /></AuthedWrapper>);
-  return props;
+  return spies;
 }
 
 describe('MediaCommandBar', () => {
