@@ -111,6 +111,13 @@ public class AppDbContext : DbContext
         => Set<VideoFaceAnalysisStatus>();
     public DbSet<VideoFaceTrack> VideoFaceTracks => Set<VideoFaceTrack>();
 
+    // VFACE-02: OWNER-LEVEL identity decisions about those canonical tracks.
+    // The tracks stay evidence; this is where "who is this" lives, one row per
+    // (owner, track), pointing at the ordinary owner-level Person the photo
+    // People path already manages. A missing row means undecided.
+    public DbSet<VideoFaceTrackPersonDecision> VideoFaceTrackPersonDecisions
+        => Set<VideoFaceTrackPersonDecision>();
+
     // Owner-private Plates (Targhe) surface. Segregated from Files/Gallery/
     // People/Party/TV/Private Vault: a standalone table no library query joins.
     public DbSet<PlateImage> PlateImages => Set<PlateImage>();

@@ -20,6 +20,13 @@ public class PersonConfiguration : IEntityTypeConfiguration<Person>
         builder.HasIndex(p => new { p.OwnerUserId, p.IsArchived })
             .HasDatabaseName("ix_people_owner_archived");
 
+        // VFACE-02: an alternate key so owner-scoped tables can carry a COMPOSITE
+        // foreign key (PersonId, OwnerUserId) and let the database itself refuse
+        // a cross-owner person reference. Purely additive — Id remains the
+        // primary key and nothing about existing rows or queries changes.
+        builder.HasAlternateKey(p => new { p.Id, p.OwnerUserId })
+            .HasName("ak_people_id_owner");
+
         builder.HasOne<User>()
             .WithMany()
             .HasForeignKey(p => p.OwnerUserId)
