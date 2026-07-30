@@ -85,3 +85,35 @@ test('invalid aspect ratios degrade to a safe square (no zero/negative sizes)', 
     assert.ok(tile.width >= 1 && tile.height >= 1);
   }
 });
+
+test('a tighter visual gap preserves row density and gives the width back to previews', () => {
+  const items = Array.from({ length: 18 }, (_v, i) => ({ id: `m${i}`, ar: 1 }));
+  const former = buildTvJustifiedRows({
+    items,
+    contentWidth: 960,
+    targetRowHeight: 150,
+    gap: 12,
+    getAspectRatio: (it) => it.ar,
+    getId: (it) => it.id,
+  });
+  const compact = buildTvJustifiedRows({
+    items,
+    contentWidth: 960,
+    targetRowHeight: 150,
+    gap: 4,
+    packingGap: 12,
+    getAspectRatio: (it) => it.ar,
+    getId: (it) => it.id,
+  });
+
+  assert.deepEqual(
+    compact.map((row) => row.tiles.map((tile) => tile.item.id)),
+    former.map((row) => row.tiles.map((tile) => tile.item.id)),
+  );
+  assert.ok(compact[0].tiles[0].width > former[0].tiles[0].width);
+  assert.equal(
+    compact[0].tiles.reduce((sum, tile) => sum + tile.width, 0)
+      + 4 * (compact[0].tiles.length - 1),
+    960,
+  );
+});

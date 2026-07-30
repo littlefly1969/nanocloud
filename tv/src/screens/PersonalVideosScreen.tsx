@@ -1,9 +1,8 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   BackHandler,
   FlatList,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -18,20 +17,25 @@ import {
   listPersonalVideos,
   type TvPersonalVideoItem,
 } from '../api/personalVideos';
-import { AuthedImage } from '../components/AuthedImage';
+import { AuthedTilePreview } from '../components/AuthedTilePreview';
 import { FocusableButton } from '../components/FocusableButton';
-import { FocusableTile } from '../components/FocusableTile';
+import { FocusableMediaTile } from '../components/FocusableMediaTile';
 import { TvVideoPlayer, type TvVideoControls } from '../components/TvVideoPlayer';
 import { useI18n } from '../i18n';
 import { useScreenAwake } from '../lib/useScreenAwake';
-import { useTvMedia } from '../media/useTvMedia';
 import { colors, font, overscan, spacing } from '../theme';
+import { normalizeTvMediaAspectRatio, VIDEO_FALLBACK_ASPECT_RATIO } from '../lib/mediaAspectRatio';
+import { buildTvJustifiedRows, type TvJustifiedRow } from '../lib/justifiedMediaRows';
+import {
+  MEDIA_GRID_FOCUS_BLEED,
+  MEDIA_GRID_PACKING_GAP,
+  MEDIA_GRID_VISUAL_GAP,
+  mediaGridTargetRowHeight,
+} from '../lib/mediaGridPresentation';
+import { useTvMediaGridFocus, type TvMediaFocusTargets } from '../lib/mediaGridFocus';
 
 const PAGE_SIZE = 60;
-const GRID_GAP = spacing.md;
-const TILE_STEP = 260;
-const STRIP_FRAMES = 6;
-const STRIP_FRAME_MS = 450;
+const GRID_GAP = MEDIA_GRID_VISUAL_GAP;
 
 interface Props {
   onBack: () => void;
@@ -51,60 +55,38 @@ function formatDuration(seconds: number | null): string {
 }
 
 const VideoTile = memo(function VideoTile({
-  item, index, total, width, preferred, onOpen, onFocusIndex,
+  item, index, total, width, height, preferred, focusTargets, onOpen, onFocusIndex,
 }: {
   item: TvPersonalVideoItem;
   index: number;
   total: number;
   width: number;
+  height: number;
   preferred: boolean;
+  focusTargets: TvMediaFocusTargets;
   onOpen: (index: number) => void;
   onFocusIndex: (index: number) => void;
 }) {
   const [focused, setFocused] = useState(false);
-  const [frame, setFrame] = useState(0);
-  const imageHeight = Math.round(width * 9 / 16);
-  // Lazy by focus: a strip failure is memoized by the shared media loader and
-  // is never regenerated/retried in a focus loop. The poster remains readable.
-  const strip = useTvMedia(focused ? item.previewStripUrl : null, { personal: true });
-
-  useEffect(() => {
-    setFrame(0);
-    if (!focused || strip.state !== 'ready') return;
-    const timer = setInterval(() => setFrame((f) => (f + 1) % STRIP_FRAMES), STRIP_FRAME_MS);
-    return () => clearInterval(timer);
-  }, [focused, strip.state]);
 
   return (
-    <FocusableTile
+    <FocusableMediaTile
       accessibilityLabel={item.name}
       style={{ width }}
       hasTVPreferredFocus={preferred}
+      focusTargets={focusTargets}
       onSelect={() => onOpen(index)}
       onFocusChange={(value) => {
         setFocused(value);
         if (value) onFocusIndex(index);
       }}
     >
-      <View style={{ width: '100%', height: imageHeight, borderRadius: 8, overflow: 'hidden' }}>
-        <AuthedImage
+      <View style={{ width: '100%', height, borderRadius: 8, overflow: 'hidden' }}>
+        <AuthedTilePreview
           path={item.posterUrl}
           personal
-          style={StyleSheet.absoluteFill}
+          style={{ width: '100%', height: '100%' }}
         />
-        {focused && strip.state === 'ready' && strip.uri && (
-          <Image
-            source={{ uri: strip.uri }}
-            resizeMode="stretch"
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: -frame * width,
-              width: width * STRIP_FRAMES,
-              height: imageHeight,
-            }}
-          />
-        )}
         <View style={styles.videoBadge}><Text style={styles.videoBadgeText}>▶</Text></View>
         {item.durationSeconds !== null && (
           <View style={styles.durationBadge}>
@@ -117,12 +99,7 @@ const VideoTile = memo(function VideoTile({
           </View>
         )}
       </View>
-      <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
-      <Text style={styles.cardMeta} numberOfLines={1}>
-        {[item.width && item.height ? `${item.width}×${item.height}` : null, item.videoCodec]
-          .filter(Boolean).join(' · ')}
-      </Text>
-    </FocusableTile>
+    </FocusableMediaTile>
   );
 });
 
@@ -138,7 +115,7 @@ export function PersonalVideosScreen({ onBack, onGrantInvalid, onSessionInvalid 
   const [loadingMore, setLoadingMore] = useState(false);
   const [failed, setFailed] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
-  const [restoreIndex, setRestoreIndex] = useState(0);
+  const [restoreIndex, setRestoreIndex] = useState<number | null>(0);
   const lastFocusedIndex = useRef(0);
   const controlsRef = useRef<TvVideoControls | null>(null);
   const itemsRef = useRef(items);
@@ -146,6 +123,11 @@ export function PersonalVideosScreen({ onBack, onGrantInvalid, onSessionInvalid 
   const viewerIndexRef = useRef(viewerIndex);
   viewerIndexRef.current = viewerIndex;
   useScreenAwake(viewerIndex !== null);
+
+  const onTileFocus = useCallback((index: number) => {
+    lastFocusedIndex.current = index;
+    setRestoreIndex((current) => (current === null ? current : null));
+  }, []);
 
   const handleAuthError = useCallback((err: unknown): boolean => {
     if (err instanceof ApiError && err.status === 401) {
@@ -230,8 +212,25 @@ export function PersonalVideosScreen({ onBack, onGrantInvalid, onSessionInvalid 
     return () => sub.remove();
   }, [closeViewer, onBack]);
 
-  const columns = Math.min(5, Math.max(3, Math.round(width / TILE_STEP)));
-  const tileWidth = Math.floor((width - inset.x * 2 - GRID_GAP * (columns - 1)) / columns);
+  const contentWidth = Math.max(1, width - inset.x * 2);
+  const targetRowHeight = mediaGridTargetRowHeight(height);
+  const rows = useMemo(
+    () => buildTvJustifiedRows({
+      items,
+      contentWidth,
+      targetRowHeight,
+      gap: GRID_GAP,
+      packingGap: MEDIA_GRID_PACKING_GAP,
+      getAspectRatio: (item) => normalizeTvMediaAspectRatio(
+        item.width,
+        item.height,
+        VIDEO_FALLBACK_ASPECT_RATIO,
+      ),
+      getId: (item) => item.id,
+    }),
+    [items, contentWidth, targetRowHeight],
+  );
+  const focusForItem = useTvMediaGridFocus(rows, GRID_GAP);
 
   if (viewerIndex !== null) {
     const item = items[Math.min(viewerIndex, items.length - 1)];
@@ -277,28 +276,35 @@ export function PersonalVideosScreen({ onBack, onGrantInvalid, onSessionInvalid 
         </View>
       ) : (
         <FlatList
-          key={`video-cols-${columns}`}
-          data={items}
-          numColumns={columns}
-          keyExtractor={(item) => item.id}
-          columnWrapperStyle={styles.row}
+          data={rows}
+          keyExtractor={(row) => row.key}
           contentContainerStyle={[styles.grid, { paddingBottom: inset.y }]}
-          renderItem={({ item, index }: ListRenderItemInfo<TvPersonalVideoItem>) => (
-            <VideoTile
-              item={item}
-              index={index}
-              total={totalCount}
-              width={tileWidth}
-              preferred={index === restoreIndex}
-              onOpen={setViewerIndex}
-              onFocusIndex={(value) => { lastFocusedIndex.current = value; }}
-            />
+          renderItem={({ item: row }: ListRenderItemInfo<TvJustifiedRow<TvPersonalVideoItem>>) => (
+            <View style={styles.row}>
+              {row.tiles.map((tile) => (
+                <VideoTile
+                  key={tile.item.id}
+                  item={tile.item}
+                  index={tile.originalIndex}
+                  total={totalCount}
+                  width={tile.width}
+                  height={tile.height}
+                  preferred={
+                    restoreIndex !== null
+                    && tile.originalIndex === restoreIndex
+                  }
+                  focusTargets={focusForItem(tile.item.id)}
+                  onOpen={setViewerIndex}
+                  onFocusIndex={onTileFocus}
+                />
+              ))}
+            </View>
           )}
           onEndReached={loadMore}
           onEndReachedThreshold={0.8}
-          initialNumToRender={columns * 3}
-          maxToRenderPerBatch={columns * 2}
-          windowSize={5}
+          initialNumToRender={6}
+          maxToRenderPerBatch={4}
+          windowSize={7}
           ListFooterComponent={loadingMore
             ? <ActivityIndicator color={colors.muted} style={styles.footer} />
             : null}
@@ -313,8 +319,13 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm, marginBottom: spacing.md },
   title: { color: colors.text, fontSize: font.heading, fontWeight: '800' },
   total: { color: colors.muted, fontSize: font.body },
-  row: { gap: GRID_GAP, marginBottom: GRID_GAP },
-  grid: { paddingBottom: spacing.xl },
+  row: {
+    flexDirection: 'row',
+    gap: GRID_GAP,
+    paddingVertical: MEDIA_GRID_FOCUS_BLEED,
+    overflow: 'visible',
+  },
+  grid: { gap: GRID_GAP, paddingBottom: spacing.xl },
   state: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
   stateText: { color: colors.muted, fontSize: font.body },
   footer: { margin: spacing.lg },
@@ -324,8 +335,6 @@ const styles = StyleSheet.create({
   durationText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   positionBadge: { position: 'absolute', left: 8, bottom: 8, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, backgroundColor: 'rgba(0,0,0,.78)' },
   positionText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  cardTitle: { color: colors.text, fontSize: 16, fontWeight: '700', marginHorizontal: 8, marginTop: 7 },
-  cardMeta: { color: colors.muted, fontSize: 13, marginHorizontal: 8, marginTop: 2, marginBottom: 8 },
   viewer: { flex: 1, backgroundColor: '#05070b' },
   viewerCapture: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   viewerTitle: { position: 'absolute', left: '12%', right: '12%', alignItems: 'center' },

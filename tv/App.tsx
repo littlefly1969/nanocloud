@@ -220,8 +220,8 @@ function AppInner(): React.JSX.Element {
   // their OWN BackHandler (each hides its MENU overlay first, then navigates up
   // via onClose/onBack). On the album list (Party root) the handler below
   // returns to MODE SELECTION (no PIN needed to come back to Party). On the
-  // mode selector itself there is no handler — the OS default applies (exits
-  // the app), and BACK can never enter a mode by itself.
+  // mode selector is the navigation root: one final BACK explicitly finishes
+  // the Android activity (the platform default was not reliable on Fire TV).
   useEffect(() => {
     if (flow.name !== 'party' || partyScreen.name !== 'albums') return;
     const onBackPress = () => {
@@ -231,6 +231,16 @@ function AppInner(): React.JSX.Element {
     const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => sub.remove();
   }, [flow.name, partyScreen.name]);
+
+  useEffect(() => {
+    if (flow.name !== 'mode' && flow.name !== 'pairing') return;
+    const onBackPress = () => {
+      BackHandler.exitApp();
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [flow.name]);
 
   return (
     <>

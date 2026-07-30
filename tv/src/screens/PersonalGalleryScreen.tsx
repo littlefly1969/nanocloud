@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   BackHandler,
@@ -23,7 +23,6 @@ import {
   countActiveFilters,
   defaultSort,
   emptyFilters,
-  galleryGridMetrics,
   initialLoadState,
   pageFailed,
   pageLoaded,
@@ -36,9 +35,9 @@ import {
   type GalleryLoadState,
   type GallerySort,
 } from '../personal/galleryQuery';
-import { FocusableTile } from '../components/FocusableTile';
+import { FocusableMediaTile } from '../components/FocusableMediaTile';
 import { FocusableButton } from '../components/FocusableButton';
-import { AuthedImage } from '../components/AuthedImage';
+import { AuthedTilePreview } from '../components/AuthedTilePreview';
 import { GalleryAlbumPanel } from './gallery/GalleryAlbumPanel';
 import { GalleryWorkspacePanel } from './gallery/GalleryWorkspacePanel';
 import { GalleryDestinationPanel, GalleryTrashConfirmPanel } from './gallery/GallerySelectionPanels';
@@ -46,6 +45,15 @@ import { PersonalViewer } from './gallery/PersonalViewer';
 import { useMenuOverlay } from '../lib/useMenuOverlay';
 import { useI18n } from '../i18n';
 import { tvDebug } from '../debug';
+import { normalizeTvMediaAspectRatio, PHOTO_FALLBACK_ASPECT_RATIO } from '../lib/mediaAspectRatio';
+import { buildTvJustifiedRows, type TvJustifiedRow } from '../lib/justifiedMediaRows';
+import {
+  MEDIA_GRID_FOCUS_BLEED,
+  MEDIA_GRID_PACKING_GAP,
+  MEDIA_GRID_VISUAL_GAP,
+  mediaGridTargetRowHeight,
+} from '../lib/mediaGridPresentation';
+import { useTvMediaGridFocus, type TvMediaFocusTargets } from '../lib/mediaGridFocus';
 
 // The real Personal Gallery: the owner's full image gallery (same eligibility,
 // filters, search, sorting and cursor paging as the authenticated web gallery —
@@ -67,8 +75,7 @@ import { tvDebug } from '../debug';
 // helpers in personal/galleryQuery.ts, node-tested). The unlock-grant
 // re-validation stays at the App level — this screen adds NO polling.
 const PAGE_SIZE = 50;
-const GRID_GAP = spacing.sm;
-const TILE_CHROME = 12;
+const GRID_GAP = MEDIA_GRID_VISUAL_GAP;
 // Toast (album-add confirmation) lifetime.
 const TOAST_MS = 4000;
 
@@ -85,8 +92,10 @@ const GalleryTile = memo(function GalleryTile({
   item,
   index,
   total,
-  size,
+  width,
+  height,
   preferred,
+  focusTargets,
   focusable,
   selected,
   selectionMode,
@@ -96,8 +105,10 @@ const GalleryTile = memo(function GalleryTile({
   item: TvPersonalGalleryItem;
   index: number;
   total: number;
-  size: number;
+  width: number;
+  height: number;
   preferred: boolean;
+  focusTargets: TvMediaFocusTargets;
   focusable: boolean;
   selected: boolean;
   selectionMode: boolean;
@@ -106,19 +117,19 @@ const GalleryTile = memo(function GalleryTile({
 }) {
   const [focused, setFocused] = useState(false);
   return (
-    <FocusableTile
+    <FocusableMediaTile
       accessibilityLabel={item.name}
-      style={{ width: size }}
+      style={{ width }}
       hasTVPreferredFocus={preferred}
+      focusTargets={focusTargets}
       focusable={focusable}
       onSelect={() => onOpen(index)}
       onFocusChange={(f) => { setFocused(f); if (f) onFocusIndex(index); }}
     >
-      <AuthedImage
+      <AuthedTilePreview
         path={item.thumbnailUrl}
-        fallbackPath={item.previewUrl}
         personal
-        style={{ width: '100%', height: size - TILE_CHROME, borderRadius: 8 }}
+        style={{ width: '100%', height, borderRadius: 8 }}
       />
       {item.favorite && <Text style={styles.favBadge}>♥</Text>}
       {item.occurrenceCount > 1 && (
@@ -134,7 +145,7 @@ const GalleryTile = memo(function GalleryTile({
           <Text style={styles.posBadgeText}>{index + 1} / {total}</Text>
         </View>
       )}
-    </FocusableTile>
+    </FocusableMediaTile>
   );
 });
 
@@ -177,9 +188,12 @@ export function PersonalGalleryScreen({ onBack, onGrantInvalid, onSessionInvalid
 
   // Focus bookkeeping (same pattern as the Party grid).
   const lastFocusedIndexRef = useRef(0);
-  const [restoreIndex, setRestoreIndex] = useState(0);
+  const [restoreIndex, setRestoreIndex] = useState<number | null>(0);
   const onTileFocus = useCallback((index: number) => {
     lastFocusedIndexRef.current = index;
+    // One-shot only: a permanently preferred tile can steal focus when
+    // FlatList remounts a clipped row during D-pad scrolling.
+    setRestoreIndex((current) => (current === null ? current : null));
   }, []);
 
   // Shared auth-failure mapping: 401 → pairing teardown; 403 pin_changed →
@@ -379,25 +393,64 @@ export function PersonalGalleryScreen({ onBack, onGrantInvalid, onSessionInvalid
   const activeFilterCount = countActiveFilters(filters);
   const gridInteractive = panel === 'none' && viewerIndex === null;
 
-  const { columns, tileSize } = galleryGridMetrics(width, inset.x, GRID_GAP);
+  const contentWidth = Math.max(1, width - 2 * inset.x);
+  const targetRowHeight = mediaGridTargetRowHeight(height);
+  const rows = useMemo(
+    () => buildTvJustifiedRows({
+      items,
+      contentWidth,
+      targetRowHeight,
+      gap: GRID_GAP,
+      packingGap: MEDIA_GRID_PACKING_GAP,
+      getAspectRatio: (item) => normalizeTvMediaAspectRatio(
+        item.width,
+        item.height,
+        PHOTO_FALLBACK_ASPECT_RATIO,
+      ),
+      getId: (item) => item.id,
+    }),
+    [items, contentWidth, targetRowHeight],
+  );
+  const focusForItem = useTvMediaGridFocus(rows, GRID_GAP);
 
   const selectionSet = selection === null ? null : new Set(selection);
-  const renderItem = useCallback(({ item, index }: ListRenderItemInfo<TvPersonalGalleryItem>) => (
-    <GalleryTile
-      item={item}
-      index={index}
-      total={total}
-      size={tileSize}
-      preferred={gridInteractive && !overlayVisible && index === restoreIndex}
-      focusable={gridInteractive}
-      selected={selectionSet?.has(item.id) ?? false}
-      selectionMode={selection !== null}
-      onOpen={openAt}
-      onFocusIndex={onTileFocus}
-    />
+  const renderRow = useCallback(({ item: row }: ListRenderItemInfo<TvJustifiedRow<TvPersonalGalleryItem>>) => (
+    <View style={styles.gridRow}>
+      {row.tiles.map((tile) => (
+        <GalleryTile
+          key={tile.item.id}
+          item={tile.item}
+          index={tile.originalIndex}
+          total={total}
+          width={tile.width}
+          height={tile.height}
+          preferred={
+            gridInteractive
+            && !overlayVisible
+            && restoreIndex !== null
+            && tile.originalIndex === restoreIndex
+          }
+          focusTargets={focusForItem(tile.item.id)}
+          focusable={gridInteractive}
+          selected={selectionSet?.has(tile.item.id) ?? false}
+          selectionMode={selection !== null}
+          onOpen={openAt}
+          onFocusIndex={onTileFocus}
+        />
+      ))}
+    </View>
     // selectionSet derives from selection — listing selection is enough.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [total, tileSize, gridInteractive, overlayVisible, restoreIndex, selection, openAt, onTileFocus]);
+  ), [
+    total,
+    gridInteractive,
+    overlayVisible,
+    restoreIndex,
+    selection,
+    focusForItem,
+    openAt,
+    onTileFocus,
+  ]);
 
   const countLabel = load.phase === 'end'
     ? tn(total, 'gallery.countLoaded')
@@ -441,16 +494,13 @@ export function PersonalGalleryScreen({ onBack, onGrantInvalid, onSessionInvalid
         </View>
       ) : (
         <FlatList
-          key={`cols-${columns}`}
-          data={items}
-          renderItem={renderItem}
-          keyExtractor={(it) => it.id}
-          numColumns={columns}
-          columnWrapperStyle={columns > 1 ? styles.gridRow : undefined}
+          data={rows}
+          renderItem={renderRow}
+          keyExtractor={(row) => row.key}
           contentContainerStyle={[styles.grid, { paddingBottom: inset.y }]}
-          initialNumToRender={columns * 4}
-          maxToRenderPerBatch={columns * 2}
-          windowSize={5}
+          initialNumToRender={6}
+          maxToRenderPerBatch={4}
+          windowSize={7}
           removeClippedSubviews
           onEndReachedThreshold={2}
           onEndReached={loadMore}
@@ -646,7 +696,12 @@ const styles = StyleSheet.create({
   body: { color: colors.muted, fontSize: font.body, textAlign: 'center' },
   stateBox: { marginTop: spacing.xl, alignItems: 'center', gap: spacing.md },
   grid: { gap: GRID_GAP },
-  gridRow: { gap: GRID_GAP },
+  gridRow: {
+    flexDirection: 'row',
+    gap: GRID_GAP,
+    paddingVertical: MEDIA_GRID_FOCUS_BLEED,
+    overflow: 'visible',
+  },
   favBadge: {
     position: 'absolute',
     top: spacing.xs,

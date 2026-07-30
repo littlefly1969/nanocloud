@@ -22,14 +22,21 @@ interface Props {
   path: string | null;
   fallbackPath?: string | null;
   style?: StyleProp<ViewStyle>;
+  personal?: boolean;
   // Ambient blur radius. Kept modest for Fire TV; the caller may lower it under
   // a measured performance regression, but not to zero (the viewer keeps it).
   blurRadius?: number;
 }
 
-export function AuthedTilePreview({ path, fallbackPath, style, blurRadius = 12 }: Props) {
+export function AuthedTilePreview({
+  path,
+  fallbackPath,
+  style,
+  personal = false,
+  blurRadius = 12,
+}: Props) {
   const { t } = useI18n();
-  const { uri, state, markFailed } = useTvMedia(path, { fallbackPath });
+  const { uri, state, markFailed } = useTvMedia(path, { fallbackPath, personal });
 
   return (
     <View style={[styles.frame, style]}>

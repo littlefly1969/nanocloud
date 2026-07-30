@@ -23,6 +23,10 @@ export interface BuildTvJustifiedRowsOptions<T> {
   contentWidth: number;
   targetRowHeight: number;
   gap: number;
+  // Optional gap used only while deciding how many items belong in a row.
+  // Keeping the former, wider packing gap while rendering a smaller visual gap
+  // preserves density and distributes the recovered width to the same tiles.
+  packingGap?: number;
   getAspectRatio: (item: T) => number;
   // Stable per-item id so a row key never collapses to a bare index (identity
   // survives progressive loading / live Party appends).
@@ -81,6 +85,7 @@ export function buildTvJustifiedRows<T>(
   if (items.length === 0) return [];
 
   const gap = Math.max(0, options.gap);
+  const packingGap = Math.max(0, options.packingGap ?? gap);
   const contentWidth = Math.max(1, options.contentWidth);
   const target = Math.max(1, options.targetRowHeight);
   const maxRowHeight = Math.max(target, options.maxRowHeight ?? target * 1.6);
@@ -91,8 +96,8 @@ export function buildTvJustifiedRows<T>(
   let rowIndices: number[] = [];
   let ratioSum = 0;
 
-  const rowHeightFor = (count: number, sum: number) =>
-    (contentWidth - gap * (count - 1)) / sum;
+  const rowHeightFor = (count: number, sum: number, rowGap: number) =>
+    (contentWidth - rowGap * (count - 1)) / sum;
 
   items.forEach((item, index) => {
     const ratio = safeAspectRatio(getAspectRatio(item));
@@ -101,11 +106,12 @@ export function buildTvJustifiedRows<T>(
     rowIndices.push(index);
     ratioSum += ratio;
 
-    const rowHeight = rowHeightFor(rowItems.length, ratioSum);
+    const rowHeight = rowHeightFor(rowItems.length, ratioSum, packingGap);
     // Close the row justified once filling the width no longer overshoots the
     // target height.
     if (rowHeight <= target) {
-      rows.push(buildRow(rowItems, rowRatios, rowIndices, rowHeight, gap, contentWidth, getId, false));
+      const renderedHeight = rowHeightFor(rowItems.length, ratioSum, gap);
+      rows.push(buildRow(rowItems, rowRatios, rowIndices, renderedHeight, gap, contentWidth, getId, false));
       rowItems = [];
       rowRatios = [];
       rowIndices = [];
@@ -117,11 +123,12 @@ export function buildTvJustifiedRows<T>(
   // taller than the max, lay it out LEFT-ALIGNED at the target height (never
   // stretch a couple of tiles across the whole width); otherwise justify it.
   if (rowItems.length > 0) {
-    const naturalHeight = rowHeightFor(rowItems.length, ratioSum);
-    if (naturalHeight > maxRowHeight) {
+    const packedHeight = rowHeightFor(rowItems.length, ratioSum, packingGap);
+    if (packedHeight > maxRowHeight) {
       rows.push(buildRow(rowItems, rowRatios, rowIndices, Math.min(target, maxRowHeight), gap, null, getId, true));
     } else {
-      rows.push(buildRow(rowItems, rowRatios, rowIndices, naturalHeight, gap, contentWidth, getId, true));
+      const renderedHeight = rowHeightFor(rowItems.length, ratioSum, gap);
+      rows.push(buildRow(rowItems, rowRatios, rowIndices, renderedHeight, gap, contentWidth, getId, true));
     }
   }
 
