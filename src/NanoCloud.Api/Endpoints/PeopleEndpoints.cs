@@ -335,7 +335,117 @@ public static class PeopleEndpoints
             return ok ? Results.NoContent() : Results.NotFound();
         }).WithName("RegenerateFacePreview").RequireAuthorization();
 
+        MapVideoFaceEndpoints(app);
         return app;
+    }
+
+    // VFACE-02: owner-level identity over canonical VIDEO face tracks. Same
+    // conventions as the static-face endpoints above — authenticated, owner-
+    // scoped, generic 404 for anything the caller may not see (foreign, deleted
+    // or vault-only), sanitized DTOs. Track ids appear ONLY on the authenticated
+    // review surface, where the client needs them to post a decision back; the
+    // person-media results carry logical file ids and millisecond intervals only.
+    //
+    // Nothing here assigns identity automatically and nothing creates a person:
+    // suggestions are advisory, and only these explicit calls write a decision.
+    private static void MapVideoFaceEndpoints(IEndpointRouteBuilder app)
+    {
+        // The review queue: visible video face tracks the owner has not decided
+        // about yet, best evidence first.
+        app.MapGet("/api/people/video-tracks/undecided", async (
+            [FromQuery] int? limit,
+            HttpContext httpContext,
+            [FromServices] NanoCloud.Api.Ai.Faces.Video.VideoFaceTrackPeopleService tracks,
+            CancellationToken cancellationToken) =>
+        {
+            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
+            return Results.Ok(await tracks.ListUndecidedAsync(ownerUserId, limit, cancellationToken));
+        }).WithName("UndecidedVideoFaceTracks").RequireAuthorization();
+
+        // Bounded, owner-scoped candidate people for one track. ADVISORY ONLY —
+        // calling this never changes any decision.
+        app.MapGet("/api/people/video-tracks/{trackId:guid}/suggestions", async (
+            Guid trackId,
+            [FromQuery] int? limit,
+            HttpContext httpContext,
+            [FromServices] NanoCloud.Api.Ai.Faces.Video.VideoFaceTrackIdentitySuggestionService suggestions,
+            CancellationToken cancellationToken) =>
+        {
+            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
+            var dto = await suggestions.SuggestAsync(ownerUserId, trackId, limit, cancellationToken);
+            return dto is null ? Results.NotFound() : Results.Ok(dto);
+        }).WithName("VideoFaceTrackSuggestions").RequireAuthorization();
+
+        // Confirm: this track shows one of MY people. Replaces any previous
+        // decision, including an ignore.
+        app.MapPost("/api/people/video-tracks/{trackId:guid}/assign", async (
+            Guid trackId,
+            [FromBody] AssignVideoFaceTrackRequest? body,
+            HttpContext httpContext,
+            [FromServices] NanoCloud.Api.Ai.Faces.Video.VideoFaceTrackPeopleService tracks,
+            CancellationToken cancellationToken) =>
+        {
+            if (body is null || body.PersonId == Guid.Empty)
+            {
+                return Results.BadRequest(new { error = "Provide an existing 'personId'." });
+            }
+
+            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
+            var ok = await tracks.AssignAsync(ownerUserId, trackId, body.PersonId, cancellationToken);
+            return ok ? Results.NoContent() : Results.NotFound();
+        }).WithName("AssignVideoFaceTrack").RequireAuthorization();
+
+        // Dismiss the track. The canonical evidence is never deleted.
+        app.MapPost("/api/people/video-tracks/{trackId:guid}/ignore", async (
+            Guid trackId,
+            HttpContext httpContext,
+            [FromServices] NanoCloud.Api.Ai.Faces.Video.VideoFaceTrackPeopleService tracks,
+            CancellationToken cancellationToken) =>
+        {
+            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
+            var ok = await tracks.IgnoreAsync(ownerUserId, trackId, cancellationToken);
+            return ok ? Results.NoContent() : Results.NotFound();
+        }).WithName("IgnoreVideoFaceTrack").RequireAuthorization();
+
+        // Back to undecided. Nothing is reassigned automatically.
+        app.MapDelete("/api/people/video-tracks/{trackId:guid}/decision", async (
+            Guid trackId,
+            HttpContext httpContext,
+            [FromServices] NanoCloud.Api.Ai.Faces.Video.VideoFaceTrackPeopleService tracks,
+            CancellationToken cancellationToken) =>
+        {
+            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
+            var ok = await tracks.ClearAsync(ownerUserId, trackId, cancellationToken);
+            return ok ? Results.NoContent() : Results.NotFound();
+        }).WithName("ClearVideoFaceTrackDecision").RequireAuthorization();
+
+        // The person-media surface, extended: videos where this person has a
+        // CONFIRMED track, with the intervals the player opens at. Sits next to
+        // the unchanged /photos endpoint rather than altering its shape.
+        app.MapGet("/api/people/{personId:guid}/videos", async (
+            Guid personId,
+            HttpContext httpContext,
+            [FromServices] NanoCloud.Api.Ai.Faces.Video.VideoFaceTrackPeopleService tracks,
+            CancellationToken cancellationToken) =>
+        {
+            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
+            var videos = await tracks.GetPersonVideosAsync(ownerUserId, personId, cancellationToken);
+            return videos is null ? Results.NotFound() : Results.Ok(videos);
+        }).WithName("GetPersonVideos").RequireAuthorization();
+
+        // Videos where BOTH people have confirmed tracks that overlap in time.
+        app.MapGet("/api/people/{personId:guid}/co-present/{otherPersonId:guid}", async (
+            Guid personId,
+            Guid otherPersonId,
+            HttpContext httpContext,
+            [FromServices] NanoCloud.Api.Ai.Faces.Video.VideoFaceTrackPeopleService tracks,
+            CancellationToken cancellationToken) =>
+        {
+            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
+            var videos = await tracks.GetCoPresentVideosAsync(
+                ownerUserId, personId, otherPersonId, cancellationToken);
+            return videos is null ? Results.NotFound() : Results.Ok(videos);
+        }).WithName("GetPersonCoPresentVideos").RequireAuthorization();
     }
 
     // Duplicated from Program.cs's local `SetPrivateDerivativeCache` helper
@@ -357,3 +467,9 @@ public sealed record AssignGroupRequest(string? Name = null, Guid? PersonId = nu
 public sealed record AddFaceRequest(Guid FaceId);
 public sealed record AssignFaceRequest(Guid? PersonId = null, string? Name = null);
 public sealed record AssignClusterRequest(bool MoveAssigned = false, bool DryRun = false);
+
+// VFACE-02. Deliberately NO `name` field, unlike AssignFaceRequest: assigning a
+// video track never creates a person. The owner names people through the
+// existing People flows, and only an EXISTING person of theirs can be confirmed
+// here.
+public sealed record AssignVideoFaceTrackRequest(Guid PersonId);

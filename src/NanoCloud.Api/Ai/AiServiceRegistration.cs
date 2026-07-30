@@ -188,6 +188,12 @@ public static class AiServiceRegistration
         services.AddScoped<Video.Faces.IVideoFaceAnalysisScheduler, Video.Faces.VideoFaceAnalysisScheduler>();
         services.AddScoped<IJobHandler, Video.Faces.AiVideosFacesBackfillJobHandler>();
 
+        // VFACE-02: the OWNER-LEVEL surface over those canonical tracks —
+        // decisions, suggestions, person video results and co-presence. Read/write
+        // only; no job, no automatic assignment, no automatic person creation.
+        services.AddScoped<Faces.Video.VideoFaceTrackPeopleService>();
+        services.AddScoped<Faces.Video.VideoFaceTrackIdentitySuggestionService>();
+
         // VSEM-04: read-only operational diagnostics over the VSEM-01/02
         // substrate above (segmentation + embedding + pgvector coverage). No
         // new state, no new job — an aggregation seam only.
