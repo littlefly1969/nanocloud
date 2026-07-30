@@ -32,7 +32,8 @@ namespace NanoCloud.Api.Ai.Video;
 //   * hard per-process timeout, bounded stdout, cooperative cancellation;
 //   * temp file removal on success, failure and cancellation;
 //   * raw process output is never logged; only counts and sanitized codes.
-public sealed class FfmpegVideoSemanticFrameExtractor : IVideoSemanticFrameExtractor
+public sealed class FfmpegVideoSemanticFrameExtractor
+    : IVideoSemanticFrameExtractor, IVideoSemanticFrameStreamExtractor
 {
     private readonly IOptions<VideoVisualEmbeddingOptions> _options;
     private readonly IOptions<MediaOptions> _media;
@@ -51,17 +52,45 @@ public sealed class FfmpegVideoSemanticFrameExtractor : IVideoSemanticFrameExtra
         _logger = logger;
     }
 
+    // Batch form (VSEM-02): the streaming pass with every frame collected. One
+    // extraction code path, so staging, timeout, classification and cleanup can
+    // never drift between the two contracts.
     public async Task<VideoSemanticFrameBatchResult> ExtractFramesAsync(
         Func<CancellationToken, Task<Stream>> openBlobContent,
         IReadOnlyList<VideoSemanticFrameRequest> requests,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(requests);
+
+        var results = new List<VideoSemanticFrameResult>(requests.Count);
+        var stagingError = await ExtractFramesStreamingAsync(
+            openBlobContent,
+            requests,
+            (frame, _) =>
+            {
+                results.Add(frame);
+                return Task.CompletedTask;
+            },
+            cancellationToken);
+
+        return stagingError is not null
+            ? VideoSemanticFrameBatchResult.StagingFailure(stagingError)
+            : new VideoSemanticFrameBatchResult(null, results);
+    }
+
+    public async Task<string?> ExtractFramesStreamingAsync(
+        Func<CancellationToken, Task<Stream>> openBlobContent,
+        IReadOnlyList<VideoSemanticFrameRequest> requests,
+        Func<VideoSemanticFrameResult, CancellationToken, Task> onFrame,
+        CancellationToken cancellationToken)
+    {
         ArgumentNullException.ThrowIfNull(openBlobContent);
         ArgumentNullException.ThrowIfNull(requests);
+        ArgumentNullException.ThrowIfNull(onFrame);
 
         if (requests.Count == 0)
         {
-            return new VideoSemanticFrameBatchResult(null, Array.Empty<VideoSemanticFrameResult>());
+            return null;
         }
 
         var options = _options.Value;
@@ -71,10 +100,9 @@ public sealed class FfmpegVideoSemanticFrameExtractor : IVideoSemanticFrameExtra
             var stagingError = await StageAsync(openBlobContent, tempFile, cancellationToken);
             if (stagingError is not null)
             {
-                return VideoSemanticFrameBatchResult.StagingFailure(stagingError);
+                return stagingError;
             }
 
-            var results = new List<VideoSemanticFrameResult>(requests.Count);
             string? startFailure = null;
 
             foreach (var request in requests)
@@ -85,7 +113,7 @@ public sealed class FfmpegVideoSemanticFrameExtractor : IVideoSemanticFrameExtra
                 // rejected without ever reaching the process.
                 if (request.TimestampMilliseconds < 0)
                 {
-                    results.Add(Failure(request, VideoSemanticErrorCodes.FrameExtraction));
+                    await onFrame(Failure(request, VideoSemanticErrorCodes.FrameExtraction), cancellationToken);
                     continue;
                 }
 
@@ -93,7 +121,7 @@ public sealed class FfmpegVideoSemanticFrameExtractor : IVideoSemanticFrameExtra
                 // spawning it once per remaining sample.
                 if (startFailure is not null)
                 {
-                    results.Add(Failure(request, startFailure));
+                    await onFrame(Failure(request, startFailure), cancellationToken);
                     continue;
                 }
 
@@ -117,14 +145,14 @@ public sealed class FfmpegVideoSemanticFrameExtractor : IVideoSemanticFrameExtra
                     _logger.LogWarning(
                         "video-embed: frame extractor could not start ({ExceptionType}).", ex.GetType().Name);
                     startFailure = VideoSemanticErrorCodes.ProcessStart;
-                    results.Add(Failure(request, startFailure));
+                    await onFrame(Failure(request, startFailure), cancellationToken);
                     continue;
                 }
 
-                results.Add(Classify(request, run));
+                await onFrame(Classify(request, run), cancellationToken);
             }
 
-            return new VideoSemanticFrameBatchResult(null, results);
+            return null;
         }
         finally
         {

@@ -20,6 +20,29 @@ public interface IVideoSemanticFrameExtractor
         CancellationToken cancellationToken);
 }
 
+// VFACE-01: the STREAMING form of the same extraction, for callers whose frame
+// budget is far larger than VSEM-02's handful of samples.
+//
+// Identical staging and per-frame semantics — the blob is still staged exactly
+// ONCE for the whole request list — but each frame is handed to the callback and
+// then released, so peak memory is ONE frame instead of the whole plan. Video
+// face analysis samples hundreds of frames per video and could not hold them all
+// at once within any sane bound.
+//
+// Implemented by the same FFmpeg extractor; the batch contract above is built ON
+// TOP of this one, so there is a single extraction code path.
+public interface IVideoSemanticFrameStreamExtractor
+{
+    // Returns null when every requested frame was attempted (individual failures
+    // are reported per frame through `onFrame`), or a batch-level staging error
+    // code when the blob could not be staged at all.
+    Task<string?> ExtractFramesStreamingAsync(
+        Func<CancellationToken, Task<Stream>> openBlobContent,
+        IReadOnlyList<VideoSemanticFrameRequest> requests,
+        Func<VideoSemanticFrameResult, CancellationToken, Task> onFrame,
+        CancellationToken cancellationToken);
+}
+
 // One requested sample frame: the sample identity plus its manifest timestamp.
 public sealed record VideoSemanticFrameRequest(Guid SampleId, long TimestampMilliseconds);
 
