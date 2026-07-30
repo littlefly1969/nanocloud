@@ -235,6 +235,14 @@ services:
       # executes FFmpeg segmentation and frame embedding jobs.
       Ai__VideoSegmentation__Enabled: ${Ai__VideoSegmentation__Enabled:-false}
       Ai__VideoVisualEmbeddings__Enabled: ${Ai__VideoVisualEmbeddings__Enabled:-false}
+      # Canonical video face tracks are an independent opt-in pipeline. Keep
+      # disabled for the initial VFACE schema/API deploy, then enable only for
+      # the controlled canary described in docs/current-work.md.
+      Ai__VideoFaceAnalysis__Enabled: ${Ai__VideoFaceAnalysis__Enabled:-false}
+      Ai__VideoFaceAnalysis__AnalysisVersion: ${Ai__VideoFaceAnalysis__AnalysisVersion:-1}
+      Ai__VideoFaceAnalysis__FrameIntervalMilliseconds: ${Ai__VideoFaceAnalysis__FrameIntervalMilliseconds:-1000}
+      Ai__VideoFaceAnalysis__MaximumFramesPerVideo: ${Ai__VideoFaceAnalysis__MaximumFramesPerVideo:-900}
+      Ai__VideoFaceAnalysis__FrameMaxEdge: ${Ai__VideoFaceAnalysis__FrameMaxEdge:-768}
       # Active photo-similarity profile (stable AiProfile.Key). Unset → the
       # capability default (deterministic image profile in the current lab).
       # Switching the photo model = set this + restart api/worker. See
@@ -420,6 +428,11 @@ services:
       # Must match the API settings above; video jobs execute in this service.
       Ai__VideoSegmentation__Enabled: ${Ai__VideoSegmentation__Enabled:-false}
       Ai__VideoVisualEmbeddings__Enabled: ${Ai__VideoVisualEmbeddings__Enabled:-false}
+      Ai__VideoFaceAnalysis__Enabled: ${Ai__VideoFaceAnalysis__Enabled:-false}
+      Ai__VideoFaceAnalysis__AnalysisVersion: ${Ai__VideoFaceAnalysis__AnalysisVersion:-1}
+      Ai__VideoFaceAnalysis__FrameIntervalMilliseconds: ${Ai__VideoFaceAnalysis__FrameIntervalMilliseconds:-1000}
+      Ai__VideoFaceAnalysis__MaximumFramesPerVideo: ${Ai__VideoFaceAnalysis__MaximumFramesPerVideo:-900}
+      Ai__VideoFaceAnalysis__FrameMaxEdge: ${Ai__VideoFaceAnalysis__FrameMaxEdge:-768}
       # Active photo-similarity profile (mirrors the api; see notes above).
       Ai__PhotoSimilarityProfileKey: ${Ai__PhotoSimilarityProfileKey:-}
       # Active face-recognition EVAL profile (see docs/ai-face-model-onnx-
