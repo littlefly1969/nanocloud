@@ -561,6 +561,7 @@ const en: Partial<Record<MessageKey, string>> = {
 
   // --- Similar Photos explorer ---
   'similar.backToGallery': '‹ Back to gallery',
+  'similar.backToLibrary': '‹ Back',
   'similar.notAvailable': 'This photo isn’t available.',
   'similar.sourceAlt': 'Source photo',
   'similar.eyebrow': 'Similar to',

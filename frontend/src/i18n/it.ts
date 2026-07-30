@@ -568,6 +568,7 @@ const it = {
 
   // --- Similar Photos explorer ---
   'similar.backToGallery': '‹ Torna alla galleria',
+  'similar.backToLibrary': '‹ Torna indietro',
   'similar.notAvailable': 'Questa foto non è disponibile.',
   'similar.sourceAlt': 'Foto di origine',
   'similar.eyebrow': 'Simili a',

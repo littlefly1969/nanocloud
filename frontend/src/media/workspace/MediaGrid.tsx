@@ -49,15 +49,21 @@ function formatDuration(totalSeconds: number): string {
 // match, by media id. Absent unless a unified semantic search is active.
 export type SemanticTimestamps = ReadonlyMap<string, number | null>;
 
+// Optional short overlay label per media id — the Similar Photos Explorer uses
+// it for the similarity percentage. Ids with no entry render no badge, so the
+// library and album walls are byte-identical to before.
+export type MediaTileBadges = ReadonlyMap<string, string>;
+
 interface GridProps {
   items: MediaItem[];
   orderedIds: string[];
   selection: MediaSelection;
   onOpen(index: number): void;
   semanticTimestamps?: SemanticTimestamps;
+  badges?: MediaTileBadges;
 }
 
-export function MediaGrid({ items, orderedIds, selection, onOpen, semanticTimestamps }: GridProps) {
+export function MediaGrid({ items, orderedIds, selection, onOpen, semanticTimestamps, badges }: GridProps) {
   const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   // `null` until the real width is known. Rows are NOT laid out against an
@@ -172,6 +178,7 @@ export function MediaGrid({ items, orderedIds, selection, onOpen, semanticTimest
                 selection={selection}
                 onOpen={() => onOpen(tile.originalIndex)}
                 semanticMs={semanticTimestamps?.get(tile.id) ?? null}
+                badge={badges?.get(tile.id) ?? null}
               />
             ))}
           </div>
@@ -191,10 +198,12 @@ interface TileProps {
   onOpen(): void;
   // VSEM-03: representative timestamp of this video's best semantic match.
   semanticMs?: number | null;
+  // Short overlay label (e.g. "92%"). Null renders nothing.
+  badge?: string | null;
 }
 
 export function MediaTile({
-  item, index, width, height, orderedIds, selection, onOpen, semanticMs = null,
+  item, index, width, height, orderedIds, selection, onOpen, semanticMs = null, badge = null,
 }: TileProps) {
   const { t } = useI18n();
   const [thumbFailed, setThumbFailed] = useState(false);
@@ -302,6 +311,14 @@ export function MediaTile({
               </span>
             )}
           </>
+        )}
+
+        {badge !== null && (
+          // Always visible (not hover-gated): it is the ranking information the
+          // Similar Photos Explorer exists to convey.
+          <span className="media-tile__badge" data-testid="media-tile-badge">
+            {badge}
+          </span>
         )}
 
         <span className="media-tile__overlay" aria-hidden="true">

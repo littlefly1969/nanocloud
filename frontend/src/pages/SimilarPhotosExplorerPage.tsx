@@ -1,16 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import {
   addAestheticLabFromGallery,
   addPlateImagesFromGallery,
   ApiError,
   getFileMetadata,
   getSimilarPhotosPage,
+  type FileMetadata,
+  type MediaItem,
   type SimilarPhotoItem,
 } from '@nanocloud/api-client';
 import { useAuth } from '../auth/useAuth';
 import { smallThumbnailUrl } from '../components/files/types';
 import { useI18n, type MessageKey } from '../i18n';
+import { useMediaWallLayout } from '../components/mediaWallLayout';
+import { MediaViewer, type MediaViewerItem } from '../components/MediaViewer';
+import { MediaGrid } from '../media/workspace/MediaGrid';
+import { MediaMetadataPanel } from '../media/metadata/MediaMetadataPanel';
 import { useMediaSelection } from '../gallery/useMediaSelection';
 import { MediaSelectionBar } from '../gallery/workspace/MediaSelectionBar';
 import type { GalleryDestinationAction } from '../gallery/workspace/DestinationMenu';
@@ -18,15 +24,22 @@ import { moveFilesToTrash } from '../gallery/workspace/bulkTrash';
 import { AlbumPickerModal } from '../gallery/AlbumPickerModal';
 import { TrashConfirmation } from '../gallery/workspace/TrashConfirmation';
 
-// Similar Photos Explorer — a dedicated, owner-private page that lists all
-// photos similar to a source image above a manually chosen similarity
-// threshold, with keyset "load more" pagination. Results share the SAME
-// selection + bulk-action model as the Gallery (useMediaSelection +
-// MediaSelectionBar): checkbox / Ctrl-/Shift-click to select, then add to an
-// album, add to a destination (Beauty Lab / Plates), or move to Trash. Grid uses
-// SMALL thumbnails; the source header uses the MEDIUM preview; originals are
-// never auto-loaded. No model / profile internals, raw vectors, distances, or
-// storage ids are shown.
+// Similar Photos Explorer — a dedicated, owner-private page listing all photos
+// similar to a source image above a chosen similarity threshold, with keyset
+// "load more" pagination.
+//
+// It is NOT a library filter: the ranking, the score and the threshold belong to
+// this page and to the /api/files/{id}/similar endpoint. What it now SHARES with
+// the Library and Albums is its presentation and interaction — the same
+// MediaGrid (justified rows, tile geometry, spacing, selection affordance,
+// hover/focus, placeholders, dark surfaces), the same MediaViewer, and the same
+// selection/bulk-action model. The similarity percentage rides along as an
+// explicit optional MediaGrid badge, so nothing was forked.
+//
+// The similar DTO is deliberately lean (id + name + score, no vectors, no blob
+// internals), which also means it carries no pixel dimensions: tiles therefore
+// use the shared square fallback rather than each photo's real ratio. Grid uses
+// SMALL thumbnails; the source header uses the MEDIUM preview.
 
 const PAGE_SIZE = 60;
 const MIN_PCT = 50;
@@ -58,14 +71,44 @@ function pctFromParams(params: URLSearchParams): number {
   return Number.isFinite(fraction) ? clampPct(fraction * 100) : DEFAULT_PCT;
 }
 
+// Project a similar-photo result onto the shared MediaItem shape the media wall
+// consumes. Every result of this endpoint is a photo. The fields the DTO does
+// not carry are null — the grid already handles that (square fallback tile, no
+// size/resolution line in the hover overlay).
+function toMediaItem(item: SimilarPhotoItem): MediaItem {
+  return {
+    id: item.fileItemId,
+    kind: 'image',
+    name: item.name,
+    title: null,
+    displayName: item.name,
+    mimeType: '',
+    sizeBytes: 0,
+    width: null,
+    height: null,
+    createdAt: '',
+    updatedAt: null,
+    takenAt: null,
+    favorite: false,
+    rating: null,
+    thumbnailUrl: smallThumbnailUrl(item.fileItemId),
+    occurrenceCount: 1,
+    hasDuplicates: false,
+    hasGps: null,
+  };
+}
+
 type Phase = 'loading' | 'ready' | 'empty' | 'indexing' | 'notfound' | 'error';
 
 export function SimilarPhotosExplorerPage() {
   const { fileId } = useParams<{ fileId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { invalidateAuth } = useAuth();
   const { t, tn } = useI18n();
+  // Same full-bleed shell the library/album walls use.
+  useMediaWallLayout();
 
   // `pct` drives the controls (50–95); `debouncedPct` drives the fetch.
   const [pct, setPct] = useState(() => pctFromParams(searchParams));
@@ -79,23 +122,49 @@ export function SimilarPhotosExplorerPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState(false);
 
-  // Shared media selection + bulk-action state (identical model to the Gallery).
+  // Shared media selection + bulk-action state (identical model to the Library).
   const selection = useMediaSelection();
   const [actionBusy, setActionBusy] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
   const [trashBusy, setTrashBusy] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   // Visible ids in display order — the range anchor for Shift-select.
   const orderedIds = useMemo(() => items.map((it) => it.fileItemId), [items]);
+  const mediaItems = useMemo(() => items.map(toMediaItem), [items]);
+  const viewerItems = useMemo<MediaViewerItem[]>(
+    () => mediaItems.map((it) => ({
+      id: it.id, name: it.name, displayName: it.displayName, kind: 'image',
+    })),
+    [mediaItems],
+  );
+  // The similarity percentage, as a shared-grid badge rather than a bespoke tile.
+  const badges = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of items) map.set(item.fileItemId, `${Math.round(item.score * 100)}%`);
+    return map;
+  }, [items]);
 
   const minSimilarity = debouncedPct / 100;
 
+  // Where "back" should go: the location the user came from when the explorer
+  // was opened from a workspace viewer, else the Library.
+  //
+  // Captured ONCE, on mount. The threshold effect below rewrites the URL with
+  // `replace: true`, and a replace drops the route state — so reading
+  // location.state lazily would silently degrade every return to the Library
+  // fallback the moment the first threshold sync ran.
+  const [returnTo] = useState<string>(() => {
+    const from = (location.state as { from?: unknown } | null)?.from;
+    return typeof from === 'string' && from.length > 0 ? from : '/media';
+  });
+
   // Debounce the slider/input so dragging doesn't spam the API.
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedPct(pct), DEBOUNCE_MS);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebouncedPct(pct), DEBOUNCE_MS);
+    return () => clearTimeout(timer);
   }, [pct]);
 
   // Keep the threshold in the URL (shareable/bookmarkable within the app).
@@ -139,6 +208,7 @@ export function SimilarPhotosExplorerPage() {
     setHasMore(false);
     setMoreError(false);
     setNotice(null);
+    setViewerIndex(null);
     selection.clear(); // a new source/threshold invalidates any stale selection
     (async () => {
       try {
@@ -264,9 +334,10 @@ export function SimilarPhotosExplorerPage() {
     const result = await moveFilesToTrash(ids, { onAuthError: invalidateAuth });
     const movedSet = new Set(result.moved);
     // Trashed items disappear from the results in place; failed ids stay selected
-    // for retry (mirrors the Gallery's confirmTrash).
+    // for retry (mirrors the workspace's confirmTrash).
     setItems((prev) => prev.filter((it) => !movedSet.has(it.fileItemId)));
     selection.selectAll(result.failed);
+    setViewerIndex(null);
     const done = result.moved.length === 1
       ? t('gallery.ws.trash.done_one', { count: 1 })
       : t('gallery.ws.trash.done_other', { count: result.moved.length });
@@ -278,39 +349,35 @@ export function SimilarPhotosExplorerPage() {
     setTrashOpen(false);
   }
 
-  // Re-root the explorer on a clicked result (keeps the chosen threshold).
-  function openResult(id: string) {
-    navigate(`/gallery/files/${id}/similar?minSimilarity=${minSimilarity.toFixed(2)}`);
+  // Re-root the explorer on another photo (keeps the chosen threshold and the
+  // original return target). Reached from the viewer's "Explore similar photos",
+  // exactly as it is from the Library — opening a tile opens the viewer here
+  // too, so the interaction matches the rest of the app.
+  function exploreFrom(id: string) {
+    setViewerIndex(null);
+    void navigate(
+      `/gallery/files/${id}/similar?minSimilarity=${minSimilarity.toFixed(2)}`,
+      { state: { from: returnTo } },
+    );
   }
 
-  const skeletons = useMemo(
-    () => Array.from({ length: 12 }, (_, i) => i),
-    [],
-  );
-  const liveRef = useRef<HTMLParagraphElement>(null);
+  const onMetadataChanged = useCallback((changedId: string, metadata: FileMetadata) => {
+    setItems((prev) => prev.map((it) => (
+      it.fileItemId === changedId ? { ...it, name: metadata.effective.displayName } : it
+    )));
+  }, []);
 
   return (
-    <section className="similar-explorer">
-      <header className="similar-explorer-header">
+    <section className="ws-page similar-explorer" aria-busy={phase === 'loading'}>
+      <header className="ws-page-header similar-explorer-header">
         <button
           type="button"
           className="row-action"
-          onClick={() => navigate('/gallery')}
+          data-testid="similar-back"
+          onClick={() => void navigate(returnTo)}
         >
-          {t('similar.backToGallery')}
+          {t('similar.backToLibrary')}
         </button>
-        {fileId !== undefined && (
-          // Open the same similar set in the main Gallery so it shares the
-          // gallery's selection + bulk-action model (add-to-album, etc.).
-          <button
-            type="button"
-            className="row-action-primary"
-            data-testid="open-similar-in-gallery"
-            onClick={() => navigate(`/gallery?similarTo=${encodeURIComponent(fileId)}`)}
-          >
-            {t('similar.openInGallery')}
-          </button>
-        )}
       </header>
 
       {phase === 'notfound' ? (
@@ -338,7 +405,8 @@ export function SimilarPhotosExplorerPage() {
             </div>
           )}
 
-          {/* Threshold filter bar (sticky on desktop). */}
+          {/* Threshold control. This is the explorer's own ranking knob — NOT a
+              library filter chip. */}
           <div className="similar-explorer-filter">
             <div className="similar-explorer-filter-row">
               <label htmlFor="minsim-slider" className="similar-explorer-filter-label">
@@ -394,7 +462,7 @@ export function SimilarPhotosExplorerPage() {
           </div>
 
           {/* Result count / status. */}
-          <p className="muted similar-explorer-status" role="status" ref={liveRef}>
+          <p className="muted similar-explorer-status" role="status">
             {phase === 'ready'
               ? tn(items.length, 'similar.countStatus', { plus: hasMore ? '+' : '', pct })
               : phase === 'loading'
@@ -403,13 +471,11 @@ export function SimilarPhotosExplorerPage() {
           </p>
 
           {phase === 'loading' && (
-            <ul className="gallery-grid" aria-hidden="true">
-              {skeletons.map((i) => (
-                <li key={i} className="gallery-card">
-                  <div className="gallery-thumb-wrap similar-explorer-skeleton" />
-                </li>
+            <div className="media-wall__skeleton" data-testid="similar-skeleton" aria-hidden="true">
+              {Array.from({ length: 8 }, (_v, i) => (
+                <span key={i} className="media-wall__skeleton-tile" />
               ))}
-            </ul>
+            </div>
           )}
 
           {phase === 'error' && (
@@ -440,65 +506,14 @@ export function SimilarPhotosExplorerPage() {
 
           {phase === 'ready' && (
             <>
-              <ul className="gallery-grid">
-                {items.map((item, index) => {
-                  const selected = selection.isSelected(item.fileItemId);
-                  return (
-                    <li
-                      key={item.fileItemId}
-                      className={`gallery-card${selected ? ' is-selected' : ''}`}
-                      data-selected={selected}
-                    >
-                      <button
-                        type="button"
-                        role="checkbox"
-                        aria-checked={selected}
-                        className={`gallery-select-control${selected ? ' is-selected' : ''}`}
-                        aria-label={t(
-                          selected ? 'gallerySel.deselectAria' : 'gallerySel.selectAria',
-                          { name: item.name },
-                        )}
-                        data-testid="gallery-select-control"
-                        onClick={(e) =>
-                          selection.toggleViaControl(item.fileItemId, index, orderedIds, e.shiftKey)
-                        }
-                      >
-                        <span aria-hidden="true">{selected ? '✓' : ''}</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="gallery-thumb-button"
-                        title={item.name}
-                        onClick={(e) => {
-                          const result = selection.handleTileClick(
-                            item.fileItemId,
-                            index,
-                            orderedIds,
-                            { ctrlOrMeta: e.ctrlKey || e.metaKey, shift: e.shiftKey },
-                          );
-                          if (result === 'open') openResult(item.fileItemId);
-                        }}
-                      >
-                        <span className="gallery-thumb-wrap">
-                          <img
-                            className="gallery-thumb"
-                            src={smallThumbnailUrl(item.fileItemId)}
-                            alt={item.name}
-                            loading="lazy"
-                            draggable={false}
-                          />
-                          <span className="similar-explorer-badge">
-                            {Math.round(item.score * 100)}%
-                          </span>
-                        </span>
-                      </button>
-                      <div className="gallery-meta">
-                        <span className="gallery-name">{item.name}</span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+              {/* The SAME wall the Library and Albums render. */}
+              <MediaGrid
+                items={mediaItems}
+                orderedIds={orderedIds}
+                selection={selection}
+                onOpen={(index) => setViewerIndex(index)}
+                badges={badges}
+              />
 
               <div className="gallery-scroll-footer">
                 {hasMore && (
@@ -525,6 +540,27 @@ export function SimilarPhotosExplorerPage() {
             </>
           )}
         </>
+      )}
+
+      {viewerIndex !== null && viewerItems[viewerIndex] !== undefined && (
+        <MediaViewer
+          items={viewerItems}
+          index={viewerIndex}
+          onClose={() => setViewerIndex(null)}
+          onIndexChange={setViewerIndex}
+          renderDetails={({ item, metadata, metadataError, adoptMetadata }) => (
+            <MediaMetadataPanel
+              fileId={item.id}
+              kind="image"
+              initialData={metadata}
+              loadError={metadataError}
+              onMetadataChanged={(id, next) => { adoptMetadata(next); onMetadataChanged(id, next); }}
+              // Re-rooting the explorer on the opened photo lives behind the
+              // same action name it has everywhere else.
+              onExploreSimilar={() => exploreFrom(item.id)}
+            />
+          )}
+        />
       )}
 
       <MediaSelectionBar

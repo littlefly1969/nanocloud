@@ -2454,6 +2454,24 @@ button.logout {
   background: color-mix(in srgb, #000 62%, transparent);
   pointer-events: none;
 }
+/* Optional per-tile overlay label (Similar Photos: the similarity percentage).
+   Small and readable rather than a second competing chrome; the strong scrim
+   keeps it legible over any photo, in either theme. */
+.media-tile__badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: color-mix(in srgb, #000 68%, transparent);
+  pointer-events: none;
+}
+
 .media-tile__video-badge {
   position: absolute;
   left: 6px;
