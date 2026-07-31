@@ -6,8 +6,9 @@
 # historical records); each is declared in config/legacy-brand-compatibility.txt
 # with a reason. Anything else is a regression.
 #
-#   scripts/check-brand-cleanliness.sh            # check
-#   scripts/check-brand-cleanliness.sh --verbose  # also summarise what was allowed
+#   scripts/check-brand-cleanliness.sh             # check
+#   scripts/check-brand-cleanliness.sh --verbose   # also summarise what was allowed
+#   scripts/check-brand-cleanliness.sh --self-test # prove the checker itself works
 #
 # Only files tracked by git are scanned, so .git, node_modules, build output
 # (bin/, obj/, dist/) and vendored dependencies are excluded by construction.
@@ -125,8 +126,77 @@ def tracked_files() -> list[str]:
     return files
 
 
+def self_test(rules: list[Rule]) -> int:
+    """Prove the checker rejects what it must and allows what it must.
+
+    Runs against synthetic (path, line) pairs in memory — it never writes to the
+    repository, so it is safe to run anywhere, including from a test suite.
+    """
+    def allowed(path: str, line: str) -> bool:
+        return any(r.covers(path, line) for r in rules)
+
+    must_reject = [
+        # A plain new mention on a user-facing surface.
+        ("frontend/src/pages/LoginPage.tsx", '<h1>NanoCloud</h1>'),
+        ("frontend/src/i18n/en.ts", "'app.name': 'NanoCloud',"),
+        # A brand-new storage key, as opposed to the migrating legacy ones.
+        ("frontend/src/settings/prefs.ts", "const KEY = 'nanocloud.sidebar';"),
+        # Prose in a document that describes the current product.
+        ("README.md", "NanoCloud is a private cloud."),
+        ("ARCHITECTURE.md", "NanoCloud stores blobs by SHA-256."),
+        # A new source identifier.
+        ("src/NanoCloud.Api/Files/Foo.cs", "public sealed class NanoCloudThing { }"),
+        # The wrong capitalizations are also the old brand.
+        ("frontend/src/brand/x.ts", "export const NAME = 'nanocloud';"),
+        ("tv/src/i18n/en.ts", "'title': 'NANOCLOUD TV',"),
+        ("mobile/src/App.tsx", "const n = 'Nano-Cloud';"),
+    ]
+    must_allow = [
+        ("src/NanoCloud.Api/Program.cs", 'options.Cookie.Name = "NanoCloud.Auth";'),
+        ("src/NanoCloud.Api/Tv/TvPairingService.cs", 'const string CookieName = "NanoCloud.TvSession";'),
+        ("src/NanoCloud.Api/Plates/PlateContainerKey.cs", 'public const string Prefix = "__nanocloud_plates_";'),
+        ("src/NanoCloud.Api/Endpoints/FileEndpoints.cs", "using NanoCloud.Api.Files;"),
+        ("tv/app.config.js", "package: 'it.littlefly.nanocloudtv',"),
+        ("docker-compose.prod.yml", "container_name: nanocloud-postgres"),
+        ("docker-compose.prod.yml", "- /var/lib/nanocloud/storage"),
+        (".env.example", "NANOCLOUD_TV_OTA_CHANNEL=production"),
+        ("frontend/src/theme/themePreference.ts", "export const LEGACY_THEME_STORAGE_KEY = 'nanocloud.theme';"),
+        ("frontend/nginx.conf", 'filename="nanocloud-tv.apk"'),
+        ("CHANGELOG.md", "NanoCloud `0.2.0` is the consolidated public baseline."),
+        ("src/NanoCloud.Api/Data/Migrations/20260516212052_InitialStorageCore.cs", "namespace NanoCloud.Api.Data.Migrations;"),
+    ]
+
+    failures: list[str] = []
+    for path, line in must_reject:
+        if not OLD_BRAND.search(line):
+            failures.append(f"fixture does not even contain the old brand: {path}: {line}")
+        elif allowed(path, line):
+            covering = next(r for r in rules if r.covers(path, line))
+            failures.append(
+                f"should be REJECTED but entry '{covering.identifier}' allows it:\n"
+                f"      {path}: {line}"
+            )
+    for path, line in must_allow:
+        if not allowed(path, line):
+            failures.append(f"should be ALLOWED but no entry covers it:\n      {path}: {line}")
+
+    total = len(must_reject) + len(must_allow)
+    if failures:
+        print(f"self-test: {len(failures)} of {total} cases failed\n", file=sys.stderr)
+        for f in failures:
+            print(f"  - {f}", file=sys.stderr)
+        return 1
+    print(
+        f"self-test: {total}/{total} cases correct "
+        f"({len(must_reject)} correctly rejected, {len(must_allow)} correctly allowed)"
+    )
+    return 0
+
+
 def main() -> int:
     rules = load_rules()
+    if "--self-test" in sys.argv[1:]:
+        return self_test(rules)
     violations: list[tuple[str, int, str]] = []
     scanned = 0
 
