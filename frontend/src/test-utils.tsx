@@ -14,6 +14,7 @@
 import type { ReactNode } from 'react';
 import { act } from 'react';
 import { vi } from 'vitest';
+import type { FileMetadata } from '@nanocloud/api-client';
 import { AuthContext, type AuthContextValue, type AuthState } from './auth/AuthContext';
 import { I18nProvider } from './i18n';
 
@@ -51,6 +52,51 @@ export function errorResponse(status: number, body: unknown = null): Response {
     status,
     headers: { 'content-type': 'application/json' },
   });
+}
+
+// Complete metadata contract for tests that open the shared viewer. Keeping
+// this typed prevents a bare `{}` response from making a viewer test look green
+// while React reports an asynchronous render exception after the assertion.
+export function fileMetadata(
+  id: string,
+  name: string,
+  mimeType = 'video/mp4',
+): FileMetadata {
+  return {
+    id,
+    name,
+    mimeType,
+    sizeBytes: 1_024,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: null,
+    blob: {
+      mediaCategory: mimeType.startsWith('video/') ? 'video' : 'image',
+      detectedContentType: mimeType,
+      detectedFormat: mimeType.startsWith('video/') ? 'mp4' : 'jpeg',
+      width: 1920,
+      height: 1080,
+      pixelCount: 2_073_600,
+      thumbnailStatus: 'ready',
+      extractionStatus: 'ready',
+      embedded: null,
+      video: null,
+    },
+    user: {
+      title: null,
+      description: null,
+      tags: [],
+      rating: null,
+      favorite: false,
+      dateTakenOverride: null,
+      locationOverride: null,
+    },
+    effective: {
+      displayName: name,
+      dateTaken: '2026-01-01T00:00:00Z',
+      dateTakenSource: 'uploaded',
+      location: null,
+    },
+  };
 }
 
 export interface FetchSpyEntry {

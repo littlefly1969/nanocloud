@@ -3,7 +3,14 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { PersonDetailPage } from './PersonDetailPage';
-import { AuthedWrapper, installFetchMock, jsonResponse, emptyResponse, type MockHandler } from '../test-utils';
+import {
+  AuthedWrapper,
+  installFetchMock,
+  jsonResponse,
+  emptyResponse,
+  fileMetadata,
+  type MockHandler,
+} from '../test-utils';
 
 afterEach(() => {
   cleanup();
@@ -191,7 +198,7 @@ it('opens the player at the representative timestamp of the clicked match', asyn
       bestMatch: videoMatch(65_000, 92_000, 78_000),
       additionalMatches: [],
     }]),
-    'GET /api/files/file-9/metadata': () => jsonResponse({}),
+    'GET /api/files/file-9/metadata': () => jsonResponse(fileMetadata('file-9', 'clip.mp4')),
   });
 
   const poster = await screen.findByRole('button', { name: /clip\.mp4.*1:05/ });

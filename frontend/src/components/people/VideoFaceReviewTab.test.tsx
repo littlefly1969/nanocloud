@@ -1,7 +1,14 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { VideoFaceReviewTab } from './VideoFaceReviewTab';
-import { AuthedWrapper, installFetchMock, emptyResponse, jsonResponse, type MockHandler } from '../../test-utils';
+import {
+  AuthedWrapper,
+  installFetchMock,
+  emptyResponse,
+  jsonResponse,
+  fileMetadata,
+  type MockHandler,
+} from '../../test-utils';
 
 afterEach(() => {
   cleanup();
@@ -135,7 +142,7 @@ it('opens the player at the track timestamp', async () => {
     'GET /api/people/video-tracks/undecided': queue([track('t-1')]),
     'GET /api/people/video-tracks/t-1/suggestions': suggestions([]),
     'GET /api/people': () => jsonResponse([]),
-    'GET /api/files/file-t-1/metadata': () => jsonResponse({}),
+    'GET /api/files/file-t-1/metadata': () => jsonResponse(fileMetadata('file-t-1', 'clip.mp4')),
   });
 
   fireEvent.click(await screen.findByRole('button', { name: /clip\.mp4.*1:05/ }));
