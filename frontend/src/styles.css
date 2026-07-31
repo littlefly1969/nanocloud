@@ -152,6 +152,17 @@ optgroup {
   font-family: var(--font-ui);
 }
 
+/* The user agent gives these elements `font-weight: bold`, which computes to
+   700 — a weight Exo 2 does not ship under the approved contract (400/500/600),
+   so the browser would synthesise or substitute one. Headings are excluded:
+   they render in Space Grotesk, where 700 IS approved. */
+strong,
+b,
+th,
+optgroup {
+  font-weight: 600;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -485,7 +496,7 @@ a {
   background: rgb(3 7 18 / 88%);
   color: #f8fafc;
   font-size: clamp(1rem, 1.6vw, 1.25rem);
-  font-weight: 750;
+  font-weight: 600;
 }
 .tv-gallery-status-pill { left: 50%; transform: translateX(-50%); }
 .tv-gallery-selection-pill { left: max(1.25rem, env(safe-area-inset-left)); background: #1d4ed8; }
@@ -564,7 +575,7 @@ a {
   background: #172033;
   color: #f8fafc;
   font-size: clamp(1rem, 1.55vw, 1.25rem);
-  font-weight: 750;
+  font-weight: 600;
 }
 .tv-gallery-command-rail button:focus,
 .tv-gallery-workspace button:focus,
@@ -602,7 +613,7 @@ a {
 }
 .tv-gallery-workspace h2 { margin: 0; font-size: clamp(1.7rem, 3vw, 2.6rem); }
 .tv-gallery-workspace header p { margin: 0.3rem 0 0; color: #b8c2d1; font-size: 1.1rem; }
-.tv-gallery-draft-count { color: #93c5fd !important; font-weight: 750; }
+.tv-gallery-draft-count { color: #93c5fd !important; font-weight: 600; }
 .tv-gallery-workspace-body {
   min-height: 0;
   flex: 1;
@@ -655,7 +666,7 @@ a {
   border-radius: 0.8rem;
   background: #0f1725;
 }
-.tv-gallery-manual legend { padding: 0 0.4rem; font-size: 1.25rem; font-weight: 800; }
+.tv-gallery-manual legend { padding: 0 0.4rem; font-size: 1.25rem; font-weight: 600; }
 .tv-gallery-manual label { display: flex; flex-direction: column; gap: 0.35rem; color: #dbe4ef; }
 .tv-personal-people { display: flex; flex-direction: column; gap: 0.55rem; max-height: 16rem; overflow-y: auto; }
 .tv-personal-person-include { background: #14532d !important; }
@@ -834,7 +845,7 @@ a {
 .party-upload-status { margin-top: 1rem; }
 .tv-party-qr { background: #fff; padding: 0.5rem; border-radius: 8px; width: 160px; height: 160px; }
 .tv-party-qr svg { width: 100%; height: 100%; display: block; }
-.tv-party-caption { color: #fff; margin: 0; font-size: 1rem; font-weight: 700; text-align: center; }
+.tv-party-caption { color: #fff; margin: 0; font-size: 1rem; font-weight: 600; text-align: center; }
 
 @media (max-width: 700px) {
   .tv-party-corner { padding: 0.5rem; gap: 0.35rem; }
@@ -876,7 +887,7 @@ a {
 
 .app-brand {
   font-size: 1.0625rem;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--text-primary);
 }
@@ -938,7 +949,6 @@ a {
     display: none;
   }
 }
-}
 
 .app-shell {
   min-height: 100vh;
@@ -998,7 +1008,7 @@ a {
 .app-nav__group-title {
   margin: 0 0 0.35rem 0.55rem;
   font-size: 0.6875rem;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -1147,7 +1157,7 @@ a {
   background: var(--accent-strong);
   color: var(--accent-contrast);
   font-size: 0.8125rem;
-  font-weight: 650;
+  font-weight: 600;
 }
 .user-menu__name {
   overflow: hidden;
@@ -1213,7 +1223,7 @@ a {
 .theme-switcher { display: flex; flex-direction: column; gap: 0.35rem; }
 .theme-switcher__label {
   font-size: 0.75rem;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -1308,7 +1318,7 @@ select option {
 }
 .language-switcher--stacked .language-switcher-label {
   font-size: 0.75rem;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -2314,7 +2324,7 @@ button.logout {
   padding: 0 0.35rem;
   border-radius: 999px;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 600;
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent);
   border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
@@ -2525,7 +2535,7 @@ button.logout {
   padding: 0 0.35rem;
   border-radius: 999px;
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #fff;
   background: color-mix(in srgb, var(--accent) 82%, #000);
 }
@@ -2601,7 +2611,7 @@ button.logout {
   padding: 2px 7px;
   border-radius: 6px;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: #fff;
   background: color-mix(in srgb, #000 68%, transparent);
@@ -2616,7 +2626,7 @@ button.logout {
   padding: 1px 6px;
   border-radius: 6px;
   font-size: 0.66rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: #fff;
@@ -4144,7 +4154,7 @@ html.tv-scroll-stable::-webkit-scrollbar {
 .metadata-action-group__title {
   margin: 0 0 0.4rem;
   font-size: 0.6875rem;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -4533,7 +4543,7 @@ video.lightbox-image {
   background: rgba(0, 0, 0, 0.72);
   color: #fff;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.02em;
   pointer-events: none;
 }
@@ -4752,7 +4762,7 @@ video.lightbox-image {
   padding: 0.05rem 0.4rem;
   border-radius: 999px;
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   vertical-align: middle;
@@ -5192,7 +5202,7 @@ video.lightbox-image {
 .similar-explorer-title {
   margin: 0;
   font-size: 1.2rem;
-  font-weight: 650;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -5230,7 +5240,7 @@ video.lightbox-image {
 
 .similar-explorer-value {
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--accent);
   font-size: 1.05rem;
 }
@@ -6226,7 +6236,7 @@ video.lightbox-image {
   bottom: 100%;
   margin-bottom: 2px;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   line-height: 1.2;
   padding: 0.05rem 0.35rem;
@@ -6296,7 +6306,7 @@ video.lightbox-image {
 }
 .aesthetics-comparison-table td.is-best {
   color: var(--accent);
-  font-weight: 700;
+  font-weight: 600;
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
@@ -6325,7 +6335,7 @@ video.lightbox-image {
 }
 .ws-header-row { display: flex; align-items: center; gap: 0.75rem; }
 .ws-header-top { justify-content: space-between; }
-.ws-header-title { margin: 0; font-size: 1.15rem; font-weight: 650; }
+.ws-header-title { margin: 0; font-size: 1.15rem; font-weight: 600; }
 .ws-header-count { color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
 .ws-header-controls { flex-wrap: wrap; }
 
@@ -6629,7 +6639,7 @@ video.lightbox-image {
   background: var(--surface-raised);
   border-color: var(--border-strong);
   color: var(--text-primary);
-  font-weight: 650;
+  font-weight: 600;
   box-shadow: var(--shadow-sm);
 }
 .media-kind-tab.is-active .nc-icon { color: var(--accent); }
@@ -6723,7 +6733,7 @@ video.lightbox-image {
   background: var(--accent-strong);
   color: var(--accent-contrast);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 .ws-sort {
   display: inline-flex;
@@ -6847,6 +6857,6 @@ video.lightbox-image {
 .album-card-desc { margin: 0; font-size: 0.82rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .album-card-counts { margin: 0; font-size: 0.8rem; color: var(--muted); }
 .album-card-updated { margin: 0; font-size: 0.72rem; }
-.album-badge { font-size: 0.62rem; font-weight: 700; padding: 0.05rem 0.4rem; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.03em; }
+.album-badge { font-size: 0.62rem; font-weight: 600; padding: 0.05rem 0.4rem; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.03em; }
 .album-badge-tv { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
 .album-card-delete { align-self: flex-start; margin: 0 0.75rem 0.75rem; font-size: 0.78rem; padding: 0.3rem 0.6rem; }
