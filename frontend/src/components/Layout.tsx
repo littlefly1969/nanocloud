@@ -3,6 +3,7 @@ import { Outlet } from 'react-router';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n';
 import { BrandMark } from '../brand/BrandMark';
+import { PRODUCT_NAME } from '../brand/brand';
 import { readMigratedItem } from '../storage/brandedStorageKey';
 import { AppNav } from './nav/AppNav';
 import { NavDrawer } from './nav/NavDrawer';
@@ -96,7 +97,10 @@ export function Layout() {
           <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={20} />
         </button>
 
-        <BrandMark className="app-topbar__brand" />
+        <span className="app-topbar__brand app-brand-lockup">
+          <BrandMark size={26} />
+          <span className="app-brand">{PRODUCT_NAME}</span>
+        </span>
 
         <div className="app-topbar__utility">
           <UserMenu

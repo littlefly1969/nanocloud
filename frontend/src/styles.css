@@ -207,29 +207,14 @@ a {
   text-align: center;
 }
 
-/* The sign-in heading IS the brand lockup, at a size that clears the 120px
-   minimum wordmark width with room for the brand clear space. */
+/* The sign-in heading IS the approved wordmark lockup. The component sizes it
+   well above the 120px minimum and applies the brand clear space, so this only
+   centres it. */
 .login-title {
   display: flex;
   justify-content: center;
 }
-.login-title .brand-mark {
-  gap: calc(var(--space-unit) * 1.5);
-}
-.login-title .brand-mark__icon {
-  width: 40px;
-  height: 40px;
-}
-.login-title .brand-mark__wordmark {
-  font-size: 1.75rem;
-}
-/* The login lockup is the one place the wordmark must survive a narrow
-   viewport — it is the only product identification on the page. */
-@media (max-width: 26.25rem) {
-  .login-title .brand-mark__wordmark {
-    display: inline;
-  }
-}
+
 
 .login-card label {
   display: block;
@@ -896,53 +881,63 @@ a {
   color: var(--text-primary);
 }
 
-/* NubArca lockup: approved icon + live wordmark text.
-   Clear space is 25% of the logo height on every side (brand guidelines), which
-   at the 28px icon is the 7px inline padding below. */
+/* NubArca brand artwork.
+   Every image here is an approved asset copied byte-for-byte from
+   assets/brand/nubarca/. The component picks the on-dark or on-light variant
+   from the resolved theme and sets the pixel size inline; CSS only positions
+   it and reserves the brand clear space (25% of the logo height, applied as
+   padding by the component). Nothing here scales artwork beyond its shipped
+   size, and nothing recolours it. */
 .brand-mark {
   display: inline-flex;
   align-items: center;
-  gap: calc(var(--space-unit) * 1.25);
-  padding-inline: calc(28px * 0.25);
+  flex: none;
   min-width: 0;
-}
-.brand-mark--compact {
-  gap: 0;
-  padding-inline: calc(24px * 0.25);
 }
 
 .brand-mark__icon {
-  flex: none;
-  /* Never below the 24px minimum icon size, and never stretched. */
+  display: block;
+  /* Never below the 24px minimum icon size, and never distorted. */
   min-width: 24px;
   min-height: 24px;
   object-fit: contain;
 }
 
-.brand-mark__wordmark {
+.brand-mark__wordmark-img {
+  display: block;
+  height: auto;
+  /* The approved light-surface file carries a large transparent canvas; the
+     component compensates so the VISIBLE lockup still meets the 120px minimum
+     (see wordmarkAsset). Never stretched. */
+  object-fit: contain;
+}
+
+/* Shell lockup: the approved flat mark beside the product name. The name stays
+   live text here rather than the wordmark image, because a topbar and a mobile
+   drawer cannot give the wordmark its 120px minimum width without crowding the
+   controls next to it. */
+.app-brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space-unit) * 0.75);
+  min-width: 0;
+}
+.app-brand-lockup .app-brand {
   font-family: var(--font-heading);
-  /* At this size the two-tone wordmark clears the 120px minimum width. */
-  font-size: 1.1875rem;
+  font-size: 1.0625rem;
   font-weight: 700;
   letter-spacing: -0.015em;
   line-height: 1;
-  color: var(--text-primary);
   white-space: nowrap;
 }
-.brand-mark__wordmark-accent {
-  color: var(--accent);
-}
 
-/* Below the mobile breakpoint the wordmark would crowd the topbar controls, so
-   the lockup falls back to the icon alone rather than shrinking the wordmark
-   under its 120px minimum. */
+/* Below the mobile breakpoint the topbar keeps the mark alone rather than
+   squeezing the name against the user menu. */
 @media (max-width: 26.25rem) {
-  .brand-mark__wordmark {
+  .app-topbar__brand .app-brand {
     display: none;
   }
-  .brand-mark {
-    gap: 0;
-  }
+}
 }
 
 .app-shell {

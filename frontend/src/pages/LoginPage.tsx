@@ -41,7 +41,7 @@ export function LoginPage() {
     <div className="login-page">
       <form className="login-card" onSubmit={onSubmit} aria-labelledby="login-title">
         <h1 id="login-title" className="login-title">
-          <BrandMark />
+          <BrandMark variant="wordmark" size={200} />
         </h1>
 
         <label htmlFor="email">{t('login.email')}</label>

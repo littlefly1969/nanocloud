@@ -2,6 +2,7 @@ import { useEffect, useRef, type KeyboardEvent } from 'react';
 import { useLocation } from 'react-router';
 import { useI18n } from '../../i18n';
 import { BrandMark } from '../../brand/BrandMark';
+import { PRODUCT_NAME } from '../../brand/brand';
 import { Icon } from '../icons/Icon';
 import { AppNav } from './AppNav';
 
@@ -94,7 +95,10 @@ export function NavDrawer({ isAdmin, onClose, returnFocusRef }: NavDrawerProps) 
         onKeyDown={onKeyDown}
       >
         <div className="nav-drawer__head">
-          <BrandMark />
+          <span className="app-brand-lockup">
+            <BrandMark size={26} />
+            <span className="app-brand">{PRODUCT_NAME}</span>
+          </span>
           <button
             type="button"
             className="icon-button"

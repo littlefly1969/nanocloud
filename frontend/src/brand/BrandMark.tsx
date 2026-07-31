@@ -1,47 +1,92 @@
-import { BRAND_ASSETS, PRODUCT_NAME, WORDMARK_PARTS } from './brand';
+import { useTheme } from '../theme/useTheme';
+import {
+  LOGO_CLEAR_SPACE_RATIO,
+  MIN_ICON_SIZE_PX,
+  MIN_WORDMARK_WIDTH_PX,
+  PRODUCT_NAME,
+  flatMarkUrl,
+  wordmarkAsset,
+} from './brand';
 
-// The NubArca lockup: the approved icon next to the wordmark.
+// The NubArca lockup, in the two forms the brand guidelines distinguish.
 //
-// The wordmark is live TEXT, not an image. That is the brand contract's own
-// fallback for the case we are in — no light-on-dark wordmark asset was
-// supplied, and informally recoloring the dark-text one is forbidden. Text also
-// stays crisp at every zoom level, respects the user's font size, and gives
-// screen readers the product name without an alt-text duplicate.
+//   'mark'     the approved FLAT mark alone — shell, navigation, dense chrome.
+//              Never the launcher/PWA icon: that artwork is luminous and
+//              framed, and at 24 px its glow smears and its frame fights the
+//              surrounding UI.
 //
-// The icon carries the whole accessible name, so the wordmark is aria-hidden:
-// otherwise "NubArca NubArca" would be announced.
+//   'wordmark' the approved full lockup (symbol + NubArca) — login and other
+//              prominent placements, at or above the 120 px minimum width.
+//
+// Both come in an ON-DARK and an ON-LIGHT variant, selected from the RESOLVED
+// theme so the Cloud White artwork never lands on Cloud White. Everything is a
+// byte-exact approved asset: nothing here recolours, rotates or restyles.
+//
+// The element carries the accessible name once, so the artwork inside is
+// aria-hidden rather than announced a second time.
 
 interface BrandMarkProps {
-  /** Icon-only, for the collapsed rail and other tight slots. */
-  compact?: boolean;
+  /** 'mark' (default) for chrome; 'wordmark' for prominent placements. */
+  variant?: 'mark' | 'wordmark';
+  /**
+   * Rendered size in CSS px: the icon's box for 'mark', the VISIBLE lockup's
+   * width for 'wordmark'. Both are clamped to the brand minimums.
+   */
+  size?: number;
   className?: string;
 }
 
-export function BrandMark({ compact = false, className }: BrandMarkProps) {
+export function BrandMark({ variant = 'mark', size, className }: BrandMarkProps) {
+  const { effective } = useTheme();
+  const classes = ['brand-mark', `brand-mark--${variant}`, className].filter(Boolean).join(' ');
+
+  if (variant === 'wordmark') {
+    // Never below the minimum wordmark width, whatever a caller asks for.
+    const contentWidth = Math.max(size ?? 200, MIN_WORDMARK_WIDTH_PX);
+    const { src, elementWidthPx } = wordmarkAsset(effective, contentWidth);
+    return (
+      <span
+        className={classes}
+        role="img"
+        aria-label={PRODUCT_NAME}
+        data-testid="brand-mark"
+        data-variant="wordmark"
+        // Clear space: 25% of the rendered logo height on every side.
+        style={{ padding: `${Math.round(contentWidth / 3.75 * LOGO_CLEAR_SPACE_RATIO)}px` }}
+      >
+        <img
+          className="brand-mark__wordmark-img"
+          src={src}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          width={elementWidthPx}
+          style={{ width: `${elementWidthPx}px` }}
+        />
+      </span>
+    );
+  }
+
+  const px = Math.max(size ?? 28, MIN_ICON_SIZE_PX);
   return (
     <span
-      className={['brand-mark', compact ? 'brand-mark--compact' : '', className]
-        .filter(Boolean)
-        .join(' ')}
+      className={classes}
       role="img"
       aria-label={PRODUCT_NAME}
       data-testid="brand-mark"
+      data-variant="mark"
+      style={{ padding: `${Math.round(px * LOGO_CLEAR_SPACE_RATIO)}px` }}
     >
       <img
         className="brand-mark__icon"
-        src={compact ? BRAND_ASSETS.iconSmall : BRAND_ASSETS.icon}
+        src={flatMarkUrl(effective, px)}
         alt=""
         aria-hidden="true"
         draggable={false}
-        width={compact ? 24 : 28}
-        height={compact ? 24 : 28}
+        width={px}
+        height={px}
+        style={{ width: `${px}px`, height: `${px}px` }}
       />
-      {!compact && (
-        <span className="brand-mark__wordmark" aria-hidden="true">
-          {WORDMARK_PARTS.lead}
-          <span className="brand-mark__wordmark-accent">{WORDMARK_PARTS.accent}</span>
-        </span>
-      )}
     </span>
   );
 }

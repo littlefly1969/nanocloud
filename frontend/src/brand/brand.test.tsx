@@ -1,20 +1,25 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { I18nProvider } from '../i18n';
 // Aliased: a bare `it` import would shadow vitest's `it`.
 import enMessages from '../i18n/en';
 import itMessages from '../i18n/it';
+import { ThemeContext } from '../theme/ThemeContext';
+import type { EffectiveTheme } from '../theme/themePreference';
 import { BrandMark } from './BrandMark';
 import {
   BRAND_ASSETS,
+  LOGO_CLEAR_SPACE_RATIO,
   MIN_ICON_SIZE_PX,
   MIN_WORDMARK_WIDTH_PX,
   PRODUCT_NAME,
   TV_PRODUCT_NAME,
-  WORDMARK_PARTS,
+  flatMarkUrl,
+  wordmarkAsset,
 } from './brand';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -22,6 +27,12 @@ const FRONTEND = resolve(here, '../..');
 const PUBLIC = resolve(FRONTEND, 'public');
 const CSS = readFileSync(resolve(FRONTEND, 'src/styles.css'), 'utf8');
 const INDEX_HTML = readFileSync(resolve(FRONTEND, 'index.html'), 'utf8');
+
+// The canonical package is the source of truth for every shipped asset.
+interface PackagedAsset { path: string; sha256: string; runtimeReady: boolean; width: number; height: number }
+const PACKAGE_MANIFEST = JSON.parse(
+  readFileSync(resolve(FRONTEND, '../assets/brand/nubarca/brand-manifest.json'), 'utf8'),
+) as { assets: PackagedAsset[]; counts: Record<string, number> };
 
 // The former product name. Written split so this file does not itself trip the
 // repository-wide brand-cleanliness check it exists to complement.
@@ -39,10 +50,6 @@ describe('product name', () => {
     }
   });
 
-  it('splits the wordmark without changing its capitalization', () => {
-    expect(WORDMARK_PARTS.lead + WORDMARK_PARTS.accent).toBe(PRODUCT_NAME);
-    expect(WORDMARK_PARTS.accent.startsWith('A')).toBe(true);
-  });
 });
 
 describe('locale resources', () => {
@@ -140,15 +147,54 @@ describe('brand artwork', () => {
     }
   });
 
+  // The single most important property of this integration: every served file is
+  // a byte-exact copy of an approved asset. If a build step ever resized,
+  // recoloured or regenerated one, its hash would stop matching the package.
+  it('serves only byte-exact copies of approved canonical assets', () => {
+    const canonical = new Map<string, string>();
+    for (const a of PACKAGE_MANIFEST.assets) {
+      canonical.set(basename(a.path), a.sha256);
+    }
+    const served = readdirSync(resolve(PUBLIC, 'brand'));
+    expect(served.length).toBeGreaterThan(20);
+    for (const file of served) {
+      const expected = canonical.get(file);
+      expect(expected, `${file} is not in the canonical package`).toBeDefined();
+      const actual = createHash('sha256')
+        .update(readFileSync(resolve(PUBLIC, 'brand', file)))
+        .digest('hex');
+      expect(actual, `${file} differs from the approved binary`).toBe(expected);
+    }
+  });
+
+  it('serves nothing the manifest marks as not runtime-ready', () => {
+    const byName = new Map(PACKAGE_MANIFEST.assets.map((a) => [basename(a.path), a]));
+    for (const file of readdirSync(resolve(PUBLIC, 'brand'))) {
+      expect(byName.get(file)?.runtimeReady, `${file} is not runtime-ready`).toBe(true);
+    }
+  });
+
   it('keeps the guideline boards out of the served directory', () => {
     // The reference boards are documentation, never runtime UI.
     const served = readdirSync(resolve(PUBLIC, 'brand'));
-    expect(served.filter((f) => f.startsWith('reference-'))).toEqual([]);
+    for (const file of served) {
+      expect(file.toLowerCase()).not.toMatch(/reference|board|poster|guide|preview/);
+    }
+    // …and none of them is even catalogued as runtime-ready.
+    for (const a of PACKAGE_MANIFEST.assets) {
+      if (a.path.startsWith('reference/')) expect(a.runtimeReady).toBe(false);
+    }
   });
 
   it('leaves no old-brand artwork behind in the served directory', () => {
     for (const file of readdirSync(resolve(PUBLIC, 'brand'))) {
       expect(file.toLowerCase()).not.toContain('nanocloud');
+    }
+  });
+
+  it('ships the whole approved favicon family', () => {
+    for (const f of ['favicon.ico', 'favicon-16.png', 'favicon-24.png', 'favicon-32.png', 'favicon-48.png']) {
+      expect(existsSync(resolve(PUBLIC, 'brand', f)), f).toBe(true);
     }
   });
 
@@ -162,41 +208,157 @@ describe('brand artwork', () => {
   });
 });
 
+// The TV app copies from the same canonical package.
+describe('TV artwork', () => {
+  const TV = resolve(FRONTEND, '../tv/assets/brand');
+  const CONFIG = readFileSync(resolve(FRONTEND, '../tv/app.config.js'), 'utf8');
+
+  it('serves only byte-exact copies of approved canonical assets', () => {
+    const canonical = new Map(PACKAGE_MANIFEST.assets.map((a) => [basename(a.path), a]));
+    for (const file of readdirSync(TV)) {
+      const record = canonical.get(file);
+      expect(record, `${file} is not in the canonical package`).toBeDefined();
+      expect(record!.runtimeReady, `${file} is not runtime-ready`).toBe(true);
+      const actual = createHash('sha256').update(readFileSync(resolve(TV, file))).digest('hex');
+      expect(actual, `${file} differs from the approved binary`).toBe(record!.sha256);
+    }
+  });
+
+  it('points the Expo config at the approved assets that exist', () => {
+    const referenced = [...CONFIG.matchAll(/'\.\/assets\/brand\/([^']+)'/g)].map((m) => m[1]);
+    expect(referenced.length).toBeGreaterThanOrEqual(3);
+    for (const f of referenced) {
+      expect(existsSync(resolve(TV, f)), `app.config.js references a missing ${f}`).toBe(true);
+    }
+  });
+
+  it('uses the purpose-built banner rather than a stretched 3:2 lockup', () => {
+    expect(CONFIG).toContain('nubarca-android-tv-banner-320x180.png');
+    const banner = PACKAGE_MANIFEST.assets
+      .find((a) => a.path.endsWith('nubarca-android-tv-banner-320x180.png'))!;
+    expect([banner.width, banner.height]).toEqual([320, 180]);
+  });
+
+  it('uses a square launcher icon, never a wide lockup', () => {
+    for (const m of [...CONFIG.matchAll(/icon: '\.\/assets\/brand\/([^']+)'/g)]) {
+      const rec = PACKAGE_MANIFEST.assets.find((a) => a.path.endsWith(m[1]))!;
+      expect(rec.width, `${m[1]} is not square`).toBe(rec.height);
+    }
+  });
+});
+
 describe('brand mark', () => {
-  function renderMark(compact = false) {
+  function renderMark(props: Parameters<typeof BrandMark>[0] = {}, theme: EffectiveTheme = 'dark') {
     return render(
-      <I18nProvider>
-        <BrandMark compact={compact} />
-      </I18nProvider>,
+      <ThemeContext.Provider value={{ preference: theme, effective: theme, setPreference: () => {} }}>
+        <I18nProvider>
+          <BrandMark {...props} />
+        </I18nProvider>
+      </ThemeContext.Provider>,
     );
   }
+  const src = () => screen.getByTestId('brand-mark').querySelector('img')!.getAttribute('src')!;
 
   it('announces the product name exactly once', () => {
     renderMark();
     const mark = screen.getByTestId('brand-mark');
     expect(mark).toHaveAttribute('aria-label', PRODUCT_NAME);
-    // The visible wordmark is decorative: the label already carries the name.
-    expect(mark.querySelector('.brand-mark__wordmark')).toHaveAttribute('aria-hidden', 'true');
+    // The artwork is decorative: the label already carries the name.
     expect(mark.querySelector('img')).toHaveAttribute('aria-hidden', 'true');
+    expect(mark.textContent).toBe('');
   });
 
-  it('renders the wordmark two-tone, without altering the capitalization', () => {
-    renderMark();
-    expect(screen.getByTestId('brand-mark').textContent).toBe(PRODUCT_NAME);
-    expect(document.querySelector('.brand-mark__wordmark-accent')?.textContent).toBe('Arca');
+  // The rule this component exists to enforce.
+  it('uses the FLAT mark in small UI contexts, never the launcher icon', () => {
+    renderMark({ size: 26 });
+    expect(src()).toContain('nubarca-mark-flat-on-');
+    for (const launcher of ['pwa-', 'app-icon', 'maskable', 'apple-touch', 'favicon']) {
+      expect(src()).not.toContain(launcher);
+    }
   });
 
-  it('drops to the icon alone in compact mode rather than shrinking the wordmark', () => {
-    renderMark(true);
-    expect(document.querySelector('.brand-mark__wordmark')).toBeNull();
-    expect(screen.getByTestId('brand-mark').querySelector('img')).not.toBeNull();
+  it('picks the on-dark or on-light mark from the RESOLVED theme', () => {
+    renderMark({ size: 26 }, 'dark');
+    expect(src()).toContain('-on-dark-');
+    cleanup();
+    renderMark({ size: 26 }, 'light');
+    expect(src()).toContain('-on-light-');
   });
 
-  it('uses the transparent icon, never a guideline board', () => {
-    renderMark();
-    const src = screen.getByTestId('brand-mark').querySelector('img')!.getAttribute('src')!;
-    expect(src).toBe(BRAND_ASSETS.icon);
-    expect(src).not.toContain('reference-');
+  it('never renders the mark below the 24px brand minimum', () => {
+    renderMark({ size: 8 });
+    const img = screen.getByTestId('brand-mark').querySelector('img') as HTMLImageElement;
+    expect(Number(img.getAttribute('width'))).toBeGreaterThanOrEqual(MIN_ICON_SIZE_PX);
+  });
+
+  it('serves a mark at least 2x the rendered box so it stays crisp', () => {
+    renderMark({ size: 26 });
+    expect(src()).toContain('-64.png');
+    cleanup();
+    // 16 is below the 24px brand minimum, so the component clamps to 24 and then
+    // asks for 2x — the 48px file, not the 32px one a naive 16x2 would pick.
+    renderMark({ size: 16 });
+    expect(src()).toContain('-48.png');
+    // The picker itself, unclamped, still resolves the small sizes.
+    expect(flatMarkUrl('dark', 16)).toContain('-32.png');
+  });
+
+  it('uses the approved wordmark lockup for prominent placements', () => {
+    renderMark({ variant: 'wordmark', size: 200 }, 'dark');
+    expect(src()).toContain('nubarca-wordmark-on-dark-');
+    cleanup();
+    renderMark({ variant: 'wordmark', size: 200 }, 'light');
+    expect(src()).toBe('/brand/nubarca-wordmark-on-light.png');
+  });
+
+  it('never renders the wordmark below its 120px minimum, in either theme', () => {
+    for (const theme of ['dark', 'light'] as const) {
+      cleanup();
+      renderMark({ variant: 'wordmark', size: 40 }, theme);
+      const img = screen.getByTestId('brand-mark').querySelector('img') as HTMLImageElement;
+      const element = Number(img.getAttribute('width'));
+      // The light file pads the lockup inside a larger canvas, so the ELEMENT is
+      // wider than the visible lockup. What must clear the minimum is the lockup.
+      const ratio = theme === 'light' ? 0.7724 : 0.9833;
+      expect(Math.round(element * ratio)).toBeGreaterThanOrEqual(MIN_WORDMARK_WIDTH_PX);
+    }
+  });
+
+  it('reserves the brand clear space around the lockup', () => {
+    renderMark({ size: 40 });
+    const pad = Number.parseFloat(screen.getByTestId('brand-mark').style.padding);
+    expect(pad).toBeCloseTo(40 * LOGO_CLEAR_SPACE_RATIO, 0);
+  });
+
+  it('never points at a reference board or a source master', () => {
+    for (const props of [{}, { variant: 'wordmark' as const }]) {
+      cleanup();
+      renderMark(props);
+      expect(src()).not.toMatch(/reference|board|poster|guide|master/);
+      expect(src().startsWith('/brand/')).toBe(true);
+    }
+  });
+});
+
+describe('asset pickers', () => {
+  it('map every shipped size to a file that exists', () => {
+    for (const theme of ['dark', 'light'] as const) {
+      for (const px of [12, 16, 24, 26, 32, 48, 64, 128]) {
+        const url = flatMarkUrl(theme, px);
+        expect(existsSync(resolve(PUBLIC, url.replace(/^\//, ''))), url).toBe(true);
+      }
+      for (const w of [120, 200, 240, 480, 700]) {
+        const { src: url } = wordmarkAsset(theme, w);
+        expect(existsSync(resolve(PUBLIC, url.replace(/^\//, ''))), url).toBe(true);
+      }
+    }
+  });
+
+  it('never serves a light-surface asset to a dark surface', () => {
+    expect(flatMarkUrl('dark', 24)).not.toContain('on-light');
+    expect(flatMarkUrl('light', 24)).not.toContain('on-dark');
+    expect(wordmarkAsset('dark', 200).src).not.toContain('on-light');
+    expect(wordmarkAsset('light', 200).src).not.toContain('on-dark');
   });
 });
 
