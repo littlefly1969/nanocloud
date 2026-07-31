@@ -123,8 +123,16 @@ def build() -> dict[Path, Image.Image]:
     out[TV / "tv-banner-320x180.png"] = banner
     for size in (512, 192, 96):
         out[TV / f"tv-icon-{size}.png"] = scale_to(app_icon, size)
-    # Splash: the lockup centred on Midnight Navy at the launcher's aspect.
-    splash = Image.new("RGBA", (1920, 1080), MIDNIGHT_NAVY)
+    # Splash: the lockup centred at the launcher's 16:9 aspect.
+    #
+    # The canvas takes the LOCKUP'S OWN background colour, sampled from its
+    # corner, rather than the Midnight Navy token. The approved artwork sits on
+    # a slightly deeper navy, and compositing it onto #0A0F1A leaves a visible
+    # rectangle where the two meet — the seam reads as a boxed logo. Sampling
+    # keeps the field continuous, changes nothing about the logo itself, and
+    # stays correct if the source artwork is ever replaced.
+    splash_bg = tv_lockup.convert("RGB").getpixel((1, 1)) + (255,)
+    splash = Image.new("RGBA", (1920, 1080), splash_bg)
     lockup = fit_width(tv_lockup, 1100)
     splash.alpha_composite(lockup, ((1920 - lockup.width) // 2, (1080 - lockup.height) // 2))
     out[TV / "tv-splash-1920x1080.png"] = splash
