@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# NanoCloud HumanAesExpert model installer — FAIL-CLOSED (operator setup step).
+# NubArca HumanAesExpert model installer — FAIL-CLOSED (operator setup step).
 #
 # Installs the pinned, LOCAL KwaiVGI/HumanAesExpert-1B checkpoint (MIT) used by
 # the optional Aesthetics Lab sidecar into an operator-owned, read-only-mounted
@@ -59,7 +59,7 @@ if [[ ! -s "$MANIFEST" ]]; then
   exit 3
 fi
 
-echo "NanoCloud HumanAesExpert model install (fail-closed)"
+echo "NubArca HumanAesExpert model install (fail-closed)"
 echo "  model key : ${MODEL_KEY}"
 echo "  repo      : ${repo}"
 echo "  revision  : ${revision}"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# NanoCloud HumanAesExpert controlled smoke test (operator step).
+# NubArca HumanAesExpert controlled smoke test (operator step).
 #
 # Verifies the sidecar end-to-end on ONE explicitly supplied local test image and
 # prints SAFE structural info only (success/failure, metric keys/count, duration,

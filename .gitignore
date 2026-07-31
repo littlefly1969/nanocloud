@@ -40,7 +40,7 @@ _ReSharper*/
 appsettings.Local.json
 appsettings.Production.json
 
-# NanoCloud runtime storage
+# NubArca runtime storage
 /storage/
 
 # Operator backups — created by deploy/backup.sh. They contain a pg_dump

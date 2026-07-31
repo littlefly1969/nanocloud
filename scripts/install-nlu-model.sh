@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# NanoCloud NLU command-model installer — FAIL-CLOSED (operator setup step only).
+# NubArca NLU command-model installer — FAIL-CLOSED (operator setup step only).
 #
 # Installs the pinned, LOCAL decoder model used by the optional "onnx" natural-
 # language gallery interpreter into an operator-owned, read-only-mounted dir.
@@ -60,7 +60,7 @@ if [[ ! -s "$MANIFEST" ]]; then
   exit 3
 fi
 
-echo "NanoCloud NLU model install (fail-closed)"
+echo "NubArca NLU model install (fail-closed)"
 echo "  model key : ${MODEL_KEY}"
 echo "  repo      : ${repo}"
 echo "  revision  : ${revision}"

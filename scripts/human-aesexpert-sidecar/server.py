@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""NanoCloud HumanAesExpert aesthetics sidecar (LOCAL, internal-only).
+"""NubArca HumanAesExpert aesthetics sidecar (LOCAL, internal-only).
 
 Runs the pinned KwaiVGI/HumanAesExpert-1B checkpoint (MIT) on CPU and exposes
-exactly the endpoints the NanoCloud worker needs:
+exactly the endpoints the NubArca worker needs:
 
     GET  /health   -> 200 {"status":"ready"|"loading"}   (liveness)
     GET  /ready    -> 200 when the model is warm, else 503 (readiness)
@@ -27,7 +27,7 @@ Hard operational rules (match docs/model-deployment/human-aesexpert.md):
 Expert-head output mapping (VERIFIED against the checkpoint's
 modeling_internvl_chat.py `expert_score()` `names` list + arXiv:2503.23907;
 scores are Mean Opinion Scores in [0,1]). The 12 outputs, in tensor order, map to
-these stable NanoCloud contract keys:
+these stable NubArca contract keys:
 
     0  Facial Brightness                    -> facial_brightness
     1  Facial Feature Clarity               -> facial_feature_clarity

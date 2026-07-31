@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# NanoCloud — production backup.
+# NubArca — production backup.
 #
 # Takes a *cold* backup (services stopped) of the PostgreSQL database AND the
 # blob storage volume as a matched pair, then restarts the stack. Online
