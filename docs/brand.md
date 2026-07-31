@@ -86,9 +86,7 @@ a third-party CDN at runtime.**
 Only the required weights ship, latin subset only (the UI is en + it):
 
 - Space Grotesk 500, 600, 700 — headings and display text
-- Exo 2 400, 500, 600 — UI, body and labels, plus 700 because thirteen
-  stylesheet rules genuinely ask for it and a missing face would be
-  synthesised into a fake bold
+- Exo 2 400, 500, 600 — UI, body and labels
 
 `@fontsource` sets `font-display: swap`, so text paints immediately in the
 fallback stack and is never invisible. Every font token ends in a real
