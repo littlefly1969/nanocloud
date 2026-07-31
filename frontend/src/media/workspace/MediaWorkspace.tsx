@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { useLocation } from 'react-router';
 import {
   ApiError,
   bulkRemoveAlbumItems,
@@ -13,6 +13,7 @@ import { useI18n } from '../../i18n';
 import { useMediaWallLayout } from '../../components/mediaWallLayout';
 import { MediaViewer, type MediaViewerItem } from '../../components/MediaViewer';
 import { MediaMetadataPanel } from '../metadata/MediaMetadataPanel';
+import { useMediaSimilarityActions } from '../viewer/mediaViewerActions';
 import { AlbumPickerModal } from '../../gallery/AlbumPickerModal';
 import { MoveToPersonalDialog } from '../actions/MoveToPersonalDialog';
 import { useMoveToPersonal } from '../actions/useMoveToPersonal';
@@ -76,7 +77,6 @@ export function MediaWorkspace({
 }: Props) {
   const { t, tn } = useI18n();
   const { invalidateAuth } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const people = usePeopleIndex();
   // Render inside the full-width media shell (no-op outside the app Layout).
@@ -117,27 +117,34 @@ export function MediaWorkspace({
   const removeChip = (kind: FilterChipKind) => mutate({ ...identity, filters: clearChip(identity.filters, kind) });
   const clearAll = () => mutate({ ...identity, filters: clearActiveFilters(identity) });
   const changeSort = (sort: ImageSortField, direction: ImageSortDirection) => mutate({ ...identity, sort, direction });
-  // "Find similar in Library": stay in this workspace and filter it. Pin the
-  // photo tab, set the anchor, clear any visual query (the two are mutually
-  // exclusive), close the viewer. Routing to /api/images happens in the hook.
-  const applySimilar = (imageId: string) => {
-    viewer.close();
+  // "Find similar in Library" applied WITHOUT leaving: this workspace already
+  // is the destination, so it pins the photo tab and sets the anchor on the
+  // live identity (clearing any visual query — the two are mutually exclusive)
+  // rather than re-entering its own route, which would rewrite the query string
+  // without re-seeding the identity and would drop the session-only filters.
+  // Whether the action is OFFERED is not decided here — see mediaViewerActions.
+  const applyLibraryAnchor = useCallback((imageId: string) => {
     mutate({
       ...identity,
       mediaKind: 'image',
       filters: { ...identity.filters, photo: { ...identity.filters.photo, similarTo: imageId, visualQuery: '', semanticTopK: 0 } },
     });
-  };
-  // "Explore similar photos": leave for the dedicated explorer, which ranks by
-  // score above a chosen threshold rather than filtering this library view. The
-  // originating location travels in route state so the explorer can offer an
-  // accurate way back.
-  const exploreSimilar = (imageId: string) => {
-    viewer.close();
-    void navigate(`/gallery/files/${imageId}/similar`, {
-      state: { from: `${location.pathname}${location.search}` },
-    });
-  };
+  }, [mutate, identity]);
+
+  // The shared viewer-action resolver. "Explore similar photos" leaves for the
+  // dedicated explorer (ranked by score above a threshold rather than filtering
+  // this view); the originating location travels in route state so the explorer
+  // can offer an accurate way back.
+  const similarityActions = useMediaSimilarityActions({
+    onNavigate: viewer.close,
+    // Only the LIBRARY workspace is the destination of "Find similar in
+    // Library". An album workspace renders the same component but is a
+    // different collection, so it must travel to the Library like any other
+    // origin — applying the anchor to itself would silently mean "similar
+    // within this album".
+    applyLibraryAnchor: source.kind === 'library' ? applyLibraryAnchor : undefined,
+    exploreState: { from: `${location.pathname}${location.search}` },
+  });
   const submitSearch = () => {
     if (searchText === identity.filters.common.metadataQuery) return;
     mutate({ ...identity, filters: { ...identity.filters, common: { ...identity.filters.common, metadataQuery: searchText } } });
@@ -430,7 +437,6 @@ export function MediaWorkspace({
           renderDetails={({ item: vi, metadata, metadataError, adoptMetadata }) => {
             const current = ws.items.find((it) => it.id === vi.id);
             if (!current) return null;
-            const isPhoto = current.kind === 'image';
             return (
               <MediaMetadataPanel
                 fileId={current.id}
@@ -445,9 +451,9 @@ export function MediaWorkspace({
                   adoptMetadata(next);
                   onMetadataChanged(id, next);
                 }}
-                // Two distinct destinations, both photo-only.
-                onFindSimilarInLibrary={isPhoto ? () => applySimilar(current.id) : undefined}
-                onExploreSimilar={isPhoto ? () => exploreSimilar(current.id) : undefined}
+                // Two distinct destinations. Eligibility comes from the shared
+                // resolver, so this surface cannot drift from the explorer's.
+                {...similarityActions({ id: current.id, kind: current.kind })}
               />
             );
           }}

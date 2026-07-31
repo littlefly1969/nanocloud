@@ -255,38 +255,33 @@ export function MediaTile({
         aria-label={t('mediaWs.previewAria', { name: item.displayName })}
       >
         {isVideo ? (
-          // The poster is letterbox-safe: 'contain' shows the whole frame, a
-          // blurred copy of the same poster fills the tile behind it (one HTTP
-          // request — the browser reuses the poster URL). The tile itself is the
-          // video's real aspect ratio, so 'contain' fills it with no bands for a
-          // source-aspect poster; the backdrop only covers sub-pixel rounding.
+          // The tile is already the video's real aspect ratio, so 'cover' fills
+          // it edge to edge with nothing cropped that 'contain' would have shown
+          // — and where the two do diverge (a ratio clamped by
+          // getMediaAspectRatio, or the fraction of a pixel a justified row's
+          // last tile absorbs) it trims that sliver instead of filling it with a
+          // blurred stand-in.
           <VideoPreview
             posterUrl={item.posterUrl ?? item.thumbnailUrl}
             previewStripUrl={item.previewStripUrl}
             active={hovered}
-            fit="contain"
+            fit="cover"
             className="media-tile__media"
           />
         ) : thumbFailed ? (
           <span className="media-tile__media media-tile__placeholder" aria-hidden="true">🖼</span>
         ) : (
-          // Photo: the same blurred-backdrop + contained-foreground treatment,
-          // both from the small thumbnail (one request). The tile is the photo's
-          // real ratio, so the foreground fills it; the backdrop only shows on
-          // the rounding sliver of a justified row's last tile.
+          // Photo: ONE thumbnail layer, filling the tile. There is deliberately
+          // no second blurred copy behind it — the tile is reserved from the
+          // item's DISPLAY dimensions (EXIF-rotation applied server-side), so a
+          // backdrop had nothing legitimate left to fill and only ever surfaced
+          // as blurred bands whenever the reserved ratio was wrong.
           <span className="media-tile__frame">
             <img
               src={item.thumbnailUrl}
               alt=""
-              aria-hidden="true"
-              className="media-tile__backdrop"
-              loading="lazy"
-              decoding="async"
-            />
-            <img
-              src={item.thumbnailUrl}
-              alt=""
               className="media-tile__media"
+              loading="lazy"
               decoding="async"
               onError={() => setThumbFailed(true)}
             />

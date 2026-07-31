@@ -223,6 +223,7 @@ export function MediaViewer({ items, index, onClose, onIndexChange, onNearEnd, r
           </div>
           <div className="media-viewer-actions">
             <button type="button" aria-label={t('mediaViewer.details')} aria-pressed={detailsOpen}
+              data-testid="viewer-details-toggle"
               onClick={() => setDetailsOpen((v) => !v)}>ⓘ</button>
             <button type="button" aria-label={t('common.close')} onClick={onClose}>✕</button>
           </div>

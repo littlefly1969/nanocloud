@@ -340,13 +340,79 @@ describe('Similar Photos Explorer — states', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Impossibile caricare le foto simili.');
   });
 
-  it('uses the shared skeleton while the first page loads', () => {
+  it('announces the wait with the status line and adds no placeholder of its own', () => {
     installFetchMock({
       ...handlers(),
       'GET /api/files/src-1/similar': () => new Promise<Response>(() => {}),
     });
     renderExplorer();
-    expect(screen.getByTestId('similar-skeleton')).toBeInTheDocument();
+    // Same treatment as the Library: a status line, then the shared wall. No
+    // explorer-owned skeleton claiming a tile geometry no result will have.
+    expect(screen.getByRole('status')).toHaveTextContent('Ricerca di foto simili…');
+    expect(screen.queryByTestId('similar-skeleton')).not.toBeInTheDocument();
+    expect(document.querySelector('.media-wall__skeleton')).toBeNull();
+  });
+});
+
+// Origin parity: what a photo offers in this viewer must equal what it offers in
+// the Library viewer. The one thing this surface may add is the re-rooting
+// behaviour of Explore — never a narrower action set.
+describe('Similar Photos Explorer — viewer action parity', () => {
+  async function openViewerDrawer() {
+    installFetchMock(handlers());
+    const utils = renderExplorer();
+    await screen.findByTestId('media-grid');
+    await userEvent.click(screen.getAllByTestId('media-open')[0]);
+    await userEvent.click(await screen.findByTestId('viewer-details-toggle'));
+    return utils;
+  }
+
+  it('offers BOTH similarity actions on a photo opened from the explorer', async () => {
+    await openViewerDrawer();
+    expect(await screen.findByTestId('viewer-find-similar')).toBeInTheDocument();
+    expect(screen.getByTestId('viewer-explore-similar')).toBeInTheDocument();
+  });
+
+  it('Find similar in Library leaves for the Library with the similarTo anchor', async () => {
+    await openViewerDrawer();
+    await userEvent.click(await screen.findByTestId('viewer-find-similar'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loc').textContent).toBe('/media?kind=image&similarTo=r-1');
+    });
+    // The viewer closed on the way out.
+    expect(screen.queryByTestId('viewer-details-toggle')).not.toBeInTheDocument();
+  });
+
+  it('Explore Similar Photos re-roots the explorer on the opened photo', async () => {
+    await openViewerDrawer();
+    await userEvent.click(await screen.findByTestId('viewer-explore-similar'));
+
+    await waitFor(() => {
+      // New anchor, and the reader's threshold travels with it.
+      expect(screen.getByTestId('loc').textContent).toBe(
+        '/gallery/files/r-1/similar?minSimilarity=0.75',
+      );
+    });
+    expect(screen.queryByTestId('viewer-details-toggle')).not.toBeInTheDocument();
+  });
+
+  it('does not push a duplicate entry when re-rooting onto the current anchor', async () => {
+    installFetchMock({
+      ...handlers([{ fileItemId: SOURCE, name: 'beach.jpg', score: 1, width: 3000, height: 2000 }]),
+    });
+    renderExplorer();
+    await screen.findByTestId('media-grid');
+    await userEvent.click(screen.getAllByTestId('media-open')[0]);
+    await userEvent.click(await screen.findByTestId('viewer-details-toggle'));
+    await userEvent.click(await screen.findByTestId('viewer-explore-similar'));
+
+    // Already the anchor: the viewer closes and the route is untouched, so Back
+    // does not have to walk through a chain of identical explorer entries.
+    await waitFor(() => expect(screen.queryByTestId('viewer-details-toggle')).not.toBeInTheDocument());
+    expect(screen.getByTestId('loc').textContent).toBe(
+      `/gallery/files/${SOURCE}/similar?minSimilarity=0.75`,
+    );
   });
 });
 

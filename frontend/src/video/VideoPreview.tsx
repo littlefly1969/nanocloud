@@ -58,13 +58,19 @@ export function VideoPreview({
     <span className={`video-preview-stage video-preview-fit-${fit} ${active && stripReady ? 'is-previewing' : ''} ${className}`.trim()}>
       {!posterFailed && (
         <>
-          <img
-            className="video-preview-backdrop"
-            src={posterUrl}
-            alt=""
-            aria-hidden="true"
-            onError={() => setPosterFailed(true)}
-          />
+          {/* Only the letterboxing 'contain' stage has empty space to fill. A
+              'cover' poster reaches every edge, so the backdrop is not rendered
+              at all there — not merely hidden — and the grid never carries a
+              blurred duplicate layer. */}
+          {fit === 'contain' && (
+            <img
+              className="video-preview-backdrop"
+              src={posterUrl}
+              alt=""
+              aria-hidden="true"
+              onError={() => setPosterFailed(true)}
+            />
+          )}
           <img
             className="video-preview-poster"
             src={posterUrl}

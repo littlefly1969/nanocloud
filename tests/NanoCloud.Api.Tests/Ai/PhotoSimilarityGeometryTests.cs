@@ -15,12 +15,16 @@ using Xunit;
 
 namespace NanoCloud.Api.Tests.Ai;
 
-// Similar-photo results carry the ORIGINAL media's pixel dimensions, so a client
-// can lay each result out at its true proportions instead of guessing a square.
+// Similar-photo results carry the ORIGINAL media's DISPLAY pixel dimensions, so
+// a client can lay each result out at its true proportions instead of guessing a
+// square.
 //
 // What these tests pin:
 //   * width/height are mapped from the persisted BlobMetadata extracted at
 //     ingestion (landscape stays landscape, portrait stays portrait);
+//   * EXIF orientation is resolved through the same ImageDisplayDimensions
+//     helper the library listing uses, so a quarter-turned photo reports the
+//     portrait shape its auto-oriented thumbnail actually has;
 //   * a blob with no extracted dimensions reports null/null so the client can
 //     fall back, rather than reporting a misleading value;
 //   * adding geometry changes NOTHING about ranking: the same ids, the same
@@ -376,6 +380,107 @@ public sealed class PhotoSimilarityGeometryTests
         Assert.False(string.IsNullOrEmpty(item.Name));
         Assert.InRange(item.Score, 0.0, 1.0);
     }
+
+    // Force an EXIF orientation onto an already-ingested blob. Uploading a real
+    // rotated JPEG is unnecessary: the coded dimensions and the orientation flag
+    // are stored independently, and this reproduces exactly that state.
+    private static async Task SetOrientationAsync(
+        SqliteWebApplicationFactory factory, Guid fileItemId, int orientation)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var blobId = await db.FileItems.Where(f => f.Id == fileItemId)
+            .Select(f => f.BlobObjectId).FirstAsync();
+        var meta = await db.BlobMetadata.FirstAsync(m => m.BlobObjectId == blobId);
+        meta.Orientation = orientation;
+        await db.SaveChangesAsync();
+    }
+
+    [Theory]
+    [InlineData(5)]
+    [InlineData(6)]
+    [InlineData(7)]
+    [InlineData(8)]
+    public async Task Quarter_Turn_Orientation_Reports_The_Displayed_Portrait_Shape(int orientation)
+    {
+        using var factory = EnabledFactory();
+        await SeedProfilesAsync(factory);
+        var (_, client) = await factory.CreateAuthenticatedClientAsync();
+
+        var query = await UploadPngAsync(client, "query.png", 40, 40);
+        // Coded landscape, but flagged as a quarter turn — a phone portrait shot.
+        var rotated = await UploadPngAsync(client, "rotated.png", 64, 24);
+        await RunBackfillAsync(factory);
+        await SetOrientationAsync(factory, rotated, orientation);
+
+        var result = await client.GetFromJsonAsync<LegacyResult>($"/api/files/{query}/similar?limit=20");
+
+        var item = Assert.Single(result!.Items, i => i.FileItemId == rotated);
+        // Every derivative renderer auto-orients, so the thumbnail this result
+        // points at IS portrait. Reporting the coded landscape pair made the
+        // shared wall reserve a landscape tile for a portrait image — the blurred
+        // lateral bands. The displayed pair is the only correct answer.
+        Assert.Equal((24, 64), (item.Width, item.Height));
+        Assert.True(item.Height > item.Width, "a quarter-turned photo must report as portrait");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    public async Task Upright_And_Mirrored_Orientations_Keep_The_Coded_Shape(int? orientation)
+    {
+        using var factory = EnabledFactory();
+        await SeedProfilesAsync(factory);
+        var (_, client) = await factory.CreateAuthenticatedClientAsync();
+
+        var query = await UploadPngAsync(client, "query.png", 40, 40);
+        var landscape = await UploadPngAsync(client, "landscape.png", 64, 24);
+        await RunBackfillAsync(factory);
+        if (orientation is not null)
+        {
+            await SetOrientationAsync(factory, landscape, orientation.Value);
+        }
+
+        var result = await client.GetFromJsonAsync<LegacyResult>($"/api/files/{query}/similar?limit=20");
+
+        var item = Assert.Single(result!.Items, i => i.FileItemId == landscape);
+        // 1..4 are upright/mirrored — no quarter turn, so no swap.
+        Assert.Equal((64, 24), (item.Width, item.Height));
+    }
+
+    [Fact]
+    public async Task Explorer_Page_Resolves_Orientation_Exactly_As_The_Library_Listing_Does()
+    {
+        using var factory = EnabledFactory();
+        await SeedProfilesAsync(factory);
+        var (_, client) = await factory.CreateAuthenticatedClientAsync();
+
+        var query = await UploadPngAsync(client, "query.png", 40, 40);
+        var rotated = await UploadPngAsync(client, "rotated.png", 64, 24);
+        await RunBackfillAsync(factory);
+        await SetOrientationAsync(factory, rotated, 6);
+
+        var page = await GetPageAsync(client, query);
+        var similarItem = Assert.Single(page!.Items, i => i.FileItemId == rotated);
+
+        // The same file, through the library's own listing endpoint.
+        var library = await client.GetFromJsonAsync<MediaList>("/api/media?kind=image&limit=50");
+        var libraryItem = Assert.Single(library!.Items, i => i.Id == rotated);
+
+        // One geometry contract across both surfaces — that is what lets the two
+        // walls reserve identical tiles for the same photo.
+        Assert.Equal(
+            (libraryItem.Width, libraryItem.Height),
+            (similarItem.Width, similarItem.Height));
+        Assert.Equal((24, 64), (similarItem.Width, similarItem.Height));
+    }
+
+    private sealed record MediaList(List<MediaListItem> Items);
+
+    private sealed record MediaListItem(Guid Id, string Name, int? Width, int? Height);
 
     [Fact]
     public async Task Dimensions_Do_Not_Leak_Storage_Internals()

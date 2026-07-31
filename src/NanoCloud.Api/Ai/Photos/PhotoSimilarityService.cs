@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using NanoCloud.Api.Data;
 using NanoCloud.Api.Domain;
+using NanoCloud.Api.Metadata;
 
 namespace NanoCloud.Api.Ai.Photos;
 
@@ -310,8 +311,11 @@ public sealed class PhotoSimilarityService
         };
     }
 
-    // Attach each item's ORIGINAL pixel dimensions from the persisted
-    // BlobMetadata row extracted at ingestion.
+    // Attach each item's DISPLAY pixel dimensions, resolved from the persisted
+    // BlobMetadata row extracted at ingestion through the same
+    // ImageDisplayDimensions helper the library and album listings use — so an
+    // EXIF-rotated photo reports the proportions it is actually rendered at and
+    // the shared media wall reserves the identical tile in every surface.
     //
     // Deliberately a separate, final step rather than part of the candidate
     // query: it runs ONLY over the items actually being returned (one page, so
@@ -341,13 +345,19 @@ public sealed class PhotoSimilarityService
             from f in _db.FileItems.AsNoTracking()
             join m in _db.BlobMetadata.AsNoTracking() on f.BlobObjectId equals m.BlobObjectId
             where ids.Contains(f.Id) && f.OwnerUserId == ownerUserId
-            select new { f.Id, m.Width, m.Height })
+            select new { f.Id, m.Width, m.Height, m.Orientation })
             .ToListAsync(cancellationToken);
 
         var geometry = new Dictionary<Guid, (int? Width, int? Height)>(rows.Count);
         foreach (var row in rows)
         {
-            geometry[row.Id] = (row.Width, row.Height);
+            // DISPLAY dimensions, exactly as the library/album listings resolve
+            // them. The stored pair is the CODED size (EXIF orientation is kept
+            // apart), while every derivative renderer auto-orients, so a phone
+            // portrait shot lands here as a landscape pair. Handing that to the
+            // grid reserved a landscape tile for a portrait thumbnail — the
+            // mismatch the wall then had to paper over.
+            geometry[row.Id] = ImageDisplayDimensions.Resolve(row.Width, row.Height, row.Orientation);
         }
 
         var enriched = new List<SimilarPhotoItem>(items.Count);
@@ -603,14 +613,17 @@ public sealed record SimilarPhotosResult(
     IReadOnlyList<SimilarPhotoItem> Items,
     string? UnavailableReason = null);
 
-// `Width`/`Height` are the ORIGINAL media's stored pixel dimensions, copied from
-// the already-persisted BlobMetadata extracted at ingestion — never measured from
-// the bytes at request time, and never a derivative's size. They exist purely so
-// a client can lay a result out at its true proportions instead of guessing a
-// square. Both are null when the blob has no extracted dimensions (pre-metadata
-// import, extraction failure), which callers must treat as "unknown" and fall
-// back on. Optional positional parameters keep every existing construction site
-// and the JSON shape additive/backward-compatible.
+// `Width`/`Height` are the ORIGINAL media's DISPLAY pixel dimensions, derived
+// from the already-persisted BlobMetadata extracted at ingestion — never measured
+// from the bytes at request time, and never a derivative's size. The stored pair
+// is the coded size with EXIF orientation held separately, so it is put through
+// ImageDisplayDimensions.Resolve exactly as the library and album listings do;
+// a quarter-turn orientation therefore reports the swapped pair and a client lays
+// the result out at the proportions it will actually render at. Both are null
+// when the blob has no extracted dimensions (pre-metadata import, extraction
+// failure), which callers must treat as "unknown" and fall back on. Optional
+// positional parameters keep every existing construction site and the JSON shape
+// additive/backward-compatible.
 public sealed record SimilarPhotoItem(
     Guid FileItemId,
     string Name,
