@@ -1,4 +1,4 @@
-# NanoCloud agent instructions
+# NubArca agent instructions
 
 Read `CLAUDE.md` and `docs/current-work.md` before starting repository work.
 

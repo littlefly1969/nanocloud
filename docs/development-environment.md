@@ -1,4 +1,4 @@
-# NanoCloud — development environment
+# NubArca — development environment
 
 ## 1. Purpose
 
@@ -310,7 +310,7 @@ Fixed in this slice: `CS0168` (2 unused locals) and `xUnit2031` (4 × `Assert.Si
 | --- | --- | --- | --- |
 | Vite: "Some chunks are larger than 500 kB" (`index` 939 kB, `hls` 523 kB) | D — informational | P3 | **Accepted.** Default Vite threshold, not an error. Code-splitting is a product/performance decision, not an environment one. |
 | `npm audit`: **`react-router` 7.15.1**, high — open redirect, XSS, DoS, CSRF | E — external dependency | ~~P1~~ → **resolved** | **Fixed 2026-07-29** by updating to **7.18.2** and dropping `react-router-dom`. The earlier entry here was **wrong**: it read npm's aggregate range `6.0.0 – 8.2.0` as one continuous range and concluded "no patched 7.x exists". That range is the *union of five independent advisories*, four of which are patched in **7.18.0** — including the only one applicable to this app. Full analysis: [react-router-security-assessment.md](react-router-security-assessment.md). |
-| `npm audit`: **`react-router` GHSA-qwww-vcr4-c8h2**, high — RSC Mode CSRF bypass | E — external dependency | P3 | **Accepted, not applicable.** The only router advisory whose fix is 8.3.0 rather than 7.18.0. The advisory states it "only affects your application if you are using the unstable RSC APIs"; NanoCloud is a Declarative Mode SPA with no RSC surface. `npm audit` cannot express mode-scoped applicability, so it keeps reporting it. Documented, never suppressed — no `overrides`/`resolutions`. |
+| `npm audit`: **`react-router` GHSA-qwww-vcr4-c8h2**, high — RSC Mode CSRF bypass | E — external dependency | P3 | **Accepted, not applicable.** The only router advisory whose fix is 8.3.0 rather than 7.18.0. The advisory states it "only affects your application if you are using the unstable RSC APIs"; NubArca is a Declarative Mode SPA with no RSC surface. `npm audit` cannot express mode-scoped applicability, so it keeps reporting it. Documented, never suppressed — no `overrides`/`resolutions`. |
 | `npm audit`: `esbuild`, `postcss`, `undici`, `@babel/core` | E — external dependency | P3 | **Accepted.** All dev-only/transitive (Vite, Vitest, jsdom). `npm audit --omit=dev` reports only the residual `react-router` RSC entry, confirming none of these ship to a browser. |
 
 ### 15.3 TV

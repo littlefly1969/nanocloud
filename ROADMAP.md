@@ -1,6 +1,6 @@
-# NanoCloud Roadmap
+# NubArca Roadmap
 
-NanoCloud is a minimal, robust, secure personal cloud server. This roadmap
+NubArca is a minimal, robust, secure personal cloud server. This roadmap
 tracks direction at a high level; release detail lives in
 [CHANGELOG.md](CHANGELOG.md) and current state in
 [DEVELOPMENT_STATE.md](DEVELOPMENT_STATE.md).
@@ -69,7 +69,7 @@ tracks direction at a high level; release detail lives in
 
 ## Non-goals
 
-NanoCloud intentionally does **not** aim to be a Nextcloud clone. Out of scope:
+NubArca intentionally does **not** aim to be a Nextcloud clone. Out of scope:
 
 - WebDAV.
 - HLS/DASH video transcoding.

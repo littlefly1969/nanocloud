@@ -1,12 +1,12 @@
-# NanoCloud Architecture
+# NubArca Architecture
 
-> **Architecture baseline:** NanoCloud **0.2.0**
+> **Architecture baseline:** NubArca **0.2.0**
 > **Repository snapshot:** `main`, reviewed on 2026-07-27
 > **Document role:** authoritative architectural description of the implementation currently present in this repository.
 
 ## 1. Authority, scope, and reading rules
 
-The repository is the source of truth for NanoCloud 0.2.0. This document describes the architecture implemented by:
+The repository is the source of truth for NubArca 0.2.0. This document describes the architecture implemented by:
 
 - `src/NanoCloud.Api/` — backend, CLI, worker, persistence, storage, media, AI, TV, and bounded contexts;
 - `frontend/` — authenticated web application and public browser surfaces;
@@ -22,7 +22,7 @@ This document intentionally does **not** duplicate the README. It covers system 
 
 ## 2. Product and deployment model
 
-NanoCloud is a self-hosted personal cloud optimized for a single server and a small number of trusted users. Its primary responsibilities are:
+NubArca is a self-hosted personal cloud optimized for a single server and a small number of trusted users. Its primary responsibilities are:
 
 - owner-scoped files and folders;
 - immutable content-addressed storage and exact SHA-256 deduplication;
@@ -34,7 +34,7 @@ NanoCloud is a self-hosted personal cloud optimized for a single server and a sm
 - segregated private or specialist surfaces: Private Vault, Plates, and Aesthetics Lab;
 - paired TV access, a PIN-protected Personal Area, native TV media playback, and TV OTA updates.
 
-NanoCloud is not designed as a horizontally scaled SaaS control plane. The production defaults deliberately target one PostgreSQL instance, one API instance, and at most one active job worker on a personal server. The schema is multi-user and every private operation is owner-scoped, but the authorization model is intentionally simple: authenticated users own their content, and one boolean admin role controls operator functions.
+NubArca is not designed as a horizontally scaled SaaS control plane. The production defaults deliberately target one PostgreSQL instance, one API instance, and at most one active job worker on a personal server. The schema is multi-user and every private operation is owner-scoped, but the authorization model is intentionally simple: authenticated users own their content, and one boolean admin role controls operator functions.
 
 The following are not current product capabilities:
 
@@ -150,7 +150,7 @@ The default deployment guidance is one active worker process and `Jobs:MaxConcur
 
 ### 4.3 Optional inference overlays
 
-The root Compose fragments are additive deployment overlays, not independent NanoCloud stacks:
+The root Compose fragments are additive deployment overlays, not independent NubArca stacks:
 
 | Overlay | Runtime effect | Boundary |
 |---|---|---|
@@ -593,7 +593,7 @@ HLS is a real optional 0.2.0 subsystem. With `Media:VideoHlsProvider=ffmpeg`:
 - `hls.js` handles compatible web playback and the native TV client uses its native video stack;
 - `media.video.hls.backfill` prewarms eligible videos cooperatively.
 
-With provider `none`, NanoCloud does not generate HLS and clients use the direct stream contract. NanoCloud does not currently generate DASH.
+With provider `none`, NubArca does not generate HLS and clients use the direct stream contract. NubArca does not currently generate DASH.
 
 ## 13. Media library and unified workspace
 

@@ -1,6 +1,6 @@
-# NanoCloud Operations
+# NubArca Operations
 
-Day-to-day operation of a running NanoCloud deployment. For the first install
+Day-to-day operation of a running NubArca deployment. For the first install
 see [deploy/FIRST_DEPLOY.md](../deploy/FIRST_DEPLOY.md); for design and
 invariants see [ARCHITECTURE.md](../ARCHITECTURE.md).
 

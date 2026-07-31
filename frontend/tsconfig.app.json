@@ -20,7 +20,7 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@nanocloud/api-client": ["./packages/api-client/src/index.ts"]
+      "@nubarca/api-client": ["./packages/api-client/src/index.ts"]
     }
   },
   "include": ["src", "packages/api-client/src"]

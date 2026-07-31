@@ -1,12 +1,12 @@
-# NanoCloud
+# NubArca
 
 > **Your files. Your hardware. A modern private cloud.**
 
-**NanoCloud 0.2.0** is a self-hosted, local-first personal cloud for secure file storage and rich photo/video management. It combines immutable content-addressed storage, exact deduplication, resilient background processing and optional locally hosted AI — without turning your server into an oversized collaboration suite.
+**NubArca 0.2.0** is a self-hosted, local-first personal cloud for secure file storage and rich photo/video management. It combines immutable content-addressed storage, exact deduplication, resilient background processing and optional locally hosted AI — without turning your server into an oversized collaboration suite.
 
-NanoCloud is designed for a **single operator and their users**, running on one small server through Docker Compose.
+NubArca is designed for a **single operator and their users**, running on one small server through Docker Compose.
 
-## Why NanoCloud stands out
+## Why NubArca stands out
 
 - **Store once, use everywhere** — original files are immutable and addressed by SHA-256. Identical content is stored only once, while folders, albums and moves remain lightweight database operations.
 - **Resilient ingestion** — large browser uploads can be staged in idempotent chunks and resumed from the missing parts. Server-side imports use persisted per-item manifests, survive interruptions and expose progress, cancellation and diagnostics.
@@ -32,7 +32,7 @@ The core product is implemented and usable for controlled self-hosted deployment
 
 Some capabilities are intentionally **opt-in**: background workers, staged uploads, server-side imports, cleanup services, HLS, FFmpeg media derivatives and AI sidecars. HLS requires an FFmpeg/FFprobe-enabled runtime and an active job worker. The Aesthetics Lab is **experimental and disabled by default**.
 
-NanoCloud is pre-1.0 software for technical self-hosters. It is not currently a replacement for a full collaboration platform or a transparent sync service.
+NubArca is pre-1.0 software for technical self-hosters. It is not currently a replacement for a full collaboration platform or a transparent sync service.
 
 ## Architecture
 
@@ -49,7 +49,7 @@ PostgreSQL owns the logical world — users, folders, files, metadata, shares an
 
 ## Deliberate non-goals
 
-NanoCloud does not currently provide WebDAV, desktop/mobile synchronization, DASH streaming, collaborative editing, calendar, contacts, chat, plugins or public registration.
+NubArca does not currently provide WebDAV, desktop/mobile synchronization, DASH streaming, collaborative editing, calendar, contacts, chat, plugins or public registration.
 
 ## Getting started
 
@@ -58,7 +58,7 @@ To set up a workstation and build from source, start with the environment guide:
 - [Development environment](docs/development-environment.md) — canonical toolchain
   versions, per-area prerequisites, validation commands and accepted warnings
 
-To run NanoCloud, start with the production runbook:
+To run NubArca, start with the production runbook:
 
 - [First deployment](deploy/FIRST_DEPLOY.md)
 - [Operations](docs/OPERATIONS.md)
@@ -68,4 +68,4 @@ To run NanoCloud, start with the production runbook:
 
 ---
 
-**NanoCloud 0.2.0** focuses on a clear promise: private ownership of your files, resilient storage mechanics and a media experience that feels modern — all on infrastructure you control.
+**NubArca 0.2.0** focuses on a clear promise: private ownership of your files, resilient storage mechanics and a media experience that feels modern — all on infrastructure you control.
