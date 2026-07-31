@@ -14,7 +14,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@nanocloud/api-client': resolve(__dirname, './packages/api-client/src/index.ts'),
+      '@nubarca/api-client': resolve(__dirname, './packages/api-client/src/index.ts'),
     },
   },
   server: {

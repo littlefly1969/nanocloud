@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { facePreviewUrl, type FaceBox } from '@nanocloud/api-client';
+import { facePreviewUrl, type FaceBox } from '@nubarca/api-client';
 import { mediumPreviewUrl, smallThumbnailUrl } from '../files/types';
 import { useI18n } from '../../i18n';
 

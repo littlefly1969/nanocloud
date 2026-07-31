@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Gate 3A — reproducible native packaging for NanoCloud in-process OpenVINO.
+# Gate 3A — reproducible native packaging for NubArca in-process OpenVINO.
 #
 # Obtains the pinned onnxruntime-openvino Linux wheel, verifies its COMPLETE
 # SHA-256, extracts ONLY the required runtime + provider libraries, asserts the

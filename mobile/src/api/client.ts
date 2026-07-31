@@ -1,4 +1,4 @@
-// NanoCloud mobile API client.
+// NubArca mobile API client.
 //
 // Cookie handling: React Native's fetch does not maintain a browser-style
 // cookie jar. We capture Set-Cookie from the login response and forward it

@@ -2,7 +2,7 @@ namespace NanoCloud.Api.Domain;
 
 // Slice 93: a web remote-staging upload session. Staging is TEMPORARY
 // acquisition space — bytes land under the configured staging root (never the
-// blob store) and become NanoCloud files only after the verified session is
+// blob store) and become NubArca files only after the verified session is
 // handed off to the existing admin-import pipeline (admin_import_runs /
 // admin_import_items / Background Jobs v2).
 //

@@ -4,7 +4,7 @@ import {
   interpretGalleryCommand,
   type GalleryInterpretResponse,
   type GalleryPersonAmbiguity,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../../auth/useAuth';
 import { LOCALE, useI18n, type MessageKey } from '../../i18n';
 import { applyInterpretDraft, type GalleryQuery } from '../galleryQuery';

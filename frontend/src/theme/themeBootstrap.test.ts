@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  LEGACY_THEME_STORAGE_KEY,
   THEME_STORAGE_KEY,
   readStoredThemePreference,
   resolveEffectiveTheme,
@@ -106,5 +107,48 @@ describe('index.html theme bootstrap', () => {
     stubMatchMedia(true);
     runBootstrap();
     expect(document.documentElement.dataset.theme).toBe('dark');
+  });
+
+  // The bootstrap decides the FIRST paint, so it has to know about the rename
+  // too. If only the module migrated, a returning light-theme reader would see
+  // a dark flash before React mounted.
+  describe('pre-rebrand key migration', () => {
+    it('paints a pre-rebrand light preference without a dark flash', () => {
+      window.localStorage.setItem(LEGACY_THEME_STORAGE_KEY, 'light');
+      stubMatchMedia(false);
+
+      runBootstrap();
+
+      expect(document.documentElement.dataset.theme).toBe('light');
+      expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
+      expect(window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY)).toBeNull();
+    });
+
+    it('agrees with the module on every legacy value', () => {
+      for (const stored of ['dark', 'light', 'system', 'nonsense']) {
+        window.localStorage.clear();
+        delete document.documentElement.dataset.theme;
+        window.localStorage.setItem(LEGACY_THEME_STORAGE_KEY, stored);
+        stubMatchMedia(false);
+
+        runBootstrap();
+        const painted = document.documentElement.dataset.theme;
+
+        // The bootstrap already consumed the legacy key, so the module now reads
+        // the migrated one — and must land on the same paint either way.
+        const fromModule = resolveEffectiveTheme(readStoredThemePreference(), systemPrefersLight());
+        expect(painted).toBe(fromModule);
+      }
+    });
+
+    it('lets the new key win when both are present', () => {
+      window.localStorage.setItem(LEGACY_THEME_STORAGE_KEY, 'light');
+      window.localStorage.setItem(THEME_STORAGE_KEY, 'dark');
+      stubMatchMedia(true);
+
+      runBootstrap();
+
+      expect(document.documentElement.dataset.theme).toBe('dark');
+    });
   });
 });

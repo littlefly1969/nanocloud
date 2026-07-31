@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { AdminImportPage } from './AdminImportPage';
 import { AuthedWrapper, installFetchMock, jsonResponse } from '../test-utils';
-import type { AdminImportRunStatus } from '@nanocloud/api-client';
+import type { AdminImportRunStatus } from '@nubarca/api-client';
 
 afterEach(() => {
   cleanup();

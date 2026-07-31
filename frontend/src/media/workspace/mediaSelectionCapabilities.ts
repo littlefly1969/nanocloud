@@ -1,4 +1,4 @@
-import type { MediaItem } from '@nanocloud/api-client';
+import type { MediaItem } from '@nubarca/api-client';
 import type { MediaLibraryScope } from './mediaWorkspaceQuery';
 
 // Pure capability matrix for the workspace selection bar. Given the currently

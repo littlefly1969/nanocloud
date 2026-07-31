@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useId, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { ApiError } from '@nanocloud/api-client';
+import { ApiError } from '@nubarca/api-client';
 import {
   listShareLinks,
   revokeShareLink,
   type ShareLinkListItem,
   type ShareLinkListResponse,
   type ShareLinkStatusFilter,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { useI18n, type MessageKey } from '../i18n';
 

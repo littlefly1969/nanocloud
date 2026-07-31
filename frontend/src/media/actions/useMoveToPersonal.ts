@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { vaultMoveIn, type VaultMoveResult } from '@nanocloud/api-client';
+import { vaultMoveIn, type VaultMoveResult } from '@nubarca/api-client';
 
 // Shared "Move selection to Personal" state, used identically by the photo and
 // video galleries. Owns: whether the dialog is open, an IMMUTABLE snapshot of

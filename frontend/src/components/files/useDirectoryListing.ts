@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError } from '@nanocloud/api-client';
+import { ApiError } from '@nubarca/api-client';
 import {
   getDirectoryChildren,
   type DirectorySortField,
   type FileSummary,
   type FolderSummary,
   type SortDirection,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../../auth/useAuth';
 
 // Drives the Files UI v2 listing for one folder + sort: fetches the first page

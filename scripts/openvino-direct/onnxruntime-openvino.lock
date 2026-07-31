@@ -1,4 +1,4 @@
-# Pinned native runtime for NanoCloud in-process OpenVINO (Gate 3A).
+# Pinned native runtime for NubArca in-process OpenVINO (Gate 3A).
 #
 # This file is the single source of truth for the OpenVINO-direct native stack.
 # It is intentionally sourced by POSIX shell (KEY=VALUE, no spaces). Regenerating

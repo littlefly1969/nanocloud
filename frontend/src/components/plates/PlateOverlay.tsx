@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { PlateDetection } from '@nanocloud/api-client';
+import type { PlateDetection } from '@nubarca/api-client';
 import { useI18n } from '../../i18n';
 
 interface Props {

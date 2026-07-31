@@ -7,7 +7,7 @@ import {
   setTvPersonalPin,
   type TvDevice,
   type TvPersonalPinStatus,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { useI18n, type MessageKey } from '../i18n';
 

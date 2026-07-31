@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# NanoCloud — read-only development environment diagnostics.
+# NubArca — read-only development environment diagnostics.
 #
 # Reports the toolchain versions this workstation actually has and compares
 # them with the canonical versions declared by the repository
@@ -109,7 +109,7 @@ check_tool() {
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-printf '%sNanoCloud development environment%s  (%s)\n' "$c_dim" "$c_off" "$repo_dir"
+printf '%sNubArca development environment%s  (%s)\n' "$c_dim" "$c_off" "$repo_dir"
 printf '%scanonical matrix: docs/development-environment.md%s\n\n' "$c_dim" "$c_off"
 printf '%s%-5s %-22s %-26s %s%s\n' "$c_dim" "STAT" "TOOL" "FOUND" "EXPECTED" "$c_off"
 

@@ -3,7 +3,7 @@ import {
   ApiError,
   approveTvPairing,
   getTvPersonalPinStatus,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { useI18n } from '../i18n';
 

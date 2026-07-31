@@ -102,7 +102,7 @@ export default function LoginScreen({
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>NanoCloud</Text>
+      <Text style={styles.title}>NubArca</Text>
 
       {sessionExpired && (
         <View style={styles.notice}>

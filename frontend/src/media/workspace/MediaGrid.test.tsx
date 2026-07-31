@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MediaItem } from '@nanocloud/api-client';
+import type { MediaItem } from '@nubarca/api-client';
 import { I18nProvider } from '../../i18n';
 import { MediaGrid } from './MediaGrid';
 import type { MediaSelection } from '../../gallery/useMediaSelection';
@@ -236,25 +236,116 @@ describe('MediaGrid proportional layout', () => {
 });
 
 describe('MediaGrid preview framing', () => {
-  it('renders a photo as a contained foreground over an aria-hidden blurred backdrop (same source, one request)', () => {
+  it('renders a photo as ONE thumbnail layer — no blurred duplicate behind it', () => {
     renderGrid([photo]);
     const frame = document.querySelector('.media-tile__frame');
     expect(frame).not.toBeNull();
-    const backdrop = document.querySelector('img.media-tile__backdrop') as HTMLImageElement;
+    // Exactly one image in the frame: the tile is reserved at the item's real
+    // ratio, so there is no lateral space for a blurred fill to occupy.
+    expect(frame!.querySelectorAll('img')).toHaveLength(1);
+    expect(document.querySelector('img.media-tile__backdrop')).toBeNull();
     const foreground = document.querySelector('img.media-tile__media') as HTMLImageElement;
-    expect(backdrop).not.toBeNull();
     expect(foreground).not.toBeNull();
-    expect(backdrop).toHaveAttribute('aria-hidden', 'true');
-    expect(backdrop.getAttribute('alt')).toBe('');
-    // Same URL → the browser reuses the decoded resource, no second fetch.
-    expect(backdrop.getAttribute('src')).toBe(foreground.getAttribute('src'));
+    expect(foreground.getAttribute('src')).toBe(photo.thumbnailUrl);
   });
 
-  it('renders the video poster with the letterbox-safe contain stage (VideoPreview backdrop + contain)', () => {
+  it('renders the video poster on the cover stage, with no blurred backdrop', () => {
     renderGrid([video]);
-    // VideoPreview default 'contain' stage; the fit-cover variant must NOT be used.
-    expect(document.querySelector('.video-preview-fit-contain')).not.toBeNull();
-    expect(document.querySelector('.video-preview-fit-cover')).toBeNull();
-    expect(document.querySelector('.video-preview-backdrop')).not.toBeNull();
+    expect(document.querySelector('.video-preview-fit-cover')).not.toBeNull();
+    expect(document.querySelector('.video-preview-fit-contain')).toBeNull();
+  });
+
+  it('never emits a background-image blur anywhere in the wall', () => {
+    renderGrid([photo, video, verticalVideo]);
+    for (const el of document.querySelectorAll<HTMLElement>('.media-wall *')) {
+      expect(el.style.backgroundImage === '' || !el.className.includes('backdrop')).toBe(true);
+      expect(el.className).not.toContain('backdrop');
+    }
+  });
+});
+
+// The geometry contract the Similar Photos Explorer shares with the Library:
+// the tile box comes from the item's declared DISPLAY dimensions, so the
+// placeholder that shows before the thumbnail decodes is already the final box.
+describe('MediaGrid tile geometry', () => {
+  function tileRatios(items: MediaItem[]): number[] {
+    renderGrid(items);
+    return [...document.querySelectorAll<HTMLElement>('.media-tile')].map((el) => {
+      const w = Number.parseFloat(el.style.width);
+      const h = Number.parseFloat(el.style.height);
+      return w / h;
+    });
+  }
+
+  const cases: ReadonlyArray<[string, number, number, number]> = [
+    ['16:9 landscape', 1920, 1080, 16 / 9],
+    ['3:2 landscape', 3000, 2000, 3 / 2],
+    ['1:1 square', 2000, 2000, 1],
+    ['2:3 portrait', 2000, 3000, 2 / 3],
+    ['9:16 portrait', 1080, 1920, 9 / 16],
+  ];
+
+  for (const [label, width, height, expected] of cases) {
+    it(`reserves the exact ${label} ratio`, () => {
+      const [ratio] = tileRatios([{ ...photo, width, height }]);
+      expect(ratio).toBeCloseTo(expected, 2);
+    });
+  }
+
+  it('reserves a panorama wider than 3:1 as a wide tile (clamped, never squared)', () => {
+    const [ratio] = tileRatios([{ ...photo, width: 12000, height: 3000 }]);
+    // 4:1 exceeds the layout clamp, so it lands at the 3.5 ceiling — still
+    // decisively panoramic, and never the 1:1 fallback.
+    expect(ratio).toBeCloseTo(3.5, 2);
+  });
+
+  it('uses the Library square fallback when geometry is missing', () => {
+    const [ratio] = tileRatios([{ ...photo, width: null, height: null }]);
+    expect(ratio).toBeCloseTo(1, 2);
+  });
+
+  it('keeps the reserved box identical while the image is still loading', () => {
+    renderGrid([{ ...photo, width: 2000, height: 3000 }]);
+    const tile = document.querySelector<HTMLElement>('.media-tile')!;
+    const before = { width: tile.style.width, height: tile.style.height };
+    // A slow load changes nothing about the box: geometry never depends on the
+    // decoded image, only on the DTO's declared dimensions.
+    const img = document.querySelector('img.media-tile__media')!;
+    act(() => { img.dispatchEvent(new Event('load')); });
+    expect(tile.style.width).toBe(before.width);
+    expect(tile.style.height).toBe(before.height);
+  });
+
+  it('keeps the reserved box when the thumbnail fails (placeholder fills the same tile)', () => {
+    renderGrid([{ ...photo, width: 2000, height: 3000 }]);
+    const tile = document.querySelector<HTMLElement>('.media-tile')!;
+    const before = { width: tile.style.width, height: tile.style.height };
+    fireEvent.error(document.querySelector('img.media-tile__media')!);
+    expect(document.querySelector('.media-tile__placeholder')).not.toBeNull();
+    expect(tile.style.width).toBe(before.width);
+    expect(tile.style.height).toBe(before.height);
+  });
+
+  it('appending a page does not resize the already-laid-out tiles', () => {
+    const first = { ...photo, id: 'a', width: 2000, height: 3000 };
+    const { rerender } = renderGrid([first]);
+    const before = document.querySelector<HTMLElement>('.media-tile')!.style.height;
+    rerender(
+      <I18nProvider>
+        <MediaGrid
+          items={[first, { ...photo, id: 'b', width: 4000, height: 3000 }]}
+          orderedIds={['a', 'b']}
+          selection={makeSelection()}
+          onOpen={vi.fn()}
+        />
+      </I18nProvider>,
+    );
+    // Two tiles now share one justified row, so the row height is re-solved for
+    // both together — what must NOT happen is the first tile losing its shape.
+    const tiles = [...document.querySelectorAll<HTMLElement>('.media-tile')];
+    expect(tiles).toHaveLength(2);
+    const ratio = Number.parseFloat(tiles[0].style.width) / Number.parseFloat(tiles[0].style.height);
+    expect(ratio).toBeCloseTo(2 / 3, 2);
+    expect(before).toBeTruthy();
   });
 });

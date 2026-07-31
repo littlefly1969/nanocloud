@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# NanoCloud — base production docker compose helper.
+# NubArca — base production docker compose helper.
 #
 # Wraps the base production Compose invocation so it is impossible to forget
 # the local override file:

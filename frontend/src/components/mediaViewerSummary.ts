@@ -1,4 +1,4 @@
-import type { FileMetadata } from '@nanocloud/api-client';
+import type { FileMetadata } from '@nubarca/api-client';
 
 // Resolution rules for the viewer's summary line (original size · Date Taken).
 // Pure, so the "never show a fallback as Date Taken" rule is pinned by tests

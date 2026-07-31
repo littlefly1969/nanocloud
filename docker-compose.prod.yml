@@ -1,4 +1,4 @@
-# NanoCloud — production compose stack.
+# NubArca — production compose stack.
 #
 # This file is INTENDED to be paired with a `.env` file (see .env.example) and
 # a reverse proxy on the host that terminates TLS. The compose stack itself

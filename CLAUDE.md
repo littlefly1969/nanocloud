@@ -1,4 +1,4 @@
-# NanoCloud — agent context
+# NubArca — agent context
 
 Stable rules and operational facts for Claude/agent sessions. Read this and
 [docs/current-work.md](docs/current-work.md) before starting any task.
@@ -7,7 +7,7 @@ Transient/branch status lives in `docs/current-work.md`, **not** here.
 Stack: C# / ASP.NET Core (minimal APIs) + PostgreSQL + EF Core; React + TypeScript
 frontend; a .NET worker for background jobs; local content-addressed blob storage.
 
-## NanoCloud project invariants
+## NubArca project invariants
 
 - Original storage is content-addressed SHA-256 **immutable** blobs.
 - `FileItem` is the logical, user-visible file/path.

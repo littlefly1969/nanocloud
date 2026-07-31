@@ -25,7 +25,7 @@ import {
   type TvPersonalGalleryQuery,
   type TvPersonalMediaInfo,
   type TvPersonalPerson,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useI18n, type MessageKey } from '../i18n';
 
 // /tv Personal Gallery — the browser-fallback equivalent of the native TV

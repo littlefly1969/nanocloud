@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError } from '@nanocloud/api-client';
+import { ApiError } from '@nubarca/api-client';
 import {
   getStorageStats,
   getMediumPreviewStatus,
@@ -9,7 +9,7 @@ import {
   type StorageStats,
   type StorageStatsDiagnostics,
   type SweeperConfig,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { formatSize } from '../components/format';
 import { useI18n } from '../i18n';

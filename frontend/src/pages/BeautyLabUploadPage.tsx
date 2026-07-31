@@ -6,7 +6,7 @@ import {
   uploadBeautyLabFiles,
   type BeautyLabUploadFileResult,
   type BeautyLabUploadStatus,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useI18n } from '../i18n';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 

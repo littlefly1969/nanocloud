@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { TvAlbumItem } from '@nanocloud/api-client';
+import type { TvAlbumItem } from '@nubarca/api-client';
 import { buildTvRows, getTvMediaAspectRatio } from './tvGridLayout';
 
 function item(over: Partial<TvAlbumItem>): TvAlbumItem {

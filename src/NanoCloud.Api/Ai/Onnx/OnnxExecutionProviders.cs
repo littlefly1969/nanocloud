@@ -24,7 +24,7 @@ public static class OnnxExecutionProviders
 }
 
 // Device placement tokens for the openvino-direct path. A SINGLE device ("CPU" or
-// "GPU") maps 1:1 to an OpenVINO device_type. "DUAL:CPU,GPU" is a NanoCloud-level
+// "GPU") maps 1:1 to an OpenVINO device_type. "DUAL:CPU,GPU" is a NubArca-level
 // placement — two exclusive single-device sessions behind a bounded dispatcher (the
 // benchmarked CPU+GPU tandem, see docs/model-deployment/openvino-siglip2-benchmark-2026-07.md)
 // — and is NEVER passed to OpenVINO as a device_type; the factory splits it into a
@@ -42,7 +42,7 @@ public static class OnnxDevice
 }
 
 // Logical models the factory can place on a device. These map to the four ONNX
-// model files NanoCloud runs.
+// model files NubArca runs.
 public enum OnnxModel
 {
     PhotoImage,

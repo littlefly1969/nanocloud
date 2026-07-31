@@ -53,7 +53,7 @@ describe('App route table (anonymous)', () => {
   it('sends an unknown route through the catch-all and on to /login', async () => {
     // The catch-all is <Navigate to="/" replace />, and "/" is protected — so
     // an anonymous visitor to an unknown URL lands on /login. This asserts the
-    // real behaviour: NanoCloud has no standalone 404 page.
+    // real behaviour: NubArca has no standalone 404 page.
     await expectLanded('/definitely-not-a-route');
   });
 

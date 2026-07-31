@@ -270,7 +270,7 @@ describe('Layout user menu', () => {
     const user = userEvent.setup();
 
     // The bare header no longer scatters the email / language / logout.
-    expect(screen.queryByText('(dev@nanocloud.local)')).not.toBeInTheDocument();
+    expect(screen.queryByText('(dev@nubarca.local)')).not.toBeInTheDocument();
 
     const trigger = screen.getByTestId('user-menu-trigger');
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
@@ -278,7 +278,7 @@ describe('Layout user menu', () => {
 
     const popover = within(screen.getByTestId('user-menu-popover'));
     expect(popover.getByText('Dev User')).toBeInTheDocument();
-    expect(popover.getByText('dev@nanocloud.local')).toBeInTheDocument();
+    expect(popover.getByText('dev@nubarca.local')).toBeInTheDocument();
     expect(popover.getByRole('link', { name: 'Account' })).toHaveAttribute('href', '/account');
     expect(popover.getByRole('combobox', { name: 'Lingua' })).toBeInTheDocument();
     expect(popover.getByRole('radiogroup', { name: 'Tema' })).toBeInTheDocument();
@@ -309,7 +309,7 @@ describe('Layout user menu', () => {
     const updateUser = vi.fn();
     const mock = installFetchMock({
       'PUT /api/auth/me/language': () => jsonResponse({
-        id: 'user-1', email: 'dev@nanocloud.local', displayName: 'Dev User',
+        id: 'user-1', email: 'dev@nubarca.local', displayName: 'Dev User',
         isAdmin: false, language: 'en',
       }),
     });
@@ -335,6 +335,6 @@ describe('Layout user menu', () => {
 
     await user.click(screen.getByTestId('theme-option-light'));
     expect(document.documentElement.dataset.theme).toBe('light');
-    expect(window.localStorage.getItem('nanocloud.theme')).toBe('light');
+    expect(window.localStorage.getItem('nubarca.theme')).toBe('light');
   });
 });

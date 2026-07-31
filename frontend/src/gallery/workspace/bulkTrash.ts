@@ -1,4 +1,4 @@
-import { deleteFile } from '@nanocloud/api-client';
+import { deleteFile } from '@nubarca/api-client';
 
 // Partial result of a bulk move-to-Trash. `moved` items are cleared from the
 // selection; `failed` items stay selected so the user can retry.

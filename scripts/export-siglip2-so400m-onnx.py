@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export the one approved NanoCloud multimodal photo profile.
+"""Export the one approved NubArca multimodal photo profile.
 
 Weights are downloaded by Hugging Face into its external cache and are never
 committed. Output layout matches OnnxImageModels exactly:

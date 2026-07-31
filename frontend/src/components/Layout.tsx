@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Outlet } from 'react-router';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n';
+import { BrandMark } from '../brand/BrandMark';
+import { PRODUCT_NAME } from '../brand/brand';
+import { readMigratedItem } from '../storage/brandedStorageKey';
 import { AppNav } from './nav/AppNav';
 import { NavDrawer } from './nav/NavDrawer';
 import { UserMenu } from './UserMenu';
@@ -20,15 +23,12 @@ import { MediaWallLayoutContext } from './mediaWallLayout';
 
 // Bounded local key for the rail state. Not a preference the backend knows or
 // needs to know about.
-const RAIL_KEY = 'nanocloud.nav.collapsed';
+const RAIL_KEY = 'nubarca.nav.collapsed';
+// Pre-rebrand key, migrated once so a collapsed rail stays collapsed.
+const LEGACY_RAIL_KEY = 'nanocloud.nav.collapsed';
 
 function readCollapsed(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    return window.localStorage.getItem(RAIL_KEY) === '1';
-  } catch {
-    return false;
-  }
+  return readMigratedItem(RAIL_KEY, LEGACY_RAIL_KEY) === '1';
 }
 
 export function Layout() {
@@ -97,7 +97,10 @@ export function Layout() {
           <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={20} />
         </button>
 
-        <span className="app-brand app-topbar__brand">{t('app.name')}</span>
+        <span className="app-topbar__brand app-brand-lockup">
+          <BrandMark size={26} />
+          <span className="app-brand">{PRODUCT_NAME}</span>
+        </span>
 
         <div className="app-topbar__utility">
           <UserMenu

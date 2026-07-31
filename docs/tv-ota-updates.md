@@ -1,6 +1,6 @@
 # Native TV OTA updates
 
-NanoCloud's native app in `tv/` uses `expo-updates` 56.0.23 and Expo Updates Protocol v1. The API serves only Android TV update manifests at `GET /api/tv-app/updates` and immutable files below `/api/tv-app/updates/assets/...`. These routes are anonymous and do not use owner authentication, pairing state, or `TvSession`.
+NubArca's native app in `tv/` uses `expo-updates` 56.0.23 and Expo Updates Protocol v1. The API serves only Android TV update manifests at `GET /api/tv-app/updates` and immutable files below `/api/tv-app/updates/assets/...`. These routes are anonymous and do not use owner authentication, pairing state, or `TvSession`.
 
 OTA can replace the JavaScript/Hermes bundle and Metro-bundled assets. It cannot change the APK, Expo SDK, React Native TV, a native dependency, a config plugin, AndroidManifest, permissions, Kotlin/Java, Gradle/native build settings, or a build-time native environment value. Those changes require a new APK and a new runtime version.
 
@@ -10,7 +10,7 @@ OTA can replace the JavaScript/Hermes bundle and Metro-bundled assets. It cannot
 
 The APK always embeds a bundle. `fallbackToCacheTimeout` is zero and the native automatic check is disabled, so the existing app renders immediately. App startup fires one background `checkForUpdateAsync`; overlapping/repeated checks in that JS process are suppressed. If an update exists it is downloaded, but `reloadAsync` is never called. It is selected only on a later cold launch. Network, HTTP, malformed manifest, signature, asset, storage, interruption, and damaged-update handling remains in the native `expo-updates` downloader/error-recovery path; failures are logged and the running or embedded update remains usable. Killing the app during a download leaves the prior complete update intact.
 
-SDK 56's manual Updates API does not expose a configurable per-check HTTP timeout. NanoCloud therefore does not add a JavaScript timeout that would only abandon the promise while leaving the native request running. There is no retry loop.
+SDK 56's manual Updates API does not expose a configurable per-check HTTP timeout. NubArca therefore does not add a JavaScript timeout that would only abandon the promise while leaving the native request running. There is no retry loop.
 
 Diagnostics are logged once per launch as `[OTA]` and include runtime version, current/embedded update ID when available, embedded/OTA state, pending state, result, and sanitized error text. No secret is logged.
 

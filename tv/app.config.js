@@ -1,4 +1,4 @@
-// Dynamic Expo config for the NanoCloud TV app.
+// Dynamic Expo config for the NubArca TV app.
 //
 // The API base URL is configurable for real Fire Stick / Android TV testing
 // against a production server, WITHOUT hardcoding any host or secret in source:
@@ -6,6 +6,11 @@
 //   EXPO_PUBLIC_NANOCLOUD_API_BASE_URL   (preferred; also readable at runtime via
 //                                         process.env.* since it is an EXPO_PUBLIC_ var)
 //   NANOCLOUD_TV_API_BASE_URL            (build-time alias, config only)
+//
+// RETAINED LEGACY BRAND: every NANOCLOUD_* / EXPO_PUBLIC_NANOCLOUD_* variable name
+// below keeps its pre-NubArca spelling on purpose — operators already have them set
+// in production environments and CI. They are recorded in the legacy-brand
+// compatibility allowlist; renaming them would silently break existing builds.
 //
 // When neither is set, a LAN dev default is used (plain http, cleartext) so the
 // normal dev workflow keeps working. Point the app at production with:
@@ -53,12 +58,25 @@ if (codeSigningCertificate) {
 
 module.exports = () => ({
   expo: {
-    name: 'NanoCloud TV',
+    name: 'NubArca TV',
+    // RETAINED LEGACY BRAND: `slug` is part of the EAS / OTA update identity that
+    // published updates and the update URL are keyed to. It is recorded in the
+    // legacy-brand compatibility allowlist and must NOT be renamed to "nubarca-tv".
     slug: 'nanocloud-tv',
     version: '0.2.0',
     runtimeVersion,
     orientation: 'landscape',
     platforms: ['android', 'ios'],
+    // Approved square launcher artwork (1024x1024), copied byte-for-byte from
+    // assets/brand/nubarca/ by scripts/sync-brand-assets.py.
+    icon: './assets/brand/nubarca-expo-app-icon-1024.png',
+    // NOTE: there is deliberately no top-level `splash` key. Expo SDK 56 removed it
+    // from the app-config schema (only `web.splash` for PWAs remains) and moved
+    // splash configuration into the `expo-splash-screen` config plugin, which this
+    // app does not depend on. Setting `splash` here would be silently ignored by
+    // prebuild. The approved `assets/brand/nubarca-tv-splash-1920x1080.png` is
+    // kept ready for the day expo-splash-screen is added, and is what the
+    // in-app boot screen renders in the meantime.
     plugins: [
       // SDK 56 ships an expo-status-bar config plugin; register it explicitly
       // since this is a dynamic config (`expo install --fix` cannot auto-write it).
@@ -68,6 +86,11 @@ module.exports = () => ({
         {
           isTV: true,
           androidTVRequired: true,
+          // Android TV launcher banner slot: copied into the drawable-* resource
+          // directories and referenced as android:banner in the manifest.
+          // Approved Android TV banner, authored at the exact 320x180 slot —
+          // never the 3:2 lockup stretched into 16:9.
+          androidTVBanner: './assets/brand/nubarca-android-tv-banner-320x180.png',
         },
       ],
     ],
@@ -98,9 +121,18 @@ module.exports = () => ({
       otaChannel: updateChannel,
     },
     android: {
+      // RETAINED LEGACY BRAND: this is the Android applicationId. Changing it would
+      // make NubArca TV install as a SEPARATE app with no upgrade path for devices
+      // that already have it sideloaded. It is recorded in the legacy-brand
+      // compatibility allowlist and must NOT be renamed.
       package: 'it.littlefly.nanocloudtv',
       versionCode: 3,
       usesCleartextTraffic,
+      icon: './assets/brand/nubarca-fire-tv-icon-512.png',
+      adaptiveIcon: {
+        foregroundImage: './assets/brand/nubarca-expo-app-icon-1024.png',
+        backgroundColor: '#0a0f1a',
+      },
     },
     ios: {
       // iOS is only used for the phone-form-factor dev smoke test; allow arbitrary

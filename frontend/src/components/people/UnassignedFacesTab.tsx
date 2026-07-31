@@ -5,7 +5,7 @@ import {
   listPeople,
   type Person,
   type UnassignedFace,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { FaceCrop } from './FaceCrop';
 import { AssignToPersonMenu } from './AssignToPersonMenu';
 import { useI18n } from '../../i18n';

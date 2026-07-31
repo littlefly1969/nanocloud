@@ -14,7 +14,7 @@ import {
   type TvBeautyLabItem,
   type TvBeautyLabItemDetail,
   type TvBeautyLabMetric,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useI18n, type MessageKey } from '../i18n';
 
 // TV "Beauty Lab" (Laboratorio bellezza): the grant-gated Aesthetics Lab on the

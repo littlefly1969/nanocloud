@@ -155,7 +155,7 @@ public static class MetadataExposurePolicy
     // Documented behaviour, not a runtime gate: public share-link
     // downloads serve the ORIGINAL file bytes (slice 12). Those bytes may
     // contain embedded metadata such as EXIF, IPTC, XMP, GPS, ICC.
-    // NanoCloud does NOT strip or redact this metadata before serving;
+    // NubArca does NOT strip or redact this metadata before serving;
     // stripping/redaction is future work and would require producing a
     // derived blob with a new SHA-256. The UI surfaces this on the
     // share-link creation form so the owner makes an informed decision.

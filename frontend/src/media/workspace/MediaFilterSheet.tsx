@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import type { Person } from '@nanocloud/api-client';
+import type { Person } from '@nubarca/api-client';
 import { useI18n } from '../../i18n';
 import { PeopleCombobox } from '../../gallery/workspace/PeopleCombobox';
 import {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { MediaItem } from '@nanocloud/api-client';
+import type { MediaItem } from '@nubarca/api-client';
 import {
   getMediaAspectRatio,
   normalizeAspectRatio,

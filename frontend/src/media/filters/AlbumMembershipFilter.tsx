@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import type { AlbumMembership } from '@nanocloud/api-client';
+import type { AlbumMembership } from '@nubarca/api-client';
 import { useI18n } from '../../i18n';
 
 // "Album" filter shared verbatim by the photo and video galleries:

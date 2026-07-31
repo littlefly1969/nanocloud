@@ -1,4 +1,4 @@
-# NanoCloud current work
+# NubArca current work
 
 Transient state for development agents. Keep this file limited to the current
 baseline and active work; do not use it as a chronological work log.
@@ -31,17 +31,79 @@ baseline and active work; do not use it as a chronological work log.
 - Read `deploy/FAST_DEPLOY.md` in full immediately before any production
   deployment, rebuild, release-pin change or production migration.
 
-## Active slice — UX-01 app shell, cloud functions and media experience
+## Active slice — BRAND-01C NubArca asset integration (closes the rebrand)
 
-Branch `feat/frontend-experience-refresh`, started from `main` (`ee09591`). Not
-pushed, not merged, not deployed. Frontend-only except ONE new backend test
+Branch `feat/nubarca-rebrand`, started from `main` (`60984e8`), which already
+contains the merged UX-01 work (`cfee4fd`). Not pushed, not merged, not
+deployed.
+
+Effective 31 July 2026 the product is **NubArca** (capital A); the TV product is
+**NubArca TV**. See `docs/brand.md` for the palette, typography, geometry, asset
+roles and the allowlist policy.
+
+- **Similar Photos geometry**: the similarity DTO now resolves DISPLAY
+  dimensions through `ImageDisplayDimensions`, the same helper the library and
+  album listings use. It previously returned the CODED pair, so an EXIF
+  quarter-turned photo got a landscape tile for a portrait thumbnail and the
+  wall filled the gap with a blurred duplicate — the reported lateral bands.
+- **Media wall**: no blurred backdrop layer at all any more, for photos or video
+  posters. One media layer, `object-fit: cover`, over a tile reserved from the
+  item's real ratio. The explorer's own page-level skeleton is gone; it used
+  eight equal-width tiles that matched no real result.
+- **Viewer actions**: eligibility lives in `media/viewer/mediaViewerActions.ts`
+  and is a function of media kind plus explicit capability gates. Its signature
+  cannot express an origin, so a photo offers the same actions from the Library,
+  an album, a search result, a direct URL or Similar Photos — which gained the
+  previously missing "Find similar in Library".
+- **Brand**: assets generated reproducibly from preserved sources by
+  `scripts/generate-brand-assets.py`; palette and geometry as design tokens;
+  Space Grotesk + Exo 2 bundled locally (SIL OFL, no CDN); favicon, app icons
+  and a PWA manifest, none of which existed before.
+- **Compatibility**: `config/legacy-brand-compatibility.txt` declares every
+  retained legacy identifier with why it stays and what would break;
+  `scripts/check-brand-cleanliness.sh` enforces it and self-tests its own engine.
+- **Canonical assets**: `assets/brand/nubarca/` is the source of truth (54
+  assets, all checksums verified). `scripts/sync-brand-assets.py` copies
+  runtime assets into `frontend/public/brand/` and `tv/assets/brand/`
+  byte-for-byte; `--check` fails if a consumer copy drifts. The earlier
+  generator is gone — it derived artwork from provisional sources.
+
+Decisions worth remembering:
+
+- The .NET assembly rename to `NubArca.*` was investigated and REJECTED. Jobs,
+  EF migration history, Data Protection and cookie names would all survive it,
+  but the assembly name IS the container entrypoint (`dotnet NanoCloud.Api.dll`)
+  and is baked into every runbook command; proving it safe needs a deploy. The
+  user-visible consequence was removed instead: the OpenAPI title AND the
+  default tag on untagged endpoints are now set explicitly, where both
+  previously defaulted to the assembly name.
+- `IHostEnvironment.ApplicationName` was deliberately NOT changed: it feeds the
+  Data Protection default purpose string, so touching it would invalidate live
+  auth cookies.
+- Browser-storage keys move to `nubarca.*` with a one-way migration that also
+  lives in the pre-paint bootstrap, because that script decides the first paint.
+- The photo-export folder rename carries a fallback: the generated script skips
+  files it already has, so a bare rename would silently re-download the reader's
+  entire archive.
+- The approved light-surface wordmark sits on a much larger transparent canvas
+  than the dark one (77.2% vs 98.3% width usage). `wordmarkAsset()` divides by
+  that measured ratio so a requested width is the VISIBLE lockup's width in
+  either theme — otherwise the light variant renders smaller and can slip under
+  the 120px minimum.
+- Renaming the GitHub repository and the `/opt/nanocloud` checkout is deferred
+  to BRAND-02; both are allowlisted until then.
+
+## Superseded slice — UX-01 app shell, cloud functions and media experience
+
+Branch `feat/frontend-experience-refresh`, merged to `main` as of `cfee4fd`. Frontend-only except ONE new backend test
 file; no migration, no DTO change, no AI/media/TV pipeline change.
 
 - **Theme**: semantic tokens under `:root` (dark, the default) and
   `:root[data-theme='light']`; legacy `--bg/--fg/--muted/--border/--error` are
   aliases so the 6k-line stylesheet stays theme-correct without a rewrite.
-  Preference is local-only under the bounded key `nanocloud.theme`
-  (`dark|light|system`) — no backend field. A pre-render bootstrap in
+  Preference is local-only under the bounded key `nubarca.theme`
+  (`dark|light|system`) — no backend field, with a one-way migration from the
+  pre-rebrand key. A pre-render bootstrap in
   `index.html` stamps `<html data-theme>` before first paint; `ThemeProvider`
   then owns the same value.
 - **Shell**: collapsible grouped left nav from one model (`navModel`), compact
@@ -73,9 +135,8 @@ Decisions worth remembering:
   `OriginalDownloadContractTests` pins it.
 - React Router's `replace: true` DROPS route state. The explorer syncs its
   threshold that way, so its return target is captured once on mount.
-- The similar-photo DTO carries no pixel dimensions, so explorer tiles use the
-  shared square fallback ratio rather than each photo's real ratio. Closing that
-  needs a DTO addition — deliberately out of this slice.
+- ~~The similar-photo DTO carries no pixel dimensions.~~ CLOSED: the DTO now
+  carries DISPLAY width/height, resolved exactly as the library resolves them.
 
 ## Active slice — VFACE-01 canonical video face tracks
 

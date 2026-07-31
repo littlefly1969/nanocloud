@@ -24,7 +24,7 @@ import type {
   ImageSortDirection,
   ImageSortField,
   ListMediaQuery,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 
 export type PeopleMode = 'all' | 'any';
 

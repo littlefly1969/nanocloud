@@ -1,4 +1,4 @@
-# NanoCloud TV APK distribution
+# NubArca TV APK distribution
 
 The production APK is available without authentication at the short Fire TV
 Downloader URL:
@@ -69,7 +69,7 @@ curl -fsS https://nanocloud.littlefly.it/download/tv/nanocloud-tv.apk.sha256
 
 Enable **Install unknown apps** for Downloader in Fire TV settings, enter the
 direct HTTPS URL above, download it, and choose **Install**. Since the package
-and Android signer are unchanged, Android updates the existing NanoCloud TV app
+and Android signer are unchanged, Android updates the existing NubArca TV app
 without deleting its pairing/session data. Downloader can delete the APK after
 installation.
 

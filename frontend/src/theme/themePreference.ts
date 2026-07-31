@@ -2,14 +2,23 @@
 // documented `applyEffectiveTheme` helper, so the rules below are unit-testable
 // and are shared verbatim by the pre-render bootstrap in index.html.
 //
-// Storage is LOCAL ONLY (no backend field, no migration). The key holds one of
-// exactly three bounded tokens; anything else — a stale value, a value written
-// by a future version, a hostile value — reads back as "absent", so the default
-// applies instead of leaking an unknown string into the DOM.
+// Storage is LOCAL ONLY (no backend field). The key holds one of exactly three
+// bounded tokens; anything else — a stale value, a value written by a future
+// version, a hostile value — reads back as "absent", so the default applies
+// instead of leaking an unknown string into the DOM.
+//
+// One bounded migration exists: the NubArca rename moved the key, and a reader
+// with a pre-rename preference must keep it. See LEGACY_THEME_STORAGE_KEY.
 
 // Versioned key: a future incompatible preference shape gets `.v2`, so old
 // values are ignored rather than misinterpreted.
-export const THEME_STORAGE_KEY = 'nanocloud.theme';
+export const THEME_STORAGE_KEY = 'nubarca.theme';
+
+// The pre-rebrand key. Read ONLY when the new key is absent, and only long
+// enough to move a valid value across — see readStoredThemePreference. Every
+// existing user keeps the theme they chose; nobody is silently reset to the
+// default by the rename. Removable once the fleet has rolled over.
+export const LEGACY_THEME_STORAGE_KEY = 'nanocloud.theme';
 
 // What the user chose. `system` follows the OS/browser preference live.
 export type ThemePreference = 'dark' | 'light' | 'system';
@@ -36,10 +45,25 @@ export function toThemePreference(raw: unknown): ThemePreference | null {
 
 // Read the stored preference, falling back to the default for a missing,
 // invalid or unreadable (private-mode) value.
+//
+// Order matters: the CURRENT key wins outright. Only when it is absent is the
+// pre-rebrand key consulted, and a valid value found there is migrated forward
+// and the old key dropped, so the fallback runs exactly once per browser. An
+// invalid legacy value is discarded rather than migrated — it would read back
+// as "absent" anyway, and leaving it behind would keep re-triggering this path.
 export function readStoredThemePreference(): ThemePreference {
   if (typeof window === 'undefined') return DEFAULT_THEME_PREFERENCE;
   try {
-    return toThemePreference(window.localStorage.getItem(THEME_STORAGE_KEY)) ?? DEFAULT_THEME_PREFERENCE;
+    const current = toThemePreference(window.localStorage.getItem(THEME_STORAGE_KEY));
+    if (current !== null) return current;
+
+    const legacyRaw = window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+    if (legacyRaw === null) return DEFAULT_THEME_PREFERENCE;
+
+    const legacy = toThemePreference(legacyRaw);
+    if (legacy !== null) window.localStorage.setItem(THEME_STORAGE_KEY, legacy);
+    window.localStorage.removeItem(LEGACY_THEME_STORAGE_KEY);
+    return legacy ?? DEFAULT_THEME_PREFERENCE;
   } catch {
     // localStorage can throw outright (private mode, blocked storage).
     return DEFAULT_THEME_PREFERENCE;

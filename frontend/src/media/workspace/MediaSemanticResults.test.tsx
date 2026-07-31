@@ -6,7 +6,7 @@ import type {
   MediaItem,
   SemanticMediaResultItem,
   SemanticMediaSearchResponse,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { AuthedWrapper, errorResponse, installFetchMock, jsonResponse } from '../../test-utils';
 import { MediaWorkspace } from './MediaWorkspace';
 import {

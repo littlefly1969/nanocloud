@@ -8,7 +8,7 @@ namespace NanoCloud.Api.Files;
 //
 // Client paths are NEVER trusted: this rejects absolute paths, drive letters,
 // path traversal (".", "..", empty segments), and over-long segments/depth.
-// Separators are normalised to "/". The result maps onto NanoCloud's logical
+// Separators are normalised to "/". The result maps onto NubArca's logical
 // folder tree — it never touches the physical store (blobs stay content-
 // addressed; no physical directories are created).
 public static partial class RelativeUploadPath

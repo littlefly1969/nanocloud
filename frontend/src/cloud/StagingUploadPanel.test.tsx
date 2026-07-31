@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { StagingUploadPanel } from './StagingUploadPanel';
 import { AuthedWrapper, installFetchMock, jsonResponse } from '../test-utils';
-import type { StagingSession } from '@nanocloud/api-client';
+import type { StagingSession } from '@nubarca/api-client';
 
 afterEach(() => {
   cleanup();

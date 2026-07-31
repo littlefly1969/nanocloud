@@ -1,4 +1,4 @@
-import type { MediaItem } from '@nanocloud/api-client';
+import type { MediaItem } from '@nubarca/api-client';
 import { VIDEO_TILE_ASPECT_RATIO } from '../mediaDerivativeSpec';
 
 // Shared, framework-free aspect-ratio rules for the media wall. The tile shape

@@ -4,7 +4,7 @@ import {
   getPersonVideos,
   type PersonVideo,
   type PersonVideoMatch,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { MediaViewer, type MediaViewerItem } from '../MediaViewer';
 import { videoPosterUrl } from '../files/types';
 import { useI18n } from '../../i18n';

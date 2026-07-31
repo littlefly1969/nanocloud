@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { TvInterpretDraft } from '@nanocloud/api-client';
+import type { TvInterpretDraft } from '@nubarca/api-client';
 import {
   activeFilterCount,
   draftToApplied,

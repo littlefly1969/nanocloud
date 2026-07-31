@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { FileSummary } from '@nanocloud/api-client';
+import type { FileSummary } from '@nubarca/api-client';
 import { isImage, mediaKindOf, smallThumbnailUrl, videoPosterUrl } from './types';
 
 // Thumbnail / glyph for one file. Grid + list both use the SMALL thumbnail

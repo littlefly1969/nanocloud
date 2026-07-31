@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   listImages, listVideos, excludeFromMediaLibrary, restoreToMediaLibrary,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 
 // Slice 3 wire contract: the media-library scope param + the bulk
 // exclude/restore endpoints. Both galleries must emit `mediaScope` with the

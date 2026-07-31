@@ -33,7 +33,7 @@ function landingFor(returnTo: unknown): string {
         status: 'authed',
         user: {
           id: 'user-1',
-          email: 'dev@nanocloud.local',
+          email: 'dev@nubarca.local',
           displayName: 'Dev User',
           isAdmin: false,
           language: 'it',

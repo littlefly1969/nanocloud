@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
-import type { FileMetadata } from '@nanocloud/api-client';
+import type { FileMetadata } from '@nubarca/api-client';
 import { AuthedWrapper, installFetchMock, jsonResponse } from '../../test-utils';
 import { MediaMetadataPanel } from './MediaMetadataPanel';
 

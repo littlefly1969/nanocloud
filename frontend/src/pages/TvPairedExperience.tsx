@@ -5,7 +5,7 @@ import {
   getTvPersonalStatus,
   lockTvPersonal,
   unlockTvPersonal,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { TvBrowser } from './TvBrowser';
 import { TvPersonalGallery } from './TvPersonalGallery';
 import { TvBeautyLab } from './TvBeautyLab';

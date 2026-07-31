@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getFolderChildren, getRootChildren, type FolderSummary } from '@nanocloud/api-client';
-import { ApiError } from '@nanocloud/api-client';
+import { getFolderChildren, getRootChildren, type FolderSummary } from '@nubarca/api-client';
+import { ApiError } from '@nubarca/api-client';
 import { useAuth } from '../../auth/useAuth';
 
 interface DestinationPickerProps {

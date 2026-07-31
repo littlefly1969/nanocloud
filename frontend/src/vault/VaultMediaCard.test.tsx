@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
-import type { VaultFile } from '@nanocloud/api-client';
+import type { VaultFile } from '@nubarca/api-client';
 import { I18nProvider } from '../i18n';
 import { triggerIntersection } from '../test-utils';
 import { VaultMediaCard } from './VaultMediaCard';

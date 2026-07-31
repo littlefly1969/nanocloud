@@ -1068,7 +1068,7 @@ public sealed class StagingUploadService : IStagingUploadService
 
     // Validates + canonicalizes the staging root on first use. Throws
     // StagingUnavailableException when the feature is off or unconfigured, and
-    // StagingValidationException when the root overlaps NanoCloud's internal
+    // StagingValidationException when the root overlaps NubArca's internal
     // blob storage roots.
     internal string ResolveStagingRoot()
     {
@@ -1102,7 +1102,7 @@ public sealed class StagingUploadService : IStagingUploadService
             if (IsWithin(canonical, other) || IsWithin(other, canonical))
             {
                 throw new StagingUnavailableException(
-                    "The staging root must not overlap NanoCloud blob storage.");
+                    "The staging root must not overlap NubArca blob storage.");
             }
         }
         Directory.CreateDirectory(canonical);

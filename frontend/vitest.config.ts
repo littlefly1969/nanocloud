@@ -12,7 +12,7 @@ export default defineConfig({
   // extracted shared client the same way the app does.
   resolve: {
     alias: {
-      '@nanocloud/api-client': resolve(__dirname, './packages/api-client/src/index.ts'),
+      '@nubarca/api-client': resolve(__dirname, './packages/api-client/src/index.ts'),
     },
   },
   test: {

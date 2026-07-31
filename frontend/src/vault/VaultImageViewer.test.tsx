@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { VaultFile } from '@nanocloud/api-client';
+import type { VaultFile } from '@nubarca/api-client';
 import { I18nProvider } from '../i18n';
 import { VaultImageViewer } from './VaultImageViewer';
 

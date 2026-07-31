@@ -7,7 +7,7 @@ import {
   vaultMoveOut,
   type VaultFile,
   type VaultListing,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useI18n } from '../i18n';
 import { PrivateVaultAccessForm } from '../vault/PrivateVaultAccessForm';
 import { VaultMediaGrid } from '../vault/VaultMediaGrid';

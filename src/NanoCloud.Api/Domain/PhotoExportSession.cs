@@ -60,7 +60,7 @@ public class PhotoExportEntry
 
     // Logical export path relative to the archive root, e.g.
     // "Holiday/2024/IMG_0001.jpg" (no leading slash; root-level files are just
-    // the name). Preserves the current NanoCloud folder tree — never reorganized.
+    // the name). Preserves the current NubArca folder tree — never reorganized.
     public string RelativePath { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public long SizeBytes { get; set; }

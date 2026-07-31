@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ApiError, listPeople, type Person } from '@nanocloud/api-client';
+import { ApiError, listPeople, type Person } from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n';
 

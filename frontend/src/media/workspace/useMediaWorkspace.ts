@@ -9,7 +9,7 @@ import {
   type ListImagesQuery,
   type MediaItem,
   type SemanticBestMatch,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useMediaSelection, type MediaSelection } from '../../gallery/useMediaSelection';
 import {
   DEFAULT_MEDIA_LIMIT,

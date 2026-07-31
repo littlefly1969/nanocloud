@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { excludeFromMediaLibrary, type MediaLibraryBulkResult } from '@nanocloud/api-client';
+import { excludeFromMediaLibrary, type MediaLibraryBulkResult } from '@nubarca/api-client';
 
 // Slice 3: "Move selection to Excluded" state, used identically by the photo and
 // video galleries. Mirrors useMoveToPersonal's shape (immutable id snapshot at

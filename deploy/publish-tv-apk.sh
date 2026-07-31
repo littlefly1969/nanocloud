@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Publish an already-built NanoCloud TV APK without ever exposing a partial
+# Publish an already-built NubArca TV APK without ever exposing a partial
 # upload. Override these only when deploying to a different installation.
 apk_path="${1:-tv/android/app/build/outputs/apk/release/app-release.apk}"
 target="${NANOCLOUD_PRODUCTION_SSH:-stefano@192.168.1.180}"

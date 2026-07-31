@@ -1,6 +1,6 @@
-# NanoCloud test strategy
+# NubArca test strategy
 
-NanoCloud keeps two backend test lanes:
+NubArca keeps two backend test lanes:
 
 - `scripts/test-backend-fast.sh` runs deterministic tests that require only the
   local .NET runtime and SQLite. This is the normal development and pre-commit

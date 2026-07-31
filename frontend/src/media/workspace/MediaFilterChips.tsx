@@ -1,4 +1,4 @@
-import type { MediaItem } from '@nanocloud/api-client';
+import type { MediaItem } from '@nubarca/api-client';
 import { useI18n } from '../../i18n';
 import type { PeopleIndex } from '../../gallery/workspace/usePeopleIndex';
 import {

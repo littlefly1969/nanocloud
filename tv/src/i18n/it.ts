@@ -6,9 +6,10 @@
 const it = {
   'common.tryAgain': 'Riprova',
 
-  'app.connecting': 'Connessione a NanoCloud…',
+  'app.connecting': 'Connessione a NubArca…',
 
-  'pairing.title': 'NanoCloud TV',
+  // Brand names are never translated: "NubArca TV" is identical in every locale.
+  'pairing.title': 'NubArca TV',
   'pairing.preparing': 'Preparazione dell’abbinamento sicuro…',
   'pairing.scan': 'Inquadra con il telefono, accedi e approva questa TV.',
   'pairing.code': 'Codice di abbinamento',
@@ -36,7 +37,7 @@ const it = {
   'items.facePerson': 'Foto con questa persona',
   'items.faceShowAll': 'Mostra tutte le foto',
 
-  'mode.title': 'Come vuoi usare NanoCloud?',
+  'mode.title': 'Come vuoi usare NubArca?',
   'mode.party': 'Party',
   'mode.personal': 'Area personale 🔒',
   'mode.beautyLab': 'Laboratorio bellezza 🔒',

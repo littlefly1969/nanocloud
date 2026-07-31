@@ -19,7 +19,7 @@ imports, stay on v7. A major upgrade to v8 is **not** justified by the evidence.
 
 ## 1. Router mode
 
-NanoCloud is a **Declarative Mode** SPA. Determined from the source, not assumed:
+NubArca is a **Declarative Mode** SPA. Determined from the source, not assumed:
 
 - [`frontend/src/App.tsx`](../frontend/src/App.tsx) uses `<BrowserRouter>` with
   `<Routes>` / `<Route>`.
@@ -42,7 +42,7 @@ reading it as a single range is what produced the earlier, incorrect conclusion
 that "no patched 7.x exists". Each advisory was checked individually against the
 GitHub Security Advisory API (primary source).
 
-| GHSA | CVE | Severity | Vulnerable | First patched | Applies to NanoCloud? |
+| GHSA | CVE | Severity | Vulnerable | First patched | Applies to NubArca? |
 | --- | --- | --- | --- | --- | --- |
 | [GHSA-wrjc-x8rr-h8h6](https://github.com/advisories/GHSA-wrjc-x8rr-h8h6) | CVE-2026-53669 | moderate | `>=6.0.0 <7.18.0` | **7.18.0** | **YES — demonstrated** |
 | [GHSA-chx6-hx7r-mcp5](https://github.com/advisories/GHSA-chx6-hx7r-mcp5) | CVE-2026-55685 | high | `>=7.0.0 <7.18.0` | 7.18.0 | No — Framework Mode only |
@@ -64,7 +64,7 @@ Advisory wording, quoted verbatim, is what excludes the non-applicable ones:
 
 GHSA-wrjc-x8rr-h8h6 is a client-side open redirect in `<Link>` and
 `useNavigate`. It carries **no mode restriction**, and Declarative Mode uses
-exactly those APIs, so NanoCloud was inside the affected surface — not merely
+exactly those APIs, so NubArca was inside the affected surface — not merely
 inside the semver range.
 
 The reachable sink is `returnTo`:
@@ -106,7 +106,7 @@ After the upgrade, `npm audit` still reports **GHSA-qwww-vcr4-c8h2** (high), the
 only advisory whose patched version is 8.3.0 rather than 7.18.0.
 
 **Not applicable.** It is an RSC-mode CSRF bypass, and the advisory states it
-only affects applications using the unstable RSC APIs. NanoCloud has no RSC
+only affects applications using the unstable RSC APIs. NubArca has no RSC
 surface at all (§1). `npm audit` cannot express "not applicable in this mode", so
 it keeps reporting it; npm's own suggested remedy is
 `npm audit fix --force` → `react-router@8.3.0`, *"which is a breaking change"*.
@@ -125,7 +125,7 @@ that `react-router` exports every symbol this app uses — `BrowserRouter`,
 `MemoryRouter`, `Routes`, `Route`, `Link`, `NavLink`, `Navigate`, `Outlet`,
 `useParams`, `useNavigate`, `useSearchParams`, `useLocation` — and that the only
 export `react-router-dom` adds is `HydratedRouter`, a Framework-Mode hydration
-entry point NanoCloud does not use.
+entry point NubArca does not use.
 
 The codebase had exactly one import form (single-quoted
 `from 'react-router-dom'`) and zero non-import references, so the rewrite could

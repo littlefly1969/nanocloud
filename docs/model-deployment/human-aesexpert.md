@@ -36,7 +36,7 @@ Verified directly against the pinned checkpoint (revision above):
 this exact `names` list and ORDER, and `modeling_qwen.py` `Expert_Head.forward()`
 ends with **`return F.sigmoid(pooled_expert_scores)`** — so every dimension is in
 **[0, 1]** (not assumed). The 12 outputs, in tensor order, map to these stable
-NanoCloud contract keys (see `AestheticMetricCatalog`):
+NubArca contract keys (see `AestheticMetricCatalog`):
 
 | # | Model name (verbatim)                | Contract key                   | Group       |
 |---|--------------------------------------|--------------------------------|-------------|

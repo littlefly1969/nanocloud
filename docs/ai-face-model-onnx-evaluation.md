@@ -40,7 +40,7 @@ reported `dim` must be 512 and `finite=True`) before trusting `compare` output.
 
 **InsightFace code is MIT.** The **pretrained model packages** (`antelopev2`,
 `buffalo_l`) are published by InsightFace for **non-commercial research /
-personal use** unless separately licensed. NanoCloud does **not** assume any
+personal use** unless separately licensed. NubArca does **not** assume any
 commercial grant — the seeded profile metadata records this and `ai face models`
 prints the caveat. Confirm the exact terms on the model card before any
 commercial deployment. Weights are **never** committed to this repo and are

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useSelection } from './useSelection';
 import type { Entry } from './types';
-import type { FileSummary } from '@nanocloud/api-client';
+import type { FileSummary } from '@nubarca/api-client';
 
 function fileEntry(id: string): Entry {
   return {

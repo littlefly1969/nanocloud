@@ -28,7 +28,7 @@ const it = {
   'language.updateError': 'Impossibile aggiornare la lingua. Riprova.',
 
   // --- Primary navigation / app shell ---
-  'app.name': 'NanoCloud',
+  'app.name': 'NubArca',
   'nav.primary': 'Principale',
   'nav.groupMain': 'Principale',
   'nav.groupMore': 'Altro',
@@ -201,7 +201,7 @@ const it = {
     'Richiedere l’approvazione per i futuri caricamenti party?\n\nSe attiva, i nuovi caricamenti degli ospiti attenderanno la tua approvazione prima di comparire sulla TV o sulla pagina party pubblica.',
 
   // --- TV pairing / browser fallback (/tv) ---
-  'tv.title': 'NanoCloud TV',
+  'tv.title': 'NubArca TV',
   'tv.preparing': 'Preparazione dell’abbinamento sicuro…',
   'tv.scanInstructions': 'Inquadra con il telefono, accedi e approva questa TV.',
   'tv.qrLabel': 'Codice QR per l’abbinamento della TV',
@@ -236,7 +236,7 @@ const it = {
   'tv.itemCount_other': '{count} elementi',
 
   // --- TV Personal Area (mode selection / PIN / shell) ---
-  'tv.modeTitle': 'Come vuoi usare NanoCloud?',
+  'tv.modeTitle': 'Come vuoi usare NubArca?',
   'tv.modeParty': 'Party',
   'tv.modePersonal': 'Area personale',
   'tv.modeBeautyLab': 'Laboratorio bellezza',
@@ -353,7 +353,7 @@ const it = {
   'tvGallery.infoError': 'Impossibile caricare i dettagli.',
 
   // --- TV pairing approval (phone) ---
-  'tvPair.title': 'Abbina NanoCloud TV',
+  'tvPair.title': 'Abbina NubArca TV',
   'tvPair.invalidLink': 'Questo link di abbinamento non è valido o è incompleto.',
   'tvPair.approvedTitle': 'TV approvata',
   'tvPair.approvedBody': 'Puoi tornare alla TV.',
@@ -1065,7 +1065,7 @@ const it = {
   'cloud.organizeDesc': 'Sposta le foto in cartelle strutturate per data (aaaa/MM/gg e altro) in base alla data di scatto. Privato, reversibile dal Cestino.',
   'cloud.organizeBtn': 'Organizza per data',
   'cloud.downloadArchive': 'Scarica archivio foto',
-  'cloud.downloadArchiveDesc': 'Scarica da remoto tutte le tue foto visibili, mantenendo l’attuale struttura di cartelle NanoCloud. Non è uno ZIP: pensato per archivi grandi.',
+  'cloud.downloadArchiveDesc': 'Scarica da remoto tutte le tue foto visibili, mantenendo l’attuale struttura di cartelle NubArca. Non è uno ZIP: pensato per archivi grandi.',
   'cloud.hideExport': 'Nascondi esportazione',
   'cloud.privateVault': 'Archivio privato',
   'cloud.privateVaultDesc': 'Area privata esclusa da Galleria, AI, organizer ed esportazione. Predisposta per cifratura futura.',
@@ -1433,7 +1433,7 @@ const it = {
 
   // --- Photo archive export panel ---
   'export.aria': 'Scarica archivio foto',
-  'export.intro': 'Scarica le tue foto visibili esattamente come sono organizzate in NanoCloud: la struttura di cartelle attuale e i nomi dei file vengono mantenuti (NON sono organizzate per data; esegui prima “Organizza le foto per data” se lo desideri).',
+  'export.intro': 'Scarica le tue foto visibili esattamente come sono organizzate in NubArca: la struttura di cartelle attuale e i nomi dei file vengono mantenuti (NON sono organizzate per data; esegui prima “Organizza le foto per data” se lo desideri).',
   'export.noteNotZip': 'Questo NON è uno ZIP: è pensato per archivi grandi.',
   'export.noteOriginals': 'Vengono scaricati i file originali (mai miniature o anteprime).',
   'export.notePrivateVault': 'I contenuti del futuro Archivio privato sono esclusi.',
@@ -1455,7 +1455,7 @@ const it = {
   'export.copied': 'Copiato ✓',
   'export.viewManifest': 'Visualizza manifest',
   'export.revokeSession': 'Revoca sessione',
-  'export.rcloneNote': 'rclone non è supportato in questa versione (richiede un endpoint di elenco directory che NanoCloud non espone ancora). Usa il comando PowerShell qui sopra.',
+  'export.rcloneNote': 'rclone non è supportato in questa versione (richiede un endpoint di elenco directory che NubArca non espone ancora). Usa il comando PowerShell qui sopra.',
   'export.buildFailed': 'Impossibile costruire l’esportazione. Prova a creare una nuova sessione.',
   'export.sessionIs': 'Questa sessione è {status}.',
   'export.startOver': 'Ricomincia',

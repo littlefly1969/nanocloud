@@ -1,4 +1,4 @@
-import { originalDownloadUrl, privacySafeDownloadUrl, type FileMetadata } from '@nanocloud/api-client';
+import { originalDownloadUrl, privacySafeDownloadUrl, type FileMetadata } from '@nubarca/api-client';
 import { formatSize } from '../../components/format';
 import { Icon } from '../../components/icons/Icon';
 import { useI18n } from '../../i18n';

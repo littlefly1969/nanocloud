@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# NanoCloud — production restore.
+# NubArca — production restore.
 #
 # Destructive operation. Restores a backup produced by deploy/backup.sh INTO
 # the postgres-data + storage-data named volumes used by docker-compose.prod.yml.

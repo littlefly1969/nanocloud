@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# NanoCloud — unauthenticated smoke check.
+# NubArca — unauthenticated smoke check.
 #
 # Hits a few well-known endpoints and reports pass/fail per check. This
 # script DELIBERATELY only exercises UNAUTHENTICATED paths so it does not
@@ -23,7 +23,7 @@ if [ -z "$BASE_URL" ]; then
     cat >&2 <<EOF
 Usage: BASE_URL=https://your-domain.example ./deploy/smoke-check.sh
 
-Set BASE_URL to the public origin in front of NanoCloud (the reverse-proxy
+Set BASE_URL to the public origin in front of NubArca (the reverse-proxy
 URL on a real deploy, or http://127.0.0.1:8080 against the api container
 directly for local sanity).
 EOF
@@ -130,7 +130,7 @@ fi
 
 # ---- summary -----------------------------------------------------------
 
-printf '\nNanoCloud smoke check  (BASE_URL=%s)\n' "$BASE_URL"
+printf '\nNubArca smoke check  (BASE_URL=%s)\n' "$BASE_URL"
 printf '%s\n' "${checks[@]}"
 printf '\n  passed: %d   failed: %d\n\n' "$pass" "$fail"
 

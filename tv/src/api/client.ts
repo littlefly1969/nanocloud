@@ -1,4 +1,10 @@
-// NanoCloud TV API client.
+// NubArca TV API client.
+//
+// RETAINED LEGACY BRAND: the wire-level identifiers below ("NanoCloud.TvSession",
+// "NanoCloud.Auth", "nanocloud.tv.session.cookie") keep their pre-NubArca spelling.
+// They are a server cookie contract and a persisted on-device storage key; renaming
+// either would break paired TVs. They are recorded in the legacy-brand
+// compatibility allowlist.
 //
 // Cookie handling: React Native's fetch does not maintain a browser-style
 // cookie jar. The limited TV session is a SESSION COOKIE ("NanoCloud.TvSession",
@@ -27,6 +33,9 @@ import { tvDebug } from '../debug';
 
 // AsyncStorage key for the persisted limited TV session cookie. Bumping this
 // string invalidates any previously persisted session.
+// RETAINED LEGACY BRAND (compatibility allowlist): this value is already persisted
+// on every paired TV device. It is an opaque storage key, not a user-visible name,
+// so it deliberately keeps the "nanocloud." prefix after the NubArca rebrand.
 const SESSION_STORAGE_KEY = 'nanocloud.tv.session.cookie';
 
 let _baseUrl = '';

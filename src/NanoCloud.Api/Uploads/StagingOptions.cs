@@ -3,7 +3,7 @@ namespace NanoCloud.Api.Uploads;
 // Slice 93: web remote-staging upload configuration. OFF by default — the
 // feature reports unavailable until Enabled=true AND RootPath is configured.
 // Staging is temporary acquisition space (resumable browser chunk uploads),
-// NEVER NanoCloud blob storage: bytes become NanoCloud files only after the
+// NEVER NubArca blob storage: bytes become NubArca files only after the
 // verified session is imported through the admin-import pipeline.
 //
 // Wired from configuration (double-underscore env keys):

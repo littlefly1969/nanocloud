@@ -1,4 +1,4 @@
-# NanoCloud HumanAesExpert aesthetics sidecar (internal-only, CPU).
+# NubArca HumanAesExpert aesthetics sidecar (internal-only, CPU).
 # Weights are NEVER baked in — they are mounted read-only at HUMANAES_MODEL_DIR
 # by the operator (see scripts/install-human-aesexpert-model.sh +
 # docker-compose.human-aesexpert.yml). The container needs NO outbound network at

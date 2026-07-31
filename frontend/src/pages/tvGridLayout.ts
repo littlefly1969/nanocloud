@@ -1,4 +1,4 @@
-import type { TvAlbumItem } from '@nanocloud/api-client';
+import type { TvAlbumItem } from '@nubarca/api-client';
 import {
   normalizeAspectRatio,
   PHOTO_FALLBACK_ASPECT_RATIO,

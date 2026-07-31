@@ -1,4 +1,4 @@
-import type { VaultFile, VaultFolder } from '@nanocloud/api-client';
+import type { VaultFile, VaultFolder } from '@nubarca/api-client';
 import { useI18n } from '../i18n';
 import { VaultMediaCard } from './VaultMediaCard';
 

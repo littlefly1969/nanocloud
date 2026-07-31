@@ -25,7 +25,7 @@ function AuthProbe() {
       <button
         type="button"
         onClick={() => {
-          void login('dev@nanocloud.local', 'password').catch(() => {});
+          void login('dev@nubarca.local', 'password').catch(() => {});
         }}
       >
         Sign in
@@ -62,7 +62,7 @@ describe('AuthProvider', () => {
         expect(req.init?.credentials).toBe('include');
         return jsonResponse({
           id: 'user-1',
-          email: 'dev@nanocloud.local',
+          email: 'dev@nubarca.local',
           displayName: 'Dev User',
           isAdmin: false,
           language: 'it',
@@ -97,7 +97,7 @@ describe('AuthProvider', () => {
     expect(loginCall).toBeDefined();
     expect(loginCall!.method).toBe('POST');
     expect(JSON.parse(loginCall!.body ?? '{}')).toEqual({
-      email: 'dev@nanocloud.local',
+      email: 'dev@nubarca.local',
       password: 'password',
     });
   });

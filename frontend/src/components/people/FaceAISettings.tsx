@@ -6,7 +6,7 @@ import {
   updateFaceSettings,
   type FaceDiagnostics,
   type FaceThresholds,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../../auth/useAuth';
 import { useI18n } from '../../i18n';
 

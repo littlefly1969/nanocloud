@@ -1,4 +1,4 @@
-# NanoCloud production fastdeploy
+# NubArca production fastdeploy
 
 > **Mandatory agent gate:** read this file immediately before every production
 > deploy. Do not rely on commands remembered from an earlier chat.
@@ -230,7 +230,7 @@ Prohibited, in this step and in the deploy workflow generally:
 - `docker builder prune -af`
 - `docker compose down --remove-orphans`
 
-Also never: remove NanoCloud storage, PostgreSQL, OpenVINO cache or
+Also never: remove NubArca storage, PostgreSQL, OpenVINO cache or
 DataProtection volumes; delete files directly from Docker/containerd data
 directories; or unmount storage to make room.
 

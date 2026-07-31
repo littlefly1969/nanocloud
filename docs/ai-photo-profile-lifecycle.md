@@ -5,7 +5,7 @@
 > [multimodal-photo-search.md](multimodal-photo-search.md). Historical examples
 > below retain the former 768 profile to document the previous rollout.
 
-How NanoCloud chooses and switches the **active photo-similarity embedding
+How NubArca chooses and switches the **active photo-similarity embedding
 profile** safely. The goal of this layer is to make future model changes
 **explicit, reversible, and profile-keyed** — never an implicit "use the latest
 installed model". This slice adds the lifecycle controls only; it does **not**

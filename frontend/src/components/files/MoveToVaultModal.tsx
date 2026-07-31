@@ -6,7 +6,7 @@ import {
   lockVault,
   unlockVault,
   vaultMoveIn,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 
 interface MoveToVaultModalProps {
   fileIds: string[];

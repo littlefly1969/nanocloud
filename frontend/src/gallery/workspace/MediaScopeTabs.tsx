@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import type { MediaGalleryScope } from '@nanocloud/api-client';
+import type { MediaGalleryScope } from '@nubarca/api-client';
 import { useI18n } from '../../i18n';
 
 // Slice 3: the "Libreria / Esclusi" tab bar shared by the photo and video

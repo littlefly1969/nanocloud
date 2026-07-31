@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { getFileMetadata, originalDownloadUrl, type FileMetadata } from '@nanocloud/api-client';
+import { getFileMetadata, originalDownloadUrl, type FileMetadata } from '@nubarca/api-client';
 import { formatSize } from './format';
 import { useI18n } from '../i18n';
 import { HlsVideoPlayer } from '../video/HlsVideoPlayer';
@@ -223,6 +223,7 @@ export function MediaViewer({ items, index, onClose, onIndexChange, onNearEnd, r
           </div>
           <div className="media-viewer-actions">
             <button type="button" aria-label={t('mediaViewer.details')} aria-pressed={detailsOpen}
+              data-testid="viewer-details-toggle"
               onClick={() => setDetailsOpen((v) => !v)}>ⓘ</button>
             <button type="button" aria-label={t('common.close')} onClick={onClose}>✕</button>
           </div>

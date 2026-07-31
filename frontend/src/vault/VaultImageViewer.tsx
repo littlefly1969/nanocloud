@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { VaultFile } from '@nanocloud/api-client';
+import type { VaultFile } from '@nubarca/api-client';
 import { useI18n } from '../i18n';
 import { useVaultMediaObjectUrl } from './useVaultMediaObjectUrl';
 import { VaultMediaInfoPanel } from './VaultMediaInfoPanel';

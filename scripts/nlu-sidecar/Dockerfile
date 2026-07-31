@@ -1,4 +1,4 @@
-# NanoCloud NLU command-model sidecar (internal-only, CPU).
+# NubArca NLU command-model sidecar (internal-only, CPU).
 # Weights are NEVER baked in — they are mounted read-only at NLU_MODEL_DIR by the
 # operator (see scripts/install-nlu-model.sh + docker-compose.nlu.yml). The
 # container needs NO outbound network at runtime.

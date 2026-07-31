@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""NanoCloud NLU command-model sidecar (LOCAL, internal-only).
+"""NubArca NLU command-model sidecar (LOCAL, internal-only).
 
 Runs a pinned instruct model under ONNX Runtime GenAI on CPU and exposes exactly
-two internal endpoints for the NanoCloud API:
+two internal endpoints for the NubArca API:
 
     GET  /health     -> 200 {"status":"ready"} once the model is loaded/warm
     POST /interpret  -> {"json": "<the model's JSON completion>"}

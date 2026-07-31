@@ -125,6 +125,34 @@ describe('native select readability', () => {
   });
 });
 
+// Real-browser verification measured these two at 3.6:1 and 3.74:1 — both below
+// AA for normal text. The cause in each case was the same: --accent is the
+// legibility TINT of Electric Blue, meant for text and borders, and printing
+// something on top of it (or printing it on a tinted background) loses the
+// headroom the tint was created to provide.
+describe('accent fills that carry text', () => {
+  it('gives the sign-in button the brand fill, not the accent tint', () => {
+    const body = ruleBody(".login-card button[type='submit']");
+    // white on --accent (#3D82FF) is 3.6:1; on --accent-strong (#1565FF) 4.84:1.
+    expect(body).toContain('background: var(--accent-strong)');
+    expect(body).toContain('color: var(--accent-contrast)');
+    expect(body).not.toMatch(/background:\s*var\(--accent\)/);
+    expect(body).not.toMatch(/color:\s*#fff/i);
+  });
+
+  it('gives the sign-in button a visible focus ring of its own', () => {
+    // With no rule it inherited the UA's 1px black outline — invisible on dark.
+    const body = ruleBody(".login-card button[type='submit']:focus-visible");
+    expect(body).toContain('outline: 2px solid var(--focus-ring)');
+  });
+
+  it('does not print the accent tint on the accent-tinted count pill', () => {
+    const body = ruleBody('.media-kind-tab.is-active .media-kind-tab-count');
+    expect(body).toContain('color: var(--text-primary)');
+    expect(body).not.toMatch(/color:\s*var\(--accent\)/);
+  });
+});
+
 describe('focus visibility', () => {
   it('uses the focus-ring token for the controls this slice introduced', () => {
     for (const selector of [

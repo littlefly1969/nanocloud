@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Person } from '@nanocloud/api-client';
+import type { Person } from '@nubarca/api-client';
 import { useI18n } from '../../i18n';
 import { EMPTY_GALLERY_QUERY, type GalleryQuery } from '../galleryQuery';
 import { ManualFilterEditor } from './ManualFilterEditor';

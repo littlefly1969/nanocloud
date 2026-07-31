@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router';
-import { updateMyLanguage } from '@nanocloud/api-client';
+import { updateMyLanguage } from '@nubarca/api-client';
 import { useI18n, type Language } from '../i18n';
 import { ThemeSwitcher } from '../theme';
 import { LanguageSwitcher } from './LanguageSwitcher';

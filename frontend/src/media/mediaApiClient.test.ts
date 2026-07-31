@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { listAlbumMedia, listMedia, type ListMediaQuery } from '@nanocloud/api-client';
+import { listAlbumMedia, listMedia, type ListMediaQuery } from '@nubarca/api-client';
 
 // Wire-level contract for the unified /api/media + /api/albums/{id}/media
 // client. `kind` is always sent; scope/active is omitted; photo and video params

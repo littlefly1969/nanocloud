@@ -6,7 +6,7 @@ public class JobsOptions
 
     // The in-process hosted worker is OFF by default. Operators opt in via
     // Jobs:WorkerEnabled=true, or run a worker out-of-band with the
-    // `jobs worker` / `jobs run-once` CLI commands. NanoCloud never processes
+    // `jobs worker` / `jobs run-once` CLI commands. NubArca never processes
     // jobs automatically unless this is set.
     public bool WorkerEnabled { get; set; } = false;
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ApiError, requestPlateAnalysis } from '@nanocloud/api-client';
+import { ApiError, requestPlateAnalysis } from '@nubarca/api-client';
 import { useAuth } from '../../auth/useAuth';
 import { useI18n } from '../../i18n';
 

@@ -1,6 +1,6 @@
 namespace NanoCloud.Api.Domain;
 
-// The closed set of UI languages NanoCloud ships. Italian is the canonical
+// The closed set of UI languages NubArca ships. Italian is the canonical
 // default; English is the optional second language. Arbitrary browser locale
 // strings are never persisted — only these exact codes pass Normalize.
 public static class UiLanguages

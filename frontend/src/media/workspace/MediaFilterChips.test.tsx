@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { MediaItem } from '@nanocloud/api-client';
+import type { MediaItem } from '@nubarca/api-client';
 import { AuthedWrapper } from '../../test-utils';
 import { MediaFilterChips } from './MediaFilterChips';
 import type { PeopleIndex } from '../../gallery/workspace/usePeopleIndex';

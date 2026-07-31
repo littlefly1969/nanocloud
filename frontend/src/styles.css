@@ -19,35 +19,76 @@
 
 :root {
   color-scheme: dark;
-  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+
+  /* ---- Official NubArca palette -------------------------------------------
+     The approved hexes, verbatim and theme-independent. Nothing outside this
+     block may invent a brand colour; the semantic tokens below are the only
+     supported way to consume them. Any deviation from an official hex is a
+     deliberate, annotated legibility tint — never a redefinition of the brand.
+     ------------------------------------------------------------------------ */
+  --brand-midnight-navy: #0a0f1a;
+  --brand-deep-blue: #0f1e3a;
+  --brand-electric-blue: #1565ff;
+  --brand-cyan-glow: #00d4ff;
+  --brand-soft-violet: #9a6cff;
+  --brand-cloud-white: #f5f7fb;
+
+  /* ---- Geometry (brand development guidelines) ---------------------------- */
+  --space-unit: 8px;
+  --radius-card: 16px;
+  --radius-button: 12px;
+
+  /* ---- Typography ---------------------------------------------------------
+     Bundled locally (see main.tsx); the fallback stack keeps the UI usable if a
+     woff2 fails to load. Monospace is deliberately untouched: logs, hashes and
+     code must stay in a real fixed-pitch face.
+     ------------------------------------------------------------------------ */
+  --font-heading: 'Space Grotesk', 'Exo 2', system-ui, -apple-system, Segoe UI, sans-serif;
+  --font-ui: 'Exo 2', system-ui, -apple-system, Segoe UI, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  font-family: var(--font-ui);
 
   /* Surfaces, back to front. */
-  --surface-canvas: #0f1013;
-  --surface-raised: #17181d;
-  --surface-overlay: #1e2026;
-  --surface-subtle: #1a1c21;
+  --surface-canvas: var(--brand-midnight-navy);
+  --surface-raised: var(--brand-deep-blue);
+  --surface-overlay: #132546;
+  --surface-subtle: #0d1729;
 
-  --border-default: #2c2e37;
-  --border-strong: #3f424d;
+  --border-default: #22355c;
+  --border-strong: #33507f;
 
-  --text-primary: #f2f3f5;
-  --text-secondary: #b9bcc4;
-  --text-muted: #8f939d;
+  --text-primary: var(--brand-cloud-white);
+  --text-secondary: #b6c4dc;
+  --text-muted: #8fa0be;
 
-  --accent: #4c9dff;
-  --accent-hover: #74b3ff;
-  /* Text/iconography placed ON an --accent fill. */
-  --accent-contrast: #08131f;
-  --accent-subtle: rgb(76 157 255 / 16%);
+  /* Electric Blue lifted to 5.3:1 on Midnight Navy. `--accent` is overwhelmingly
+     a TEXT and border colour here, and the official #1565FF only reaches 4.0:1
+     on the canvas — below AA. The exact brand hex is not lost: it is
+     `--accent-strong`, used for fills, where white text on it clears AA. */
+  --accent: #3d82ff;
+  --accent-hover: #5a97ff;
+  --accent-strong: var(--brand-electric-blue);
+  /* Text/iconography placed ON an --accent-strong fill. */
+  --accent-contrast: #ffffff;
+  --accent-subtle: rgb(21 101 255 / 20%);
+  /* Cyan Glow: the secondary accent, and the restrained glow this brand allows.
+     Soft Violet is a limited highlight — never the primary action colour. */
+  --accent-glow: var(--brand-cyan-glow);
+  --accent-secondary: var(--brand-soft-violet);
+  --glow-soft: 0 0 0 1px rgb(0 212 255 / 22%);
 
-  --focus-ring: #8cc6ff;
-  --danger: #ff8080;
+  --focus-ring: var(--brand-cyan-glow);
+  /* Kept warm and green so destructive and successful stay readable as
+     THEMSELVES, never as another shade of the brand blue. */
+  --danger: #ff7a85;
   --danger-contrast: #1a0505;
-  --success: #5cd694;
+  --success: #3fd98c;
 
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 45%);
-  --shadow-md: 0 4px 14px rgb(0 0 0 / 45%);
-  --shadow-lg: 0 18px 48px rgb(0 0 0 / 55%);
+  /* Restrained, per the brand rule against heavy shadows. */
+  --shadow-sm: 0 1px 2px rgb(2 6 16 / 40%);
+  --shadow-md: 0 4px 14px rgb(2 6 16 / 38%);
+  --shadow-lg: 0 16px 40px rgb(2 6 16 / 46%);
 
   /* Legacy aliases — do not add new usages. */
   --bg: var(--surface-canvas);
@@ -57,34 +98,69 @@
   --error: var(--danger);
 }
 
+/* Light theme, derived from the same brand palette: Cloud White canvas,
+   Midnight Navy text, and a deepened Electric Blue so accent TEXT clears AA on
+   white (the #1565FF fill reaches only 4.0:1 there). */
 :root[data-theme='light'] {
   color-scheme: light;
 
-  --surface-canvas: #f6f7f9;
+  --surface-canvas: var(--brand-cloud-white);
   --surface-raised: #ffffff;
   --surface-overlay: #ffffff;
-  --surface-subtle: #eceef2;
+  --surface-subtle: #e7ecf5;
 
-  --border-default: #d3d6dd;
-  --border-strong: #a9aeb8;
+  --border-default: #c9d4e6;
+  --border-strong: #98a9c6;
 
-  --text-primary: #15161a;
-  --text-secondary: #474b53;
-  --text-muted: #5f636b;
+  --text-primary: var(--brand-midnight-navy);
+  --text-secondary: #36455f;
+  --text-muted: #596884;
 
-  --accent: #0a5fd0;
-  --accent-hover: #08489f;
+  --accent: #0b4fd6;
+  --accent-hover: #093fac;
+  --accent-strong: #0b4fd6;
   --accent-contrast: #ffffff;
-  --accent-subtle: rgb(10 95 208 / 12%);
+  --accent-subtle: rgb(11 79 214 / 12%);
+  /* Cyan Glow is unreadable on white, so the light theme's secondary accent is
+     the deep blue itself; Soft Violet darkens just enough to stay legible. */
+  --accent-glow: #0b4fd6;
+  --accent-secondary: #6d3fd6;
+  --glow-soft: 0 0 0 1px rgb(11 79 214 / 18%);
 
-  --focus-ring: #0a5fd0;
-  --danger: #bf1220;
+  --focus-ring: #0b4fd6;
+  --danger: #c21127;
   --danger-contrast: #ffffff;
-  --success: #12643a;
+  --success: #0e6b42;
 
-  --shadow-sm: 0 1px 2px rgb(15 22 36 / 10%);
-  --shadow-md: 0 4px 14px rgb(15 22 36 / 12%);
-  --shadow-lg: 0 18px 48px rgb(15 22 36 / 18%);
+  --shadow-sm: 0 1px 2px rgb(10 15 26 / 10%);
+  --shadow-md: 0 4px 14px rgb(10 15 26 / 12%);
+  --shadow-lg: 0 16px 40px rgb(10 15 26 / 16%);
+}
+
+/* Headings carry the display face; controls inherit the UI face explicitly so a
+   browser default can never pull a button back to the system font. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.01em;
+}
+
+button,
+input,
+select,
+textarea,
+optgroup {
+  font-family: var(--font-ui);
+}
+
+/* The user agent gives these elements `font-weight: bold`, which computes to
+   700 — a weight Exo 2 does not ship under the approved contract (400/500/600),
+   so the browser would synthesise or substitute one. Headings are excluded:
+   they render in Space Grotesk, where 700 IS approved. */
+strong,
+b,
+th,
+optgroup {
+  font-weight: 600;
 }
 
 * {
@@ -132,8 +208,8 @@ a {
   width: min(100%, 22rem);
   padding: 2rem;
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--bg);
+  border-radius: var(--radius-card);
+  background: var(--surface-raised);
 }
 
 .login-card h1 {
@@ -141,6 +217,15 @@ a {
   font-size: 1.5rem;
   text-align: center;
 }
+
+/* The sign-in heading IS the approved wordmark lockup. The component sizes it
+   well above the 120px minimum and applies the brand clear space, so this only
+   centres it. */
+.login-title {
+  display: flex;
+  justify-content: center;
+}
+
 
 .login-card label {
   display: block;
@@ -169,10 +254,20 @@ a {
   margin-top: 1.25rem;
   padding: 0.625rem;
   border: none;
-  border-radius: 0.375rem;
-  background: var(--accent);
-  color: #fff;
+  border-radius: var(--radius-button);
+  /* Carries white text, so it must be the brand Electric Blue FILL that
+     --accent-contrast is contrast-checked against (4.84:1). The lighter
+     --accent tint exists for accent TEXT; white on it is only 3.6:1. */
+  background: var(--accent-strong);
+  color: var(--accent-contrast);
   cursor: pointer;
+}
+
+.login-card button[type='submit']:focus-visible {
+  /* Without an explicit rule this fell back to the UA's 1px black outline,
+     which is invisible on the dark theme. */
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .login-card button[type='submit']:disabled {
@@ -401,7 +496,7 @@ a {
   background: rgb(3 7 18 / 88%);
   color: #f8fafc;
   font-size: clamp(1rem, 1.6vw, 1.25rem);
-  font-weight: 750;
+  font-weight: 600;
 }
 .tv-gallery-status-pill { left: 50%; transform: translateX(-50%); }
 .tv-gallery-selection-pill { left: max(1.25rem, env(safe-area-inset-left)); background: #1d4ed8; }
@@ -480,7 +575,7 @@ a {
   background: #172033;
   color: #f8fafc;
   font-size: clamp(1rem, 1.55vw, 1.25rem);
-  font-weight: 750;
+  font-weight: 600;
 }
 .tv-gallery-command-rail button:focus,
 .tv-gallery-workspace button:focus,
@@ -518,7 +613,7 @@ a {
 }
 .tv-gallery-workspace h2 { margin: 0; font-size: clamp(1.7rem, 3vw, 2.6rem); }
 .tv-gallery-workspace header p { margin: 0.3rem 0 0; color: #b8c2d1; font-size: 1.1rem; }
-.tv-gallery-draft-count { color: #93c5fd !important; font-weight: 750; }
+.tv-gallery-draft-count { color: #93c5fd !important; font-weight: 600; }
 .tv-gallery-workspace-body {
   min-height: 0;
   flex: 1;
@@ -571,7 +666,7 @@ a {
   border-radius: 0.8rem;
   background: #0f1725;
 }
-.tv-gallery-manual legend { padding: 0 0.4rem; font-size: 1.25rem; font-weight: 800; }
+.tv-gallery-manual legend { padding: 0 0.4rem; font-size: 1.25rem; font-weight: 600; }
 .tv-gallery-manual label { display: flex; flex-direction: column; gap: 0.35rem; color: #dbe4ef; }
 .tv-personal-people { display: flex; flex-direction: column; gap: 0.55rem; max-height: 16rem; overflow-y: auto; }
 .tv-personal-person-include { background: #14532d !important; }
@@ -750,7 +845,7 @@ a {
 .party-upload-status { margin-top: 1rem; }
 .tv-party-qr { background: #fff; padding: 0.5rem; border-radius: 8px; width: 160px; height: 160px; }
 .tv-party-qr svg { width: 100%; height: 100%; display: block; }
-.tv-party-caption { color: #fff; margin: 0; font-size: 1rem; font-weight: 700; text-align: center; }
+.tv-party-caption { color: #fff; margin: 0; font-size: 1rem; font-weight: 600; text-align: center; }
 
 @media (max-width: 700px) {
   .tv-party-corner { padding: 0.5rem; gap: 0.35rem; }
@@ -792,9 +887,67 @@ a {
 
 .app-brand {
   font-size: 1.0625rem;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--text-primary);
+}
+
+/* NubArca brand artwork.
+   Every image here is an approved asset copied byte-for-byte from
+   assets/brand/nubarca/. The component picks the on-dark or on-light variant
+   from the resolved theme and sets the pixel size inline; CSS only positions
+   it and reserves the brand clear space (25% of the logo height, applied as
+   padding by the component). Nothing here scales artwork beyond its shipped
+   size, and nothing recolours it. */
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  min-width: 0;
+}
+
+.brand-mark__icon {
+  display: block;
+  /* Never below the 24px minimum icon size, and never distorted. */
+  min-width: 24px;
+  min-height: 24px;
+  object-fit: contain;
+}
+
+.brand-mark__wordmark-img {
+  display: block;
+  height: auto;
+  /* The approved light-surface file carries a large transparent canvas; the
+     component compensates so the VISIBLE lockup still meets the 120px minimum
+     (see wordmarkAsset). Never stretched. */
+  object-fit: contain;
+}
+
+/* Shell lockup: the approved flat mark beside the product name. The name stays
+   live text here rather than the wordmark image, because a topbar and a mobile
+   drawer cannot give the wordmark its 120px minimum width without crowding the
+   controls next to it. */
+.app-brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space-unit) * 0.75);
+  min-width: 0;
+}
+.app-brand-lockup .app-brand {
+  font-family: var(--font-heading);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Below the mobile breakpoint the topbar keeps the mark alone rather than
+   squeezing the name against the user menu. */
+@media (max-width: 26.25rem) {
+  .app-topbar__brand .app-brand {
+    display: none;
+  }
 }
 
 .app-shell {
@@ -855,7 +1008,7 @@ a {
 .app-nav__group-title {
   margin: 0 0 0.35rem 0.55rem;
   font-size: 0.6875rem;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -999,10 +1152,12 @@ a {
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 999px;
-  background: var(--accent);
+  /* Text sits on this fill, so it uses the brand Electric Blue that
+     --accent-contrast is contrast-checked against. */
+  background: var(--accent-strong);
   color: var(--accent-contrast);
   font-size: 0.8125rem;
-  font-weight: 650;
+  font-weight: 600;
 }
 .user-menu__name {
   overflow: hidden;
@@ -1068,7 +1223,7 @@ a {
 .theme-switcher { display: flex; flex-direction: column; gap: 0.35rem; }
 .theme-switcher__label {
   font-size: 0.75rem;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -1163,7 +1318,7 @@ select option {
 }
 .language-switcher--stacked .language-switcher-label {
   font-size: 0.75rem;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -2169,7 +2324,7 @@ button.logout {
   padding: 0 0.35rem;
   border-radius: 999px;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 600;
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent);
   border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
@@ -2285,9 +2440,10 @@ button.logout {
   outline-offset: -2px;
 }
 
-/* Preview frame: a blurred cover-backdrop behind a contained foreground, so the
-   whole photo/poster is always visible (never cropped) and the tile is filled
-   without hard letterbox bands. */
+/* Preview frame: a single media layer filling the tile. The tile is reserved at
+   the item's DISPLAY aspect ratio, so there is nothing to letterbox and no
+   second blurred layer behind it — the frame's own tint is the placeholder that
+   shows until the thumbnail decodes, in exactly the same box. */
 .media-tile__frame {
   position: relative;
   display: block;
@@ -2298,27 +2454,17 @@ button.logout {
   background: color-mix(in srgb, var(--fg) 8%, transparent);
 }
 
-.media-tile__backdrop {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  object-fit: cover;
-  filter: blur(16px) brightness(0.62);
-  transform: scale(1.06);
-  pointer-events: none;
-}
-
 .media-tile__media {
   position: relative;
   z-index: 1;
   display: block;
   width: 100%;
   height: 100%;
-  /* The whole frame is shown; the tile is sized to the item's real aspect ratio
-     so this fills the tile, and the backdrop covers only rounding slivers. */
-  object-fit: contain;
+  /* Fills the reserved box without distortion. Identical to 'contain' whenever
+     the tile matches the media's ratio (the normal case); where the ratio was
+     clamped or a justified row rounded the last tile, it trims that sliver
+     rather than leaving a band to fill. */
+  object-fit: cover;
 }
 
 .media-tile__placeholder {
@@ -2389,7 +2535,7 @@ button.logout {
   padding: 0 0.35rem;
   border-radius: 999px;
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #fff;
   background: color-mix(in srgb, var(--accent) 82%, #000);
 }
@@ -2465,7 +2611,7 @@ button.logout {
   padding: 2px 7px;
   border-radius: 6px;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: #fff;
   background: color-mix(in srgb, #000 68%, transparent);
@@ -2480,7 +2626,7 @@ button.logout {
   padding: 1px 6px;
   border-radius: 6px;
   font-size: 0.66rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: #fff;
@@ -4008,7 +4154,7 @@ html.tv-scroll-stable::-webkit-scrollbar {
 .metadata-action-group__title {
   margin: 0 0 0.4rem;
   font-size: 0.6875rem;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -4397,7 +4543,7 @@ video.lightbox-image {
   background: rgba(0, 0, 0, 0.72);
   color: #fff;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.02em;
   pointer-events: none;
 }
@@ -4616,7 +4762,7 @@ video.lightbox-image {
   padding: 0.05rem 0.4rem;
   border-radius: 999px;
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   vertical-align: middle;
@@ -5056,7 +5202,7 @@ video.lightbox-image {
 .similar-explorer-title {
   margin: 0;
   font-size: 1.2rem;
-  font-weight: 650;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -5094,7 +5240,7 @@ video.lightbox-image {
 
 .similar-explorer-value {
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--accent);
   font-size: 1.05rem;
 }
@@ -5164,52 +5310,15 @@ video.lightbox-image {
   margin: 0;
 }
 
-/* Similarity badge overlaid on each result thumbnail. */
-.similar-explorer-badge {
-  position: absolute;
-  top: 0.4rem;
-  right: 0.4rem;
-  padding: 0.1rem 0.4rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: #fff;
-  background: color-mix(in srgb, #000 62%, transparent);
-  border-radius: 0.375rem;
-  pointer-events: none;
-}
+/* The similarity percentage rides on the shared tile badge (.media-tile__badge)
+   and the first page waits behind the shared media-wall skeleton, so the
+   explorer contributes no tile or placeholder styling of its own. */
 
 .similar-explorer-empty {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   padding: 1.5rem 0;
-}
-
-/* Loading skeleton shimmer for the first page. */
-.similar-explorer-skeleton {
-  position: relative;
-  overflow: hidden;
-}
-
-.similar-explorer-skeleton::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--fg) 8%, transparent),
-    transparent
-  );
-  transform: translateX(-100%);
-  animation: similar-explorer-shimmer 1.3s infinite;
-}
-
-@keyframes similar-explorer-shimmer {
-  100% {
-    transform: translateX(100%);
-  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -6127,7 +6236,7 @@ video.lightbox-image {
   bottom: 100%;
   margin-bottom: 2px;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   line-height: 1.2;
   padding: 0.05rem 0.35rem;
@@ -6197,7 +6306,7 @@ video.lightbox-image {
 }
 .aesthetics-comparison-table td.is-best {
   color: var(--accent);
-  font-weight: 700;
+  font-weight: 600;
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
@@ -6226,7 +6335,7 @@ video.lightbox-image {
 }
 .ws-header-row { display: flex; align-items: center; gap: 0.75rem; }
 .ws-header-top { justify-content: space-between; }
-.ws-header-title { margin: 0; font-size: 1.15rem; font-weight: 650; }
+.ws-header-title { margin: 0; font-size: 1.15rem; font-weight: 600; }
 .ws-header-count { color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
 .ws-header-controls { flex-wrap: wrap; }
 
@@ -6530,7 +6639,7 @@ video.lightbox-image {
   background: var(--surface-raised);
   border-color: var(--border-strong);
   color: var(--text-primary);
-  font-weight: 650;
+  font-weight: 600;
   box-shadow: var(--shadow-sm);
 }
 .media-kind-tab.is-active .nc-icon { color: var(--accent); }
@@ -6548,7 +6657,11 @@ video.lightbox-image {
 }
 .media-kind-tab-count[data-pending='true'] { color: transparent; }
 .media-kind-tab.is-active .media-kind-tab-count {
-  color: var(--accent);
+  /* --accent on --accent-subtle is only 3.74:1 — the tinted accent sits too
+     close to the tinted background it is printed on. The count is small text,
+     so it takes the primary text colour and lets the tinted pill carry the
+     "active" signal. */
+  color: var(--text-primary);
   background: var(--accent-subtle);
   border-color: transparent;
 }
@@ -6617,10 +6730,10 @@ video.lightbox-image {
   height: 1.25rem;
   padding: 0 0.3rem;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--accent-strong);
   color: var(--accent-contrast);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 .ws-sort {
   display: inline-flex;
@@ -6691,7 +6804,8 @@ video.lightbox-image {
 
 /* Video card: uniform cover-fill (no letterbox bands in the square tile), a
    legibility scrim behind the overlays, and hide the play glyph while the hover
-   strip animates. */
+   strip animates. A cover poster leaves no gap for a backdrop to fill, so
+   VideoPreview does not render the blurred layer at all in this variant. */
 .video-preview-fit-cover .video-preview-poster { object-fit: cover; }
 .gallery-card[data-kind="video"] .gallery-thumb-wrap::after {
   content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 42%;
@@ -6743,6 +6857,6 @@ video.lightbox-image {
 .album-card-desc { margin: 0; font-size: 0.82rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .album-card-counts { margin: 0; font-size: 0.8rem; color: var(--muted); }
 .album-card-updated { margin: 0; font-size: 0.72rem; }
-.album-badge { font-size: 0.62rem; font-weight: 700; padding: 0.05rem 0.4rem; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.03em; }
+.album-badge { font-size: 0.62rem; font-weight: 600; padding: 0.05rem 0.4rem; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.03em; }
 .album-badge-tv { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
 .album-card-delete { align-self: flex-start; margin: 0 0.75rem 0.75rem; font-size: 0.78rem; padding: 0.3rem 0.6rem; }

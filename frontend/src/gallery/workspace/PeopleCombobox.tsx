@@ -1,5 +1,5 @@
 import { useId, useMemo, useRef, useState } from 'react';
-import type { Person } from '@nanocloud/api-client';
+import type { Person } from '@nubarca/api-client';
 import { useI18n } from '../../i18n';
 
 // A small accessible searchable combobox for picking owner-private people.

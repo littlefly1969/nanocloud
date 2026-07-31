@@ -7,8 +7,13 @@ using NanoCloud.Api.Domain.Ai;
 
 namespace NanoCloud.Api.Plates.Redaction;
 
-// PRIVACY-ONLY face-box detector that REUSES NanoCloud's existing face detector
+// PRIVACY-ONLY face-box detector that REUSES NubArca's existing face detector
 // (the AI substrate's ONNX SCRFD IFaceDetector) to obtain BOUNDING BOXES ONLY.
+//
+// The type name and the `ExistingNanoCloudFaceDetector` provider enum member are
+// RETAINED legacy-brand identifiers: the enum member is parsed verbatim from
+// operator configuration (Plates:FaceRedaction:Provider). Only human-readable
+// message text was rebranded.
 //
 // It calls IFaceDetector.DetectFacesAsync, which is evaluation-only: it runs
 // detection inference and returns normalized boxes WITHOUT persisting any
@@ -65,7 +70,7 @@ public sealed class ExistingNanoCloudPlateFaceBoxDetector : IPlateFaceRedactionD
         if (!detector.IsAvailable || detector.Backend is null || detector.Resolution.ProfileKey is null)
         {
             _logger.LogInformation(
-                "Plates face redaction: existing NanoCloud face detector unavailable ({Reason}).",
+                "Plates face redaction: existing NubArca face detector unavailable ({Reason}).",
                 detector.Resolution.UnavailableReason ?? "unknown");
             throw new PlateFaceRedactionUnavailableException();
         }

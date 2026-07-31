@@ -5,7 +5,7 @@ import {
   getPartyAlbum,
   getPartyItems,
   type PartyItem,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useI18n } from '../i18n';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { PartyFaceSearch, type PartyFaceFilter } from '../components/PartyFaceSearch';

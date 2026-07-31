@@ -9,7 +9,7 @@ import {
   type TvAlbum,
   type TvAlbumItem,
   type TvAlbumItems,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useI18n } from '../i18n';
 import { VideoPreview } from '../video/VideoPreview';
 import { buildTvRows, TV_GRID_GAP } from './tvGridLayout';

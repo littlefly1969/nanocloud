@@ -9,7 +9,7 @@ import {
   type FileMetadata,
   type MediaItem,
   type SimilarPhotoItem,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { smallThumbnailUrl } from '../components/files/types';
 import { useI18n, type MessageKey } from '../i18n';
@@ -17,6 +17,7 @@ import { useMediaWallLayout } from '../components/mediaWallLayout';
 import { MediaViewer, type MediaViewerItem } from '../components/MediaViewer';
 import { MediaGrid } from '../media/workspace/MediaGrid';
 import { MediaMetadataPanel } from '../media/metadata/MediaMetadataPanel';
+import { useMediaSimilarityActions } from '../media/viewer/mediaViewerActions';
 import { useMediaSelection } from '../gallery/useMediaSelection';
 import { MediaSelectionBar } from '../gallery/workspace/MediaSelectionBar';
 import type { GalleryDestinationAction } from '../gallery/workspace/DestinationMenu';
@@ -36,10 +37,12 @@ import { TrashConfirmation } from '../gallery/workspace/TrashConfirmation';
 // selection/bulk-action model. The similarity percentage rides along as an
 // explicit optional MediaGrid badge, so nothing was forked.
 //
-// The similar DTO is deliberately lean (id + name + score, no vectors, no blob
-// internals), which also means it carries no pixel dimensions: tiles therefore
-// use the shared square fallback rather than each photo's real ratio. Grid uses
-// SMALL thumbnails; the source header uses the MEDIUM preview.
+// The similar DTO stays lean on internals (id + name + score, no vectors, no
+// blob internals) but does carry each result's DISPLAY width/height, resolved
+// server-side through the same helper the library uses — so the shared wall
+// reserves the identical tile here as it does there, and no surface has to
+// guess a shape. Grid uses SMALL thumbnails; the source header uses the MEDIUM
+// preview.
 
 const PAGE_SIZE = 60;
 const MIN_PCT = 50;
@@ -74,13 +77,18 @@ function pctFromParams(params: URLSearchParams): number {
 // Project a similar-photo result onto the shared MediaItem shape the media wall
 // consumes. Every result of this endpoint is a photo.
 //
-// `width`/`height` are the ORIGINAL media's stored dimensions, so the shared
-// justified layout gives each result its true proportions — a portrait result is
-// a portrait tile — exactly as in the Library and Albums. When the server has no
-// extracted dimensions both are null and `getMediaAspectRatio` applies its square
-// photo fallback. The remaining fields the lean similarity DTO does not carry
-// stay null/0; the grid already handles that (no size/resolution line in the
-// hover overlay).
+// `width`/`height` are DISPLAY dimensions: the server resolves the stored pair
+// through ImageDisplayDimensions before sending it, so an EXIF quarter-turn
+// (orientation 5–8) arrives already swapped. They are NOT the coded dimensions
+// held in blob_metadata — those describe the bytes before rotation, and handing
+// them to the wall reserved a landscape tile for a portrait thumbnail.
+//
+// This is the same resolution the Library and Album listings apply, which is
+// what makes the shared justified layout give a result the identical tile in
+// every surface. When the server has no extracted dimensions both are null and
+// `getMediaAspectRatio` applies its square photo fallback. The remaining fields
+// the lean similarity DTO does not carry stay null/0; the grid already handles
+// that (no size/resolution line in the hover overlay).
 function toMediaItem(item: SimilarPhotoItem): MediaItem {
   return {
     id: item.fileItemId,
@@ -355,17 +363,18 @@ export function SimilarPhotosExplorerPage() {
     setTrashOpen(false);
   }
 
-  // Re-root the explorer on another photo (keeps the chosen threshold and the
-  // original return target). Reached from the viewer's "Explore similar photos",
-  // exactly as it is from the Library — opening a tile opens the viewer here
-  // too, so the interaction matches the rest of the app.
-  function exploreFrom(id: string) {
-    setViewerIndex(null);
-    void navigate(
-      `/gallery/files/${id}/similar?minSimilarity=${minSimilarity.toFixed(2)}`,
-      { state: { from: returnTo } },
-    );
-  }
+  // The SAME viewer-action resolver the library workspace uses, so a photo
+  // opened here offers exactly the actions it offers anywhere else. "Explore
+  // similar photos" re-roots this explorer on the opened photo — carrying the
+  // chosen threshold and the original return target, and doing nothing at all
+  // when the opened photo is already the anchor (no duplicate history entry on
+  // itself). "Find similar in Library" leaves for the Library's own filter.
+  const similarityActions = useMediaSimilarityActions({
+    onNavigate: () => setViewerIndex(null),
+    exploreMinSimilarity: minSimilarity,
+    exploreState: { from: returnTo },
+    currentExploreAnchor: fileId ?? null,
+  });
 
   const onMetadataChanged = useCallback((changedId: string, metadata: FileMetadata) => {
     setItems((prev) => prev.map((it) => (
@@ -476,13 +485,12 @@ export function SimilarPhotosExplorerPage() {
                 : ''}
           </p>
 
-          {phase === 'loading' && (
-            <div className="media-wall__skeleton" data-testid="similar-skeleton" aria-hidden="true">
-              {Array.from({ length: 8 }, (_v, i) => (
-                <span key={i} className="media-wall__skeleton-tile" />
-              ))}
-            </div>
-          )}
+          {/* No explorer-specific loading block: the status line above already
+              announces the wait, and the results then arrive through the shared
+              MediaGrid — which reserves each tile at its real proportions and
+              owns the only placeholder in the wall. A second, page-level
+              skeleton of eight equal-width tiles claimed a geometry no result
+              would actually have. */}
 
           {phase === 'error' && (
             <div className="folder-error" role="alert">
@@ -561,9 +569,9 @@ export function SimilarPhotosExplorerPage() {
               initialData={metadata}
               loadError={metadataError}
               onMetadataChanged={(id, next) => { adoptMetadata(next); onMetadataChanged(id, next); }}
-              // Re-rooting the explorer on the opened photo lives behind the
-              // same action name it has everywhere else.
-              onExploreSimilar={() => exploreFrom(item.id)}
+              // Resolved centrally: this surface adds no origin condition of its
+              // own, so the drawer here is the drawer everywhere.
+              {...similarityActions({ id: item.id, kind: 'image' })}
             />
           )}
         />

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { GalleryInterpretDraft } from '@nanocloud/api-client';
+import type { GalleryInterpretDraft } from '@nubarca/api-client';
 import {
   EMPTY_GALLERY_QUERY,
   applyInterpretDraft,

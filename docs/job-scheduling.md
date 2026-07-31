@@ -1,6 +1,6 @@
 # Background job scheduling
 
-NanoCloud runs background work (imports, media derivatives, metadata
+NubArca runs background work (imports, media derivatives, metadata
 extraction, storage reconcile) through a single durable queue
 (`background_jobs`) drained by an in-process worker (`JobWorker`, off by
 default — see `Jobs:WorkerEnabled`) or out-of-band via the `jobs run-once` /

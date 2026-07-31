@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { Person } from '@nanocloud/api-client';
+import type { Person } from '@nubarca/api-client';
 import { AuthedWrapper, installFetchMock, jsonResponse } from '../../test-utils';
 import { EMPTY_GALLERY_QUERY, type GalleryQuery } from '../galleryQuery';
 import { GalleryFilterSheet } from './GalleryFilterSheet';

@@ -1,4 +1,4 @@
-# NanoCloud HumanAesExpert sidecar — pinned CPU deps. No cloud/model download at
+# NubArca HumanAesExpert sidecar — pinned CPU deps. No cloud/model download at
 # runtime. Versions pinned for a reproducible internal image. The checkpoint's
 # custom code requires transformers==4.44.2 (per the official model card).
 #

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ApiError, type MediaLibraryBulkResult } from '@nanocloud/api-client';
+import { ApiError, type MediaLibraryBulkResult } from '@nubarca/api-client';
 import { useAuth } from '../../auth/useAuth';
 import { useI18n } from '../../i18n';
 

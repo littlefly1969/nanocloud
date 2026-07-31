@@ -5,13 +5,13 @@ import {
   getPhotoExport,
   revokePhotoExport,
   type PhotoExportStatus,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n';
 
 // "Download photo archive" UI. Creates a read-only export session, polls its
 // build status, and shows a Windows-friendly PowerShell command that downloads
-// every photo preserving the NanoCloud folder tree (no ZIP, originals only).
+// every photo preserving the NubArca folder tree (no ZIP, originals only).
 // The token is held in memory for the session view only and never logged.
 
 function formatBytes(n: number): string {
@@ -28,21 +28,36 @@ function psQuote(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
 }
 
-// The `$Dest` line: a user-chosen absolute path when provided, else a sensible
+// The default export folder, under the user's Windows profile.
+export const DEFAULT_EXPORT_FOLDER = 'NubArcaExport';
+
+// What the folder was called before the NubArca rename. The generated script
+// re-downloads nothing it already has (it skips by size), so a returning reader
+// whose archive lives in the old folder must keep using it — otherwise a purely
+// cosmetic rename would silently re-fetch their entire photo library. The
+// fallback is one-directional and only applies when the new folder does not
+// exist yet.
+export const LEGACY_EXPORT_FOLDER = 'NanoCloudExport';
+
+// The `$Dest` assignment: a user-chosen absolute path when provided, else the
 // default in the user's profile folder (built with Join-Path so $HOME expands —
-// never a literal "%USERPROFILE%").
+// never a literal "%USERPROFILE%"). An explicit path is used verbatim; only the
+// default consults the legacy folder.
 function destLine(destDir: string): string {
   const trimmed = destDir.trim();
-  return trimmed.length > 0
-    ? `$Dest    = ${psQuote(trimmed)}`
-    : `$Dest    = Join-Path $HOME 'NanoCloudExport'`;
+  if (trimmed.length > 0) return `$Dest    = ${psQuote(trimmed)}`;
+  return `$Dest    = Join-Path $HOME '${DEFAULT_EXPORT_FOLDER}'
+$Legacy  = Join-Path $HOME '${LEGACY_EXPORT_FOLDER}'
+# Resume a pre-rename export where it already lives, instead of downloading the
+# whole archive again into a differently named folder.
+if (-not (Test-Path -LiteralPath $Dest) -and (Test-Path -LiteralPath $Legacy)) { $Dest = $Legacy }`;
 }
 
 // Parallel PowerShell script (RunspacePool, PS 5.x / PS 7 compatible).
 // -LiteralPath throughout so filenames with [ ] are handled correctly.
 // `destDir` is the folder ON THE WINDOWS PC (empty = default under $HOME).
 function powershellScript(origin: string, sessionId: string, token: string, destDir: string): string {
-  return `# NanoCloud photo archive export — Windows PowerShell (PS 5.x / PS 7).
+  return `# NubArca photo archive export — Windows PowerShell (PS 5.x / PS 7).
 $ErrorActionPreference = 'Stop'
 $ProgressPreference    = 'SilentlyContinue'
 $Base      = '${origin}'
@@ -236,7 +251,7 @@ export function PhotoArchiveExportPanel() {
           autoComplete="off"
         />
         <p className="muted export-dest-hint">
-          {t('export.destHintPre')}<code>%USERPROFILE%\NanoCloudExport</code>{t('export.destHintPost')}
+          {t('export.destHintPre')}<code>{`%USERPROFILE%\\${DEFAULT_EXPORT_FOLDER}`}</code>{t('export.destHintPost')}
         </p>
       </div>
 
@@ -274,7 +289,7 @@ export function PhotoArchiveExportPanel() {
             <>
               <h4>{t('export.psHeading')}</h4>
               <p className="muted">
-                {t('export.psIntro1')}<code>.ps1</code>{t('export.psIntro2')}<code>%USERPROFILE%\NanoCloudExport</code>{t('export.psIntro3')}
+                {t('export.psIntro1')}<code>.ps1</code>{t('export.psIntro2')}<code>{`%USERPROFILE%\\${DEFAULT_EXPORT_FOLDER}`}</code>{t('export.psIntro3')}
               </p>
               <textarea
                 className="export-command"

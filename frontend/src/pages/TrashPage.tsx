@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError } from '@nanocloud/api-client';
+import { ApiError } from '@nubarca/api-client';
 import {
   emptyTrash,
   getTrash,
@@ -11,7 +11,7 @@ import {
   type FileTrashSummary,
   type FolderTrashSummary,
   type TrashResponse,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { formatSize } from '../components/format';
 import { useI18n } from '../i18n';
