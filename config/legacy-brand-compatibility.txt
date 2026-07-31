@@ -230,7 +230,7 @@ identifier:  Repository name in the git remote and checkout path
 match:       Progetti/nanocloud|github\.com[:/]littlefly1969/nanocloud|/opt/nanocloud
 why:         The remote URL and the deployment checkout path.
 breaks:      Push/pull and every deploy command that cd's into the checkout.
-remove-when: The repository is renamed on the host, with remotes and the deploy path updated together.
+remove-when: BRAND-02 renames the GitHub repository and the deployment checkout, updating remotes, the deploy path and CLAUDE.md together. Deliberately NOT done in this slice: renaming the repository breaks every existing clone's remote and every documented `cd /opt/nanocloud` command.
 
 [entry]
 identifier:  SBOM component and property names for the OpenVINO native bundle
@@ -281,7 +281,7 @@ remove-when: Never.
 [entry]
 identifier:  The rebrand's own tooling, tests and documentation
 match:       .
-paths:       assets/brand/**,scripts/generate-brand-assets.py,config/legacy-brand-compatibility.txt,scripts/check-brand-cleanliness.sh,docs/brand.md,frontend/src/brand/brand.test.tsx,frontend/src/storage/brandedStorageKey.ts,frontend/src/theme/themePreference.ts,frontend/src/theme/themePreference.test.ts,frontend/src/theme/themeBootstrap.test.ts,frontend/src/i18n/i18n.test.tsx,tests/NanoCloud.Api.Tests/Branding/**
+paths:       assets/brand/**,scripts/generate-brand-assets.py,config/legacy-brand-compatibility.txt,scripts/check-brand-cleanliness.sh,docs/brand.md,frontend/src/brand/brand.test.tsx,frontend/src/brand/brandPackage.test.ts,frontend/src/storage/brandedStorageKey.ts,frontend/src/theme/themePreference.ts,frontend/src/theme/themePreference.test.ts,frontend/src/theme/themeBootstrap.test.ts,frontend/src/i18n/i18n.test.tsx,tests/NanoCloud.Api.Tests/Branding/**
 why:         The allowlist, the checker, the brand docs and the migration/absence tests must be able to NAME the former identifiers in order to describe or assert against them.
 breaks:      The checker could not describe what it allows, and the tests that prove the old name is gone could not reference it.
 remove-when: Never.

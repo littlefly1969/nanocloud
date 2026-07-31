@@ -85,8 +85,10 @@ a third-party CDN at runtime.**
 
 Only the required weights ship, latin subset only (the UI is en + it):
 
-- Space Grotesk 500, 700
-- Exo 2 400, 500, 600, 700
+- Space Grotesk 500, 600, 700 — headings and display text
+- Exo 2 400, 500, 600 — UI, body and labels, plus 700 because thirteen
+  stylesheet rules genuinely ask for it and a missing face would be
+  synthesised into a fake bold
 
 `@fontsource` sets `font-display: swap`, so text paints immediately in the
 fallback stack and is never invisible. Every font token ends in a real
@@ -113,40 +115,71 @@ approved variants, or add heavy shadows.
 
 ## Assets
 
-Approved source artwork is preserved at full resolution in
-[`assets/brand/source/`](../assets/brand/source) and is never edited. Every
-runtime image is generated from it by
-[`scripts/generate-brand-assets.py`](../scripts/generate-brand-assets.py), which
-only trims, pads and **downscales** — it refuses to upscale past a source, and
-refuses outright to build a runtime asset from a guideline board.
+`assets/brand/nubarca/` is the **canonical source of truth** for every NubArca
+visual asset. It is the approved handoff package, imported without redesign:
 
-| Source file | Role |
-| --- | --- |
-| `icon-transparent.png` | Primary icon, alpha, light-on-dark. The app-shell mark. |
-| `app-icon.png` | Opaque app-icon artwork — favicon, PWA, Apple touch, maskable, TV icon. |
-| `tv-lockup.png` | The approved `NubArca TV` lockup. |
-| `wordmark-dark-text-transparent.png` | Approved wordmark with **dark** text. Light backgrounds only. |
-| `reference-brand-system.png` | Guideline board — **reference only**, never UI. |
-| `reference-color-and-type.png` | Guideline board — **reference only**, never UI. |
-| `reference-development-guidelines.png` | Guideline board — **reference only**, never UI. |
+```
+assets/brand/nubarca/
+  README.md  NUBARCA_BRAND_HANDOFF.md  brand-manifest.json  checksums.sha256
+  source/      8 masters      — preserved originals, never shipped
+  runtime/     39 assets      — the only assets applications may use
+    favicon/  pwa/  tv/  web/
+  reference/   7 boards       — documentation, never runtime UI
+```
 
-Regenerate with `python3 scripts/generate-brand-assets.py`; verify the committed
-derivatives still match their sources with `--check`. Outputs land in
-`frontend/public/brand/` and `tv/assets/brand/`.
+54 catalogued assets. `sha256sum --check checksums.sha256` must pass; the
+manifest records each asset's dimensions, alpha, glow and provenance, and
+`frontend/src/brand/brandPackage.test.ts` verifies all of it against the real
+binaries — including that every `runtime/` file is runtime-ready and that no
+source master or reference board can reach a shipped directory.
 
-### Why the app shell renders the wordmark as text
+The approved binaries are never edited. Metadata may be corrected when it
+misdescribes a binary; the affected checksum entry is then refreshed and the
+whole file re-verified.
 
-The only approved transparent wordmark has **dark** text (`#000829` / `#0160D9`).
-On the dark default theme it would be invisible, and informally recoloring an
-official asset is not permitted. The brand contract's own fallback applies: use
-the standalone approved icon plus normal UI text. That is what
-[`BrandMark`](../frontend/src/brand/BrandMark.tsx) does — the icon carries the
-accessible name and the wordmark is live text in Space Grotesk, two-tone with
-`Arca` in the accent colour. It stays crisp at any zoom and respects the reader's
-font size.
+### Source to consumer
 
-The dark-text wordmark is still shipped, as `wordmark-dark-text-{240,480,960}.png`,
-for use on guaranteed-light surfaces.
+`scripts/sync-brand-assets.py` copies `runtime/` assets into the directories the
+platforms require. It **only copies** — no resizing, recolouring or
+regeneration — so every served file has the same SHA-256 as its canonical
+source. `--check` re-verifies that. Destination basenames match the canonical
+ones, so any consumer path traces back to the package by name.
+
+| Consumer | From | Used for |
+| --- | --- | --- |
+| `frontend/public/brand/favicon*` | `runtime/favicon/` | browser tab icons |
+| `frontend/public/brand/nubarca-pwa-*`, `nubarca-apple-touch-icon-180.png` | `runtime/pwa/` | PWA install + Apple touch |
+| `frontend/public/brand/nubarca-mark-flat-on-{dark,light}-{16..256}.png` | `runtime/web/` | shell, navigation, drawer |
+| `frontend/public/brand/nubarca-wordmark-on-dark-{480,960,1440}w.png`, `nubarca-wordmark-on-light.png` | `runtime/web/` | login and prominent placements |
+| `tv/assets/brand/nubarca-expo-app-icon-1024.png` | `runtime/pwa/` | Expo launcher + adaptive icon |
+| `tv/assets/brand/nubarca-android-tv-banner-320x180.png` | `runtime/tv/` | Android TV banner slot |
+| `tv/assets/brand/nubarca-fire-tv-{icon-512,banner-1280x720}.png` | `runtime/tv/` | Fire TV icon and banner |
+| `tv/assets/brand/nubarca-tv-lockup-transparent-{640,1280,1800}w.png` | `runtime/tv/` | in-app TV branding |
+| `tv/assets/brand/nubarca-tv-splash-1920x1080.png` | `runtime/tv/` | TV splash composition |
+
+Run `python3 scripts/sync-brand-assets.py` after changing the package;
+`--check` fails the build if a consumer copy drifts.
+
+### Which artwork goes where
+
+Two rules the code enforces rather than documents:
+
+**Small UI contexts (16–48 px) use the FLAT mark.** The launcher/PWA icon is
+luminous and framed; at 26 px its glow smears and its frame competes with the
+surrounding chrome. It is an app icon, not a UI icon. `flatMarkUrl()` picks the
+smallest shipped size covering the rendered box at 2×.
+
+**Dark and light surfaces get different artwork.** The on-dark mark and wordmark
+carry Cloud White; the on-light ones carry Midnight Navy. `BrandMark` selects
+from the *resolved* theme, so Cloud White artwork never lands on Cloud White.
+
+The approved light-surface wordmark places the lockup on a much larger
+transparent canvas (77.2% width usage, against 98.3% for the dark files).
+`wordmarkAsset()` divides by that measured ratio, so a requested width is the
+width of the **visible lockup** in either theme and the 120 px minimum is real.
+
+Reference boards are documentation only. They are never copied into
+`public/` or `tv/assets/`, and the production build contains none.
 
 ## Legacy compatibility identifiers
 
