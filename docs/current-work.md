@@ -31,7 +31,7 @@ baseline and active work; do not use it as a chronological work log.
 - Read `deploy/FAST_DEPLOY.md` in full immediately before any production
   deployment, rebuild, release-pin change or production migration.
 
-## Active slice — UX-01D + BRAND-01 NubArca rebrand
+## Active slice — BRAND-01C NubArca asset integration (closes the rebrand)
 
 Branch `feat/nubarca-rebrand`, started from `main` (`60984e8`), which already
 contains the merged UX-01 work (`cfee4fd`). Not pushed, not merged, not
@@ -62,6 +62,11 @@ roles and the allowlist policy.
 - **Compatibility**: `config/legacy-brand-compatibility.txt` declares every
   retained legacy identifier with why it stays and what would break;
   `scripts/check-brand-cleanliness.sh` enforces it and self-tests its own engine.
+- **Canonical assets**: `assets/brand/nubarca/` is the source of truth (54
+  assets, all checksums verified). `scripts/sync-brand-assets.py` copies
+  runtime assets into `frontend/public/brand/` and `tv/assets/brand/`
+  byte-for-byte; `--check` fails if a consumer copy drifts. The earlier
+  generator is gone — it derived artwork from provisional sources.
 
 Decisions worth remembering:
 
@@ -80,6 +85,13 @@ Decisions worth remembering:
 - The photo-export folder rename carries a fallback: the generated script skips
   files it already has, so a bare rename would silently re-download the reader's
   entire archive.
+- The approved light-surface wordmark sits on a much larger transparent canvas
+  than the dark one (77.2% vs 98.3% width usage). `wordmarkAsset()` divides by
+  that measured ratio so a requested width is the VISIBLE lockup's width in
+  either theme — otherwise the light variant renders smaller and can slip under
+  the 120px minimum.
+- Renaming the GitHub repository and the `/opt/nanocloud` checkout is deferred
+  to BRAND-02; both are allowlisted until then.
 
 ## Superseded slice — UX-01 app shell, cloud functions and media experience
 

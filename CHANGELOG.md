@@ -29,6 +29,16 @@ of what shipped, not a description of the product today.
   storage or Docker volume identity changed.
 - `scripts/check-brand-cleanliness.sh` fails on any new occurrence of the former
   name outside that allowlist. See `docs/brand.md`.
+- The approved visual package is imported under `assets/brand/nubarca/` as the
+  canonical source of truth: 54 catalogued assets with checksums, dimensions,
+  alpha and provenance, all verified against the real binaries.
+  `scripts/sync-brand-assets.py` copies runtime assets into the platform
+  directories byte-for-byte — it never resizes, recolours or regenerates — so
+  every shipped image hashes identically to its canonical source. Source
+  masters and reference boards are structurally excluded from the build.
+- Small UI contexts use the approved flat mark rather than the luminous
+  launcher icon, and dark and light surfaces get their own approved mark and
+  wordmark variants.
 
 ### Fixed
 
