@@ -258,10 +258,20 @@ a {
   margin-top: 1.25rem;
   padding: 0.625rem;
   border: none;
-  border-radius: 0.375rem;
-  background: var(--accent);
-  color: #fff;
+  border-radius: var(--radius-button);
+  /* Carries white text, so it must be the brand Electric Blue FILL that
+     --accent-contrast is contrast-checked against (4.84:1). The lighter
+     --accent tint exists for accent TEXT; white on it is only 3.6:1. */
+  background: var(--accent-strong);
+  color: var(--accent-contrast);
   cursor: pointer;
+}
+
+.login-card button[type='submit']:focus-visible {
+  /* Without an explicit rule this fell back to the UA's 1px black outline,
+     which is invisible on the dark theme. */
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .login-card button[type='submit']:disabled {
@@ -6642,7 +6652,11 @@ video.lightbox-image {
 }
 .media-kind-tab-count[data-pending='true'] { color: transparent; }
 .media-kind-tab.is-active .media-kind-tab-count {
-  color: var(--accent);
+  /* --accent on --accent-subtle is only 3.74:1 — the tinted accent sits too
+     close to the tinted background it is printed on. The count is small text,
+     so it takes the primary text colour and lets the tinted pill carry the
+     "active" signal. */
+  color: var(--text-primary);
   background: var(--accent-subtle);
   border-color: transparent;
 }
