@@ -150,6 +150,15 @@ def self_test(rules: list[Rule]) -> int:
         ("frontend/src/brand/x.ts", "export const NAME = 'nanocloud';"),
         ("tv/src/i18n/en.ts", "'title': 'NANOCLOUD TV',"),
         ("mobile/src/App.tsx", "const n = 'Nano-Cloud';"),
+        # Ordinary product prose in CURRENT documentation. These used to be
+        # accepted by a single `match: .` rule spanning all of docs/** and
+        # deploy/**.md — the exact hole this suite now closes.
+        ("docs/current-work.md", "NanoCloud is the current product."),
+        ("docs/development-environment.md", "Start using NanoCloud today."),
+        ("docs/OPERATIONS.md", "NanoCloud stores blobs by SHA-256."),
+        ("deploy/FIRST_DEPLOY.md", "Deploying NanoCloud takes about an hour."),
+        ("tv/README.md", "NanoCloud TV is the television client."),
+        ("CHANGELOG.md", "NanoCloud gains a new photo wall."),
     ]
     must_allow = [
         ("src/NanoCloud.Api/Program.cs", 'options.Cookie.Name = "NanoCloud.Auth";'),
@@ -164,6 +173,22 @@ def self_test(rules: list[Rule]) -> int:
         ("frontend/nginx.conf", 'filename="nanocloud-tv.apk"'),
         ("CHANGELOG.md", "NanoCloud `0.2.0` is the consolidated public baseline."),
         ("src/NanoCloud.Api/Data/Migrations/20260516212052_InitialStorageCore.cs", "namespace NanoCloud.Api.Data.Migrations;"),
+        # Compatibility-sensitive identifiers quoted verbatim by runbooks.
+        ("CLAUDE.md", "SSH target: stefano@192.168.1.180, repo path /opt/nanocloud"),
+        ("deploy/FAST_DEPLOY.md", "cd /opt/nanocloud"),
+        ("deploy/FAST_DEPLOY.md", "$DC exec api dotnet NanoCloud.Api.dll ai status"),
+        ("docs/OPERATIONS.md", "dotnet NanoCloud.Api.dll storage blobs audit-references"),
+        ("docs/tv-apk-distribution.md", "https://nanocloud.littlefly.it/download/tv/nanocloud-tv.apk"),
+        ("frontend/nginx.conf", 'alias /usr/share/nginx/html/download/tv/nanocloud-tv.apk;'),
+        ("CHANGELOG.md", "Effective 31 July 2026, NanoCloud was renamed **NubArca**."),
+        ("tv/README.md", "The product was renamed from **NanoCloud** to **NubArca**."),
+        ("deploy/FIRST_DEPLOY.md", "git clone https://github.com/<your-fork>/nanocloud.git"),
+        ("deploy/FIRST_DEPLOY.md", "sudo ln -sf /etc/nginx/sites-available/nanocloud /etc/nginx/sites-enabled/"),
+        ("deploy/FIRST_DEPLOY.md", "./deploy/restore.sh ./backups/nanocloud-* --yes"),
+        ("docs/ai-photo-pgvector.md", "REINDEX DATABASE nanocloud;"),
+        ("docs/tv-ota-updates.md", "-days 1825 -subj '/CN=NanoCloud TV OTA' \\"),
+        ("src/NanoCloud.Api/Data/Migrations/20260701100538_AddPrivateVaults.Designer.cs",
+         'b.ToTable("blob_metadata");  // NanoCloud.Api.Domain.BlobMetadata'),
     ]
 
     failures: list[str] = []

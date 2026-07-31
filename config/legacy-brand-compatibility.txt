@@ -54,7 +54,13 @@
 
 [entry]
 identifier:  .NET solution, project, namespace and assembly name
-match:       NanoCloud\.(Api|sln)|NanoCloud\.Api\.(Tests|dll|csproj)|namespace NanoCloud|using NanoCloud|NanoCloud\.Api\.Tests
+match:       NanoCloud\.(Api|sln)\b|NanoCloud\.Api\.(Tests|dll|csproj)\b
+# NARROWED: this previously also carried bare `namespace NanoCloud` and
+# `using NanoCloud` alternatives, which matched any English sentence
+# containing "using NanoCloud" — e.g. "Start using NanoCloud today." Every
+# real declaration in src/ and tests/ is dotted (NanoCloud.Api.*), so the
+# dotted forms above already cover them and the bare ones only widened the
+# rule. The self-test pins both directions.
 why:         The assembly name is the produced DLL name and therefore the container entrypoint and every documented operator command.
 breaks:      docker entrypoint fails to start; every `$DC exec api dotnet NanoCloud.Api.dll ...` runbook command breaks; deploy scripts and monitoring break.
 remove-when: A coordinated release renames the assembly, the Dockerfile ENTRYPOINT, deploy/, CLAUDE.md and docs together, and is verified on the production host.
@@ -262,13 +268,85 @@ remove-when: Any time; purely cosmetic.
 # would make the record inaccurate. Current installation and user documentation
 # uses NubArca; see docs/brand.md.
 
+# NARROWED. This was previously one rule with `match: .` over CHANGELOG.md,
+# docs/**, deploy/**.md and tv/README.md, which permitted ARBITRARY old-brand
+# prose anywhere in the documentation — it would have accepted a brand-new
+# sentence like "NanoCloud is the current product." in docs/current-work.md.
+# The 50 lines it was covering were audited: 33 were ordinary product prose and
+# have been rebranded, and the 17 that genuinely had to stay are now matched by
+# the specific rules below. No documentation rule uses a bare `.` any more.
+
 [entry]
-identifier:  Historical documentation, changelog and operational runbooks
+identifier:  The rename statement itself, in the records that announce it
+match:       \*{0,2}NanoCloud\*{0,2} was renamed|renamed from \*{0,2}NanoCloud|NanoCloud\*{0,2} to \*{0,2}NubArca|keep their old .*NanoCloud.* spelling
+paths:       CHANGELOG.md,tv/README.md,docs/brand.md
+why:         A document cannot state that the product was renamed without naming what it was renamed from.
+breaks:      "NubArca was renamed NubArca" — the sentence stops being true or even meaningful.
+remove-when: Never; this is the historical record of the rename.
+
+[entry]
+identifier:  Historical release entries in the changelog
+match:       ^NanoCloud `[0-9]
+paths:       CHANGELOG.md
+why:         Records what shipped under the name it shipped with. Anchored to the line start and a version literal so it cannot cover new prose.
+breaks:      Rewriting a released entry makes the changelog claim a name that release never had.
+remove-when: Never.
+
+[entry]
+identifier:  Repository clone directory in setup runbooks
+match:       git clone [^\n]*nanocloud|cd nanocloud\b|<repo> nanocloud
+paths:       deploy/**.md,docs/**.md
+why:         `git clone` creates a directory named after the repository, which is still nanocloud pending BRAND-02.
+breaks:      Every subsequent `cd` and relative path in the runbook points at a directory that does not exist.
+remove-when: BRAND-02 renames the GitHub repository.
+
+[entry]
+identifier:  nginx site filename on the production host
+match:       sites-(available|enabled)/nanocloud
+paths:       deploy/**.md
+why:         The site file is already installed under this name on the running host.
+breaks:      The runbook edits and symlinks a file the operator does not have, leaving the real site untouched.
+remove-when: The site file is renamed on the host during a maintenance window.
+
+[entry]
+identifier:  Backup archive glob quoted in runbooks
+match:       backups/nanocloud-|nanocloud-\*
+paths:       deploy/**.md
+why:         Existing backup directories on disk carry this prefix; the restore commands locate them by it.
+breaks:      The documented restore command matches no existing archive.
+remove-when: The restore script accepts both prefixes and the old archives have aged out.
+
+[entry]
+identifier:  Database name in SQL maintenance commands
+match:       (REINDEX|ALTER|VACUUM|ANALYZE) DATABASE nanocloud
+paths:       docs/**.md
+why:         The live database is named nanocloud; these are commands an operator pastes verbatim.
+breaks:      The command errors with "database does not exist".
+remove-when: Never for branding alone — see the database entry above.
+
+[entry]
+identifier:  Historical benchmark probe filename
+match:       /tmp/nanocloud-[a-z0-9-]+\.(py|sh|json)
+paths:       docs/model-deployment/**
+why:         A dated benchmark record naming the exact script that produced the numbers.
+breaks:      The record no longer identifies what was actually run.
+remove-when: Never; the measurement already happened under that filename.
+
+[entry]
+identifier:  TV OTA signing certificate subject
+match:       /CN=NanoCloud TV OTA
+paths:       docs/**.md,tv/**
+why:         Deployed TVs validate OTA manifests against a certificate issued with this exact subject.
+breaks:      Regenerating the certificate with a new CN invalidates OTA trust on every device already in the field.
+remove-when: A coordinated certificate rotation that ships the new trust anchor before the new CN is used.
+
+[entry]
+identifier:  Agent working notes excluded from the product surface
 match:       .
-paths:       CHANGELOG.md,docs/**,deploy/**.md,.claude/**,.codex/**,tv/README.md
-why:         Historical accuracy, plus runbooks that must quote live infrastructure identifiers (volumes, paths, entrypoint commands) verbatim to remain usable. README.md, ARCHITECTURE.md, CLAUDE.md, ROADMAP.md, AGENTS.md and DEVELOPMENT_STATE.md are deliberately NOT here: they describe the current product and are held to the new name.
-breaks:      A runbook that names a volume or command incorrectly is worse than one that names it with the legacy spelling.
-remove-when: Never for history. Runbook identifiers follow whenever the underlying identifier is migrated.
+paths:       .claude/**,.codex/**
+why:         Local assistant context files, not product documentation and not shipped.
+breaks:      Nothing; they are excluded from the build and from every distribution.
+remove-when: Any time; they carry no product surface.
 
 [entry]
 identifier:  EF Core migration history

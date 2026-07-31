@@ -3,7 +3,7 @@
 ## 1. Purpose
 
 This file is the **canonical description of the toolchain** needed to develop,
-build, test and validate NanoCloud. It exists so that a new workstation can be
+build, test and validate NubArca. It exists so that a new workstation can be
 brought to a working state without guessing versions, and so that every
 tolerated warning and known version drift is a recorded decision rather than
 folklore.

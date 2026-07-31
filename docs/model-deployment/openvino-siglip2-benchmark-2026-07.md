@@ -103,7 +103,7 @@ plugin. The recovered benchmark artifact
 (`/tmp/nanocloud-siglip-scheduling-probe.py` on the target host) compiled one
 CPU FP32 model and one GPU FP32 model, created one `InferRequest` for each, and
 fed them from a shared `queue.Queue` using two Python threads. The CPU processed
-34 images and the GPU 26 in the same interval. No NanoCloud application code was
+34 images and the GPU 26 in the same interval. No NubArca application code was
 changed, but the benchmark harness itself supplied the bounded scheduling.
 
 It is also not OpenVINO `HETERO`: `HETERO` did not partition this graph, assigned

@@ -1,4 +1,4 @@
-# NanoCloud — production smoke checklist
+# NubArca — production smoke checklist
 
 A short list of "did the deployment actually come up correctly?" checks.
 Run this:

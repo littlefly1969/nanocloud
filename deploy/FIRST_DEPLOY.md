@@ -1,7 +1,7 @@
-# NanoCloud — first-deploy runbook
+# NubArca — first-deploy runbook
 
 This runbook walks an operator from an **empty host** to a verified
-NanoCloud deployment. It assumes you've already read the "Production
+NubArca deployment. It assumes you've already read the "Production
 deployment" section of the [main README](../README.md) at least once; this
 document is the linear, step-by-step companion you can follow once.
 
@@ -114,12 +114,12 @@ sudo systemctl daemon-reload
 sudo mount -a
 findmnt /mnt/raid1           # confirm it is mounted (and on the RAID device)
 
-# Create the NanoCloud data directories on RAID1.
+# Create the NubArca data directories on RAID1.
 sudo mkdir -p /mnt/raid1/nanocloud/blobs
 sudo mkdir -p /mnt/raid1/nanocloud/backups
 ```
 
-### Point NanoCloud at them
+### Point NubArca at them
 
 In `.env` set the host paths:
 
@@ -340,7 +340,7 @@ pending migrations is a no-op.
 
 ## 8. Create the first admin user
 
-**Why.** NanoCloud has no public registration. Without this step you have a
+**Why.** NubArca has no public registration. Without this step you have a
 running stack you cannot log into.
 
 > **Important — how `docker compose run` handles variables.**
@@ -579,7 +579,7 @@ at `/health`.
 
 ## 16. PostgreSQL maintenance (occasional)
 
-NanoCloud needs no special tuning, but a few periodic checks keep the admin
+NubArca needs no special tuning, but a few periodic checks keep the admin
 Storage Stats page and large admin imports fast. None require exposing
 PostgreSQL publicly or any external monitoring stack.
 
@@ -603,7 +603,7 @@ docker compose -f docker-compose.prod.yml --env-file .env exec postgres \
   FROM pg_stat_activity WHERE state <> 'idle';` (the `query` text stays inside
   the DB shell — never copy it anywhere that isn't admin-only). If the
   `pg_stat_statements` extension is enabled you can also rank queries by total
-  time; it is optional and not required by NanoCloud.
+  time; it is optional and not required by NubArca.
 - **Storage Stats slow?** The admin page now shows a per-phase timing line
   ("Computed in N ms · physical scan … · metadata …") and caches the result
   for ~30s; hit **Refresh** to force a recompute. If "physical scan" dominates,

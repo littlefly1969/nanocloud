@@ -2,7 +2,7 @@
 
 Deployment guidance for the owner-private **Plates (Targhe)** model pipelines:
 ALPR (license-plate detection + OCR) and privacy-only face redaction. This is
-documentation only — **no model weights are committed to NanoCloud**, and the
+documentation only — **no model weights are committed to NubArca**, and the
 production default is **disabled**.
 
 > Privacy boundaries (unchanged): Plates data is owner-private. Nothing here is
@@ -83,7 +83,7 @@ models/
     "plateDetector": { "kind": "Yolo", "path": "detector.onnx", "inputWidth": 640, "inputHeight": 640 },
     "plateOcr": { "kind": "FastPlateOcr", "path": "ocr.onnx", "inputWidth": 160, "inputHeight": 40, "alphabet": "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" }
   },
-  "notes": "No model weights are committed to NanoCloud."
+  "notes": "No model weights are committed to NubArca."
 }
 ```
 
@@ -146,6 +146,6 @@ traces, or secrets.
 Any ALPR model selected for deployment must be reviewed before use and recorded
 with: a clear license, source URL, version/hash, the expected input/output
 contract, and deployment approval. **Do not add unreviewed third-party weights to
-the repository.** The reused NanoCloud face detector keeps its existing
+the repository.** The reused NubArca face detector keeps its existing
 provenance/license documentation in [ai-substrate.md](ai-substrate.md) — refer to
 it rather than duplicating.

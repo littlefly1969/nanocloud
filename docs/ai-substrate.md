@@ -1,6 +1,6 @@
 # AI Substrate
 
-NanoCloud is being built toward an *updateable* AI substrate (embeddings,
+NubArca is being built toward an *updateable* AI substrate (embeddings,
 document text/OCR, faces, semantic + unified search) that can adopt new models
 quickly. The full phased design lives on the `docs/ai-substrate-plan` branch;
 this document tracks what is **actually implemented**.
@@ -225,7 +225,7 @@ product rule in `CLAUDE.md`).
   real privacy face detector is deployed.
 - **Slice 4** (`feature/plates-production-models-diagnostics`): production model
   **plumbing** + provider selection for both Plates pipelines, and — the headline
-  — it can **reuse the existing NanoCloud face detector for Plates redaction,
+  — it can **reuse the existing NubArca face detector for Plates redaction,
   boxes only**. With `Plates:FaceRedaction:Provider=ExistingNanoCloudFaceDetector`,
   `ExistingNanoCloudPlateFaceBoxDetector` resolves the face profile via
   `FaceProfileResolver`/`IAiBackendResolver` and calls the SCRFD backend's

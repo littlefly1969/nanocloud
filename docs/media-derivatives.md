@@ -5,7 +5,7 @@
 > **ImageSharp** path as an always-available fallback. See
 > [Image backends](#image-backends-libvips--imagesharp) below.
 
-NanoCloud produces four derived artifacts from a source blob:
+NubArca produces four derived artifacts from a source blob:
 
 | Size     | What it is                          | Generator           |
 | -------- | ----------------------------------- | ------------------- |

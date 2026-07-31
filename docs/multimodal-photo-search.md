@@ -1,6 +1,6 @@
 # Multimodal photo search — SigLIP2 So400m / 1152
 
-NanoCloud uses one production photo-embedding profile for two deliberately
+NubArca uses one production photo-embedding profile for two deliberately
 separate retrieval modes:
 
 - **image → image**: the existing Similar Photos surfaces;

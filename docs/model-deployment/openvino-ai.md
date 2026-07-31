@@ -7,7 +7,7 @@
 
 # OpenVINO FP32 AI acceleration and Party fast lane
 
-This slice accelerates the existing, quality-validated NanoCloud ONNX models. It
+This slice accelerates the existing, quality-validated NubArca ONNX models. It
 does not change checkpoints, embedding dimensions, preprocessing, tokenization,
 thresholds, vector tables, blobs, or ownership/privacy rules.
 
