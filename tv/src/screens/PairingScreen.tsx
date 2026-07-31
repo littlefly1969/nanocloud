@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import { colors, font, spacing } from '../theme';
 import { startTvPairing, getTvPairingStatus, type TvPairingStarted } from '../api/tv';
 import { QrCode } from '../components/QrCode';
@@ -70,7 +70,18 @@ export function PairingScreen({ onPaired, notice = null }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{t('pairing.title')}</Text>
+      {/* The approved transparent NubArca TV lockup. Transparent, so it sits
+          on the screen's own Midnight Navy with no card edge or seam. The
+          product name travels as the accessibility label rather than a
+          second visible copy. */}
+      <Image
+        source={require('../../assets/brand/nubarca-tv-lockup-transparent-1280w.png')}
+        style={styles.lockup}
+        resizeMode="contain"
+        accessible
+        accessibilityRole="image"
+        accessibilityLabel={t('pairing.title')}
+      />
       {notice !== null && <Text style={styles.notice}>{notice}</Text>}
 
       {state.kind === 'starting' && (
@@ -113,7 +124,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     padding: spacing.xl,
   },
-  title: { color: colors.text, fontSize: font.title, fontWeight: '700', marginBottom: spacing.lg },
+  // 640x148 keeps the approved 4.31:1 lockup proportions exactly; never stretched.
+  lockup: { width: 640, height: 148, marginBottom: spacing.lg },
   notice: {
     color: colors.danger,
     fontSize: font.body,

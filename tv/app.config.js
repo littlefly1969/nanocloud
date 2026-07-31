@@ -67,13 +67,16 @@ module.exports = () => ({
     runtimeVersion,
     orientation: 'landscape',
     platforms: ['android', 'ios'],
-    icon: './assets/brand/tv-icon-512.png',
+    // Approved square launcher artwork (1024x1024), copied byte-for-byte from
+    // assets/brand/nubarca/ by scripts/sync-brand-assets.py.
+    icon: './assets/brand/nubarca-expo-app-icon-1024.png',
     // NOTE: there is deliberately no top-level `splash` key. Expo SDK 56 removed it
     // from the app-config schema (only `web.splash` for PWAs remains) and moved
     // splash configuration into the `expo-splash-screen` config plugin, which this
     // app does not depend on. Setting `splash` here would be silently ignored by
-    // prebuild. `assets/brand/tv-splash-1920x1080.png` is kept ready for the day
-    // expo-splash-screen is added.
+    // prebuild. The approved `assets/brand/nubarca-tv-splash-1920x1080.png` is
+    // kept ready for the day expo-splash-screen is added, and is what the
+    // in-app boot screen renders in the meantime.
     plugins: [
       // SDK 56 ships an expo-status-bar config plugin; register it explicitly
       // since this is a dynamic config (`expo install --fix` cannot auto-write it).
@@ -85,7 +88,9 @@ module.exports = () => ({
           androidTVRequired: true,
           // Android TV launcher banner slot: copied into the drawable-* resource
           // directories and referenced as android:banner in the manifest.
-          androidTVBanner: './assets/brand/tv-banner-320x180.png',
+          // Approved Android TV banner, authored at the exact 320x180 slot —
+          // never the 3:2 lockup stretched into 16:9.
+          androidTVBanner: './assets/brand/nubarca-android-tv-banner-320x180.png',
         },
       ],
     ],
@@ -123,9 +128,9 @@ module.exports = () => ({
       package: 'it.littlefly.nanocloudtv',
       versionCode: 3,
       usesCleartextTraffic,
-      icon: './assets/brand/tv-icon-512.png',
+      icon: './assets/brand/nubarca-fire-tv-icon-512.png',
       adaptiveIcon: {
-        foregroundImage: './assets/brand/tv-adaptive-icon-432.png',
+        foregroundImage: './assets/brand/nubarca-expo-app-icon-1024.png',
         backgroundColor: '#0a0f1a',
       },
     },
