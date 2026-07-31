@@ -77,13 +77,18 @@ function pctFromParams(params: URLSearchParams): number {
 // Project a similar-photo result onto the shared MediaItem shape the media wall
 // consumes. Every result of this endpoint is a photo.
 //
-// `width`/`height` are the ORIGINAL media's stored dimensions, so the shared
-// justified layout gives each result its true proportions — a portrait result is
-// a portrait tile — exactly as in the Library and Albums. When the server has no
-// extracted dimensions both are null and `getMediaAspectRatio` applies its square
-// photo fallback. The remaining fields the lean similarity DTO does not carry
-// stay null/0; the grid already handles that (no size/resolution line in the
-// hover overlay).
+// `width`/`height` are DISPLAY dimensions: the server resolves the stored pair
+// through ImageDisplayDimensions before sending it, so an EXIF quarter-turn
+// (orientation 5–8) arrives already swapped. They are NOT the coded dimensions
+// held in blob_metadata — those describe the bytes before rotation, and handing
+// them to the wall reserved a landscape tile for a portrait thumbnail.
+//
+// This is the same resolution the Library and Album listings apply, which is
+// what makes the shared justified layout give a result the identical tile in
+// every surface. When the server has no extracted dimensions both are null and
+// `getMediaAspectRatio` applies its square photo fallback. The remaining fields
+// the lean similarity DTO does not carry stay null/0; the grid already handles
+// that (no size/resolution line in the hover overlay).
 function toMediaItem(item: SimilarPhotoItem): MediaItem {
   return {
     id: item.fileItemId,
