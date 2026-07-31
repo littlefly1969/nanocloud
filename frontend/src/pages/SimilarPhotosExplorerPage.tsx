@@ -72,9 +72,15 @@ function pctFromParams(params: URLSearchParams): number {
 }
 
 // Project a similar-photo result onto the shared MediaItem shape the media wall
-// consumes. Every result of this endpoint is a photo. The fields the DTO does
-// not carry are null — the grid already handles that (square fallback tile, no
-// size/resolution line in the hover overlay).
+// consumes. Every result of this endpoint is a photo.
+//
+// `width`/`height` are the ORIGINAL media's stored dimensions, so the shared
+// justified layout gives each result its true proportions — a portrait result is
+// a portrait tile — exactly as in the Library and Albums. When the server has no
+// extracted dimensions both are null and `getMediaAspectRatio` applies its square
+// photo fallback. The remaining fields the lean similarity DTO does not carry
+// stay null/0; the grid already handles that (no size/resolution line in the
+// hover overlay).
 function toMediaItem(item: SimilarPhotoItem): MediaItem {
   return {
     id: item.fileItemId,
@@ -84,8 +90,8 @@ function toMediaItem(item: SimilarPhotoItem): MediaItem {
     displayName: item.name,
     mimeType: '',
     sizeBytes: 0,
-    width: null,
-    height: null,
+    width: item.width,
+    height: item.height,
     createdAt: '',
     updatedAt: null,
     takenAt: null,

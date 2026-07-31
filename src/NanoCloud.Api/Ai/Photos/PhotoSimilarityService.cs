@@ -102,7 +102,9 @@ public sealed class PhotoSimilarityService
                 var vectorItems = neighbours
                     .Select(n => new SimilarPhotoItem(n.FileItemId, n.Name, n.Score))
                     .ToList();
-                return new SimilarPhotosResult(ProfileAvailable: true, QueryIndexed: true, vectorItems, null);
+                return new SimilarPhotosResult(
+                    ProfileAvailable: true, QueryIndexed: true,
+                    await WithGeometryAsync(ownerUserId, vectorItems, cancellationToken), null);
             }
         }
 
@@ -159,7 +161,9 @@ public sealed class PhotoSimilarityService
             .Take(take)
             .ToList();
 
-        return new SimilarPhotosResult(ProfileAvailable: true, QueryIndexed: true, items, null);
+        return new SimilarPhotosResult(
+            ProfileAvailable: true, QueryIndexed: true,
+            await WithGeometryAsync(ownerUserId, items, cancellationToken), null);
     }
 
     // ------------------------------------------------------------------
@@ -241,7 +245,11 @@ public sealed class PhotoSimilarityService
                     .OrderByDescending(s => s.Score)
                     .ThenBy(s => s.FileItemId)
                     .ToList();
-                return Paginate(ordered, cursor, pageSize, queryIndexed: true);
+                var vectorPage = Paginate(ordered, cursor, pageSize, queryIndexed: true);
+                return vectorPage with
+                {
+                    Items = await WithGeometryAsync(ownerUserId, vectorPage.Items, cancellationToken),
+                };
             }
         }
 
@@ -293,7 +301,74 @@ public sealed class PhotoSimilarityService
             .Take(MaxExplorable)
             .ToList();
 
-        return Paginate(ordered, cursor, pageSize, queryIndexed: true);
+        // Geometry is attached to the RETURNED PAGE only, after the cursor has
+        // already selected it — never to the full candidate set.
+        var page = Paginate(ordered, cursor, pageSize, queryIndexed: true);
+        return page with
+        {
+            Items = await WithGeometryAsync(ownerUserId, page.Items, cancellationToken),
+        };
+    }
+
+    // Attach each item's ORIGINAL pixel dimensions from the persisted
+    // BlobMetadata row extracted at ingestion.
+    //
+    // Deliberately a separate, final step rather than part of the candidate
+    // query: it runs ONLY over the items actually being returned (one page, so
+    // at most MaxPageSize rows), it is identical for the pgvector and exact-scan
+    // backends, and — most importantly — it cannot influence scoring, the
+    // threshold, the ordering or the cursor, because it runs after all of those
+    // are decided and preserves the input order exactly.
+    //
+    // No image bytes are opened and no derivative is generated. A file whose blob
+    // has no metadata row (or no extracted dimensions) simply keeps null/null and
+    // the client falls back.
+    private async Task<IReadOnlyList<SimilarPhotoItem>> WithGeometryAsync(
+        Guid ownerUserId,
+        IReadOnlyList<SimilarPhotoItem> items,
+        CancellationToken cancellationToken)
+    {
+        if (items.Count == 0)
+        {
+            return items;
+        }
+
+        var ids = items.Select(i => i.FileItemId).ToArray();
+
+        // Owner-scoped as defence in depth: the ids already come from an
+        // owner-scoped query, so this can only ever narrow, never widen.
+        var rows = await (
+            from f in _db.FileItems.AsNoTracking()
+            join m in _db.BlobMetadata.AsNoTracking() on f.BlobObjectId equals m.BlobObjectId
+            where ids.Contains(f.Id) && f.OwnerUserId == ownerUserId
+            select new { f.Id, m.Width, m.Height })
+            .ToListAsync(cancellationToken);
+
+        var geometry = new Dictionary<Guid, (int? Width, int? Height)>(rows.Count);
+        foreach (var row in rows)
+        {
+            geometry[row.Id] = (row.Width, row.Height);
+        }
+
+        var enriched = new List<SimilarPhotoItem>(items.Count);
+        foreach (var item in items)
+        {
+            // Only a COMPLETE, positive pair is usable as an aspect ratio; a half
+            // known dimension is as unusable as none, so it is reported as
+            // unknown rather than as a misleading partial value.
+            if (geometry.TryGetValue(item.FileItemId, out var dims)
+                && dims.Width is > 0
+                && dims.Height is > 0)
+            {
+                enriched.Add(item with { Width = dims.Width, Height = dims.Height });
+            }
+            else
+            {
+                enriched.Add(item);
+            }
+        }
+
+        return enriched;
     }
 
     // Apply the (score desc, FileItemId asc) keyset cursor over a pre-ordered
@@ -528,7 +603,20 @@ public sealed record SimilarPhotosResult(
     IReadOnlyList<SimilarPhotoItem> Items,
     string? UnavailableReason = null);
 
-public sealed record SimilarPhotoItem(Guid FileItemId, string Name, double Score);
+// `Width`/`Height` are the ORIGINAL media's stored pixel dimensions, copied from
+// the already-persisted BlobMetadata extracted at ingestion — never measured from
+// the bytes at request time, and never a derivative's size. They exist purely so
+// a client can lay a result out at its true proportions instead of guessing a
+// square. Both are null when the blob has no extracted dimensions (pre-metadata
+// import, extraction failure), which callers must treat as "unknown" and fall
+// back on. Optional positional parameters keep every existing construction site
+// and the JSON shape additive/backward-compatible.
+public sealed record SimilarPhotoItem(
+    Guid FileItemId,
+    string Name,
+    double Score,
+    int? Width = null,
+    int? Height = null);
 
 // Paginated explorer result. Same owner-private guarantees as SimilarPhotosResult
 // plus a keyset cursor. `NextCursor` is null at the end of the result set.

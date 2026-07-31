@@ -229,7 +229,11 @@ export function MediaTile({
   const resolution = item.width != null && item.height != null
     ? `${item.width}×${item.height}`
     : null;
-  const details = [resolution, formatSize(item.sizeBytes)].filter(Boolean).join(' · ');
+  // A non-positive size means "not carried by this source" (the similarity DTO
+  // is leaner than MediaItem), not "an empty file" — rendering it as "0 B" would
+  // state something false about the original.
+  const size = item.sizeBytes > 0 ? formatSize(item.sizeBytes) : null;
+  const details = [resolution, size].filter(Boolean).join(' · ');
 
   return (
     <div

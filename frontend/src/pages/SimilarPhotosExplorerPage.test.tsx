@@ -57,15 +57,26 @@ function meta(name: string): MockHandler {
   return () => jsonResponse(metaDoc(SOURCE, name));
 }
 
+// A similar-photo result as the wire carries it. `width`/`height` are optional
+// here only so a fixture can omit them; the handler fills nulls, matching a
+// server that has no extracted dimensions.
+interface ResultFixture {
+  fileItemId: string;
+  name: string;
+  score: number;
+  width?: number | null;
+  height?: number | null;
+}
+
 function page(
-  items: { fileItemId: string; name: string; score: number }[],
+  items: ResultFixture[],
   opts: { hasMore?: boolean; nextCursor?: string | null; profileAvailable?: boolean; queryIndexed?: boolean } = {},
 ): MockHandler {
   return () =>
     jsonResponse({
       profileAvailable: opts.profileAvailable ?? true,
       queryIndexed: opts.queryIndexed ?? true,
-      items,
+      items: items.map((i) => ({ width: null, height: null, ...i })),
       nextCursor: opts.nextCursor ?? null,
       hasMore: opts.hasMore ?? false,
       unavailableReason: null,
@@ -94,12 +105,13 @@ function renderExplorer(state?: unknown) {
   );
 }
 
-const TWO_RESULTS = [
-  { fileItemId: 'r-1', name: 'forest.jpg', score: 0.92 },
-  { fileItemId: 'r-2', name: 'lake.jpg', score: 0.81 },
+const TWO_RESULTS: ResultFixture[] = [
+  // 3:2 landscape and 2:3 portrait, so a square fallback would be obvious.
+  { fileItemId: 'r-1', name: 'forest.jpg', score: 0.92, width: 3000, height: 2000 },
+  { fileItemId: 'r-2', name: 'lake.jpg', score: 0.81, width: 2000, height: 3000 },
 ];
 
-function handlers(items = TWO_RESULTS, opts = {}) {
+function handlers(items: ResultFixture[] = TWO_RESULTS, opts = {}) {
   return {
     'GET /api/files/src-1/metadata': meta('beach.jpg'),
     'GET /api/files/r-1/metadata': () => jsonResponse(metaDoc('r-1', 'forest.jpg')),
@@ -155,6 +167,70 @@ describe('Similar Photos Explorer — shared presentation', () => {
     expect(await screen.findByText('beach.jpg')).toBeInTheDocument();
     const source = document.querySelector('.similar-explorer-source-thumb img');
     expect(source?.getAttribute('src')).toBe('/api/files/src-1/preview');
+  });
+
+  it('lays each result out at its ORIGINAL proportions, not a square guess', async () => {
+    installFetchMock(handlers());
+    renderExplorer();
+    await screen.findByTestId('media-grid');
+
+    // The justified layout sizes each tile from the DTO's real dimensions, so a
+    // 3:2 landscape tile is wider than tall and a 2:3 portrait is taller than
+    // wide. Before geometry existed both were square.
+    const tiles = Array.from(document.querySelectorAll<HTMLElement>('.media-tile'));
+    expect(tiles).toHaveLength(2);
+
+    const ratios = tiles.map((t) => {
+      const width = Number.parseFloat(t.style.width);
+      const height = Number.parseFloat(t.style.height);
+      expect(width).toBeGreaterThan(0);
+      expect(height).toBeGreaterThan(0);
+      return width / height;
+    });
+
+    // forest.jpg is 3000×2000 (1.5), lake.jpg is 2000×3000 (0.667).
+    expect(ratios[0]).toBeCloseTo(1.5, 1);
+    expect(ratios[1]).toBeCloseTo(2 / 3, 1);
+    expect(ratios[0]).toBeGreaterThan(1);
+    expect(ratios[1]).toBeLessThan(1);
+  });
+
+  it('falls back to a square tile only when dimensions are genuinely missing', async () => {
+    installFetchMock(handlers([
+      { fileItemId: 'r-1', name: 'unknown.jpg', score: 0.9, width: null, height: null },
+    ]));
+    renderExplorer();
+    await screen.findByTestId('media-grid');
+
+    const tile = document.querySelector<HTMLElement>('.media-tile')!;
+    const ratio = Number.parseFloat(tile.style.width) / Number.parseFloat(tile.style.height);
+    // The shared PHOTO_FALLBACK_ASPECT_RATIO, applied by getMediaAspectRatio.
+    expect(ratio).toBeCloseTo(1, 1);
+  });
+
+  it('treats a half-known dimension pair as unknown', async () => {
+    installFetchMock(handlers([
+      { fileItemId: 'r-1', name: 'half.jpg', score: 0.9, width: 3000, height: null },
+    ]));
+    renderExplorer();
+    await screen.findByTestId('media-grid');
+
+    const tile = document.querySelector<HTMLElement>('.media-tile')!;
+    const ratio = Number.parseFloat(tile.style.width) / Number.parseFloat(tile.style.height);
+    expect(ratio).toBeCloseTo(1, 1);
+  });
+
+  it('does not claim a file size the similarity result does not carry', async () => {
+    installFetchMock(handlers());
+    renderExplorer();
+    await screen.findByTestId('media-grid');
+
+    // The lean DTO has no size; the tile overlay must show the resolution alone
+    // rather than an invented "0 B".
+    const details = Array.from(document.querySelectorAll('.media-tile__details'))
+      .map((d) => d.textContent);
+    expect(details.join(' ')).not.toContain('0 B');
+    expect(details).toContain('3000×2000');
   });
 
   it('renders under the app theme rather than a hard-coded palette', async () => {

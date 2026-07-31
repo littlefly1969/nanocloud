@@ -11,6 +11,13 @@ export interface SimilarPhotoItem {
   name: string;
   // Cosine similarity (0..1), rounded. The UI hides it from normal users.
   score: number;
+  // ORIGINAL media pixel dimensions, from the metadata the server extracted at
+  // ingestion — not a derivative's size and not measured at request time. They
+  // exist so a result can be laid out at its true proportions instead of a
+  // square guess. Null (both, always together) when the blob has no extracted
+  // dimensions; callers must fall back rather than assume a ratio.
+  width: number | null;
+  height: number | null;
 }
 
 export interface SimilarPhotosResult {
