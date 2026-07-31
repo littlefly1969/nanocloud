@@ -372,7 +372,7 @@ export default function GalleryScreen({
           delayLongPress={600}
           style={styles.wordmarkWrap}
         >
-          <Text style={styles.wordmark}>NanoCloud</Text>
+          <Text style={styles.wordmark}>NubArca</Text>
         </Pressable>
         <Pressable
           onPress={() => void handleLogout()}

@@ -1,11 +1,32 @@
-# NanoCloud TV
+# NubArca TV
 
 Native OTA operation, signing, publication, rollback, and bootstrap instructions are documented in [`../docs/tv-ota-updates.md`](../docs/tv-ota-updates.md).
 
 A **separate** Expo React Native application for the 10-foot TV experience,
 targeting **Fire Stick / Android TV** first. It is intentionally NOT the mobile
-app and NOT a full NanoCloud client — see the architecture strategy in
+app and NOT a full NubArca client — see the architecture strategy in
 [../docs/current-work.md](../docs/current-work.md).
+
+## Retained legacy-brand identifiers (do not rename)
+
+The product was renamed from **NanoCloud** to **NubArca** (TV product: **NubArca
+TV**) on 2026-07-31. The rename covers the *display* surface only. The following
+identifiers deliberately keep their old `nanocloud` / `NanoCloud` spelling because
+renaming them would break already-deployed installs, paired devices, or operator
+environments. Treat every one of them as a **retained legacy identifier**:
+
+| Identifier | Where | Why it must not change |
+| --- | --- | --- |
+| `it.littlefly.nanocloudtv` | `app.config.js` → `android.package` | Android applicationId. A new id installs as a **separate** app with no upgrade path. |
+| `nanocloud-tv` | `app.config.js` → `slug` | Part of the EAS / OTA update identity that published updates are keyed to. |
+| `NanoCloud.TvSession` | server cookie, `src/api/client.ts` | Wire contract with the backend `/api/tv` endpoints. |
+| `NanoCloud.Auth` | server cookie (never received here) | Wire contract with the backend owner endpoints. |
+| `nanocloud.tv.session.cookie` | AsyncStorage key, `src/api/client.ts` | Already persisted on every paired TV; renaming logs every device out. |
+| `EXPO_PUBLIC_NANOCLOUD_API_BASE_URL`, `NANOCLOUD_TV_*` | build/runtime env vars | Operators already have them set in production `.env` files and CI. |
+| `nanocloud-tv.apk` | published APK artifact name | Existing download links and sideload instructions point at it. |
+
+The user-visible strings (launcher name, pairing title, in-app copy) **are**
+rebranded — see `src/i18n/it.ts` (canonical) and `src/i18n/en.ts`.
 
 ## TV runtime decision
 
@@ -38,11 +59,11 @@ matrix live in [`../docs/development-environment.md`](../docs/development-enviro
   documented Expo-TV approach — **not** `--force` (which would also mask genuine
   conflicts).
 - `@react-native-tvos/config-tv` (dev dependency) in `app.config.js` `plugins`,
-  with `{ "isTV": true, "androidTVRequired": true }`. During `expo prebuild` it
-  configures the native Android project for TV: `LEANBACK_LAUNCHER` category,
-  `android.software.leanback` **required**, and `android.hardware.touchscreen`
-  **not required** — i.e. an Android TV / Fire TV app, not a phone app. (Verified
-  in the SDK-56 generated `AndroidManifest.xml`.)
+  with `{ "isTV": true, "androidTVRequired": true, "androidTVBanner": … }`. During
+  `expo prebuild` it configures the native Android project for TV:
+  `LEANBACK_LAUNCHER` category, `android.software.leanback` **required**, and
+  `android.hardware.touchscreen` **not required** — i.e. an Android TV / Fire TV
+  app, not a phone app. (Verified in the SDK-56 generated `AndroidManifest.xml`.)
 - `expo-status-bar` is registered as a config plugin (SDK 56 ships one; a dynamic
   `app.config.js` cannot be auto-written by `expo install --fix`, so it is added
   explicitly).
@@ -53,6 +74,27 @@ matrix live in [`../docs/development-environment.md`](../docs/development-enviro
   type space.
 - `EXPO_TV=1` forces a TV build regardless of the flag; a clean prebuild is
   required when toggling TV mode (`--clean`).
+
+### Brand assets
+
+The NubArca TV artwork lives in `assets/brand/` (generated reproducibly by
+`../scripts/generate-brand-assets.py`; do not hand-edit). Wiring in
+`app.config.js`:
+
+| Asset | Config field | Result |
+| --- | --- | --- |
+| `tv-icon-512.png` | `icon`, `android.icon` | app icon (all platforms / Android fallback) |
+| `tv-adaptive-icon-432.png` | `android.adaptiveIcon.foregroundImage` (`backgroundColor` `#0a0f1a`) | Android adaptive launcher icon |
+| `tv-banner-320x180.png` | `@react-native-tvos/config-tv` → `androidTVBanner` | `android:banner` in the manifest = the Android TV / Fire TV home-row banner |
+| `tv-lockup-1280.png`, `tv-lockup-640.png` | *(not wired)* | the "NubArca TV" lockup, kept for stores/docs; the in-app pairing header is text, not an image |
+| `tv-splash-1920x1080.png` | *(not wired)* | see below |
+
+**No splash screen is configured.** Expo SDK 56 removed the top-level `splash`
+key from the app-config schema (only `web.splash` for PWAs remains) and moved
+splash configuration into the `expo-splash-screen` config plugin, which this app
+does not depend on. A `splash` key in `app.config.js` would be silently ignored by
+prebuild, so it was left out; the asset is ready if `expo-splash-screen` is added
+later.
 
 ### JDK for the native build
 
@@ -202,11 +244,14 @@ Native project directories (`android/`, `ios/`) are **generated** by prebuild
 - Uses **only** `/api/tv/*` endpoints (enforced by an `assertTvPath` guard in
   `src/api/client.ts`). No normal owner APIs, no token auth, no full user
   session.
-- The limited TV **session cookie** (`NanoCloud.TvSession`) is captured from
+- The limited TV **session cookie** (`NanoCloud.TvSession` — a *retained legacy
+  identifier*, see the table above; the cookie name is a backend wire contract and
+  was not rebranded to NubArca) is captured from
   `Set-Cookie` and re-sent via the `Cookie` header (RN has no cookie jar). It is
   **persisted across app restarts** via AsyncStorage (see *Session persistence*
   below) and rehydrated + re-validated on launch. Only that one limited cookie is
-  persisted — never the owner `NanoCloud.Auth` cookie (never received here), the
+  persisted — never the owner `NanoCloud.Auth` cookie (also a retained legacy
+  identifier; never received here), the
   pairing secret (travels in a header, not a cookie), or party tokens (in URLs,
   not cookies).
 - DTOs/URLs carry only logical ids, names, counts, and `/api/tv/…` media URLs —
@@ -289,7 +334,9 @@ npm start           # Expo dev server (phone form factor)
 ## API base URL configuration (dev + Fire Stick test builds)
 
 The API base URL is resolved (in `App.tsx` `resolveBaseUrl()` +
-`app.config.js`), in order:
+`app.config.js`), in order. The `*_NANOCLOUD_*` variable names are *retained
+legacy identifiers* — they kept their pre-NubArca spelling because operators
+already have them set in production environments and CI:
 
 1. `EXPO_PUBLIC_NANOCLOUD_API_BASE_URL` — preferred; an `EXPO_PUBLIC_*` var is
    inlined by Expo at build time and read at runtime, so a Fire Stick test build
@@ -319,7 +366,9 @@ dev default, cleartext enabled).
 
 The limited TV session cookie is persisted with
 `@react-native-async-storage/async-storage` under the key
-`nanocloud.tv.session.cookie` (`src/api/client.ts`):
+`nanocloud.tv.session.cookie` (`src/api/client.ts`) — a *retained legacy
+identifier*: the key is already written on every paired TV, so it was **not**
+rebranded to NubArca (renaming it would sign every device out):
 
 - **Only** the `NanoCloud.TvSession` cookie string is stored — by construction
   `_cookieJar` can hold nothing else (owner auth is never received on `/api/tv`,
@@ -588,7 +637,11 @@ Or via EAS Build with a TV profile (`EXPO_TV=1`) for reproducible cloud builds.
   KEYCODE_MENU → `'menu'` is verified in the native source; confirm on hardware
   with `TV_DEBUG_MEDIA`.
 - Optional `TVFocusGuideView` for explicit focus routing on complex grids;
-  encrypted TV session storage; Fire TV store banner asset; release signing.
+  encrypted TV session storage; release signing. (The Fire TV / Android TV banner
+  asset is now shipped — see *Brand assets*; it has not yet been verified on
+  hardware.)
+- Splash screen: needs the `expo-splash-screen` dependency before
+  `tv-splash-1920x1080.png` can be wired (see *Brand assets*).
 
 Party mode (public read-only view), QR upload/download, live party refresh, and
 face-search filtered slideshow are implemented. Out of scope (future TV-only

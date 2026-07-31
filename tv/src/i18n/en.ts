@@ -5,9 +5,9 @@ import type { TvMessageKey } from './it';
 const en: Partial<Record<TvMessageKey, string>> = {
   'common.tryAgain': 'Try again',
 
-  'app.connecting': 'Connecting to NanoCloud…',
+  'app.connecting': 'Connecting to NubArca…',
 
-  'pairing.title': 'NanoCloud TV',
+  'pairing.title': 'NubArca TV',
   'pairing.preparing': 'Preparing secure pairing…',
   'pairing.scan': 'Scan with your phone, sign in, and approve this TV.',
   'pairing.code': 'Pairing code',
@@ -35,7 +35,7 @@ const en: Partial<Record<TvMessageKey, string>> = {
   'items.facePerson': 'Photos with this person',
   'items.faceShowAll': 'Show all photos',
 
-  'mode.title': 'How do you want to use NanoCloud?',
+  'mode.title': 'How do you want to use NubArca?',
   'mode.party': 'Party',
   'mode.personal': 'Personal area 🔒',
   'mode.beautyLab': 'Beauty Lab 🔒',

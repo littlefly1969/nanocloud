@@ -30,7 +30,7 @@ export function useScreenAwake(active: boolean, driver: KeepAwakeDriver = native
   const tag = useId();
   const controllerRef = useRef<KeepAwakeController | null>(null);
   if (controllerRef.current === null) {
-    controllerRef.current = new KeepAwakeController(driver, `nanocloud-viewer-${tag}`);
+    controllerRef.current = new KeepAwakeController(driver, `nubarca-viewer-${tag}`);
   }
 
   useEffect(() => {
