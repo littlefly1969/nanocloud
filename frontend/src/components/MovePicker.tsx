@@ -5,8 +5,8 @@ import {
   moveFile,
   moveFolder,
   type FolderSummary,
-} from '@nanocloud/api-client';
-import { ApiError } from '@nanocloud/api-client';
+} from '@nubarca/api-client';
+import { ApiError } from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 
 interface MovePickerProps {

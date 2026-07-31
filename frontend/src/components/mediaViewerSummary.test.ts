@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FileMetadata } from '@nanocloud/api-client';
+import type { FileMetadata } from '@nubarca/api-client';
 import { resolveViewerSummary } from './mediaViewerSummary';
 
 function meta(overrides: Partial<FileMetadata['effective']> = {}, sizeBytes = 4_194_304): FileMetadata {

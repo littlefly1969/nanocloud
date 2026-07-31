@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { getFileMetadata, originalDownloadUrl, type FileMetadata } from '@nanocloud/api-client';
+import { getFileMetadata, originalDownloadUrl, type FileMetadata } from '@nubarca/api-client';
 import { formatSize } from './format';
 import { useI18n } from '../i18n';
 import { HlsVideoPlayer } from '../video/HlsVideoPlayer';

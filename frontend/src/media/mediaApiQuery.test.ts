@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { listImages, listVideos } from '@nanocloud/api-client';
+import { listImages, listVideos } from '@nubarca/api-client';
 
 // Wire-level contract for the shared `albumMembership` filter. Both galleries
 // must emit the SAME parameter with the SAME vocabulary, and must omit it when

@@ -6,7 +6,7 @@ import {
   ignoreFace,
   removeFaceAssignment,
   type Person,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useI18n } from '../../i18n';
 
 // Owner-private "Assign to person…" control for a single face. Reusable from face

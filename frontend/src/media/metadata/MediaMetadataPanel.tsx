@@ -4,7 +4,7 @@ import {
   getFileMetadata,
   writeFileDateTaken,
   type FileMetadata,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../../auth/useAuth';
 import { useI18n } from '../../i18n';
 import { AlbumPickerModal } from '../../gallery/AlbumPickerModal';

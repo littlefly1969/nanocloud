@@ -46,12 +46,12 @@ describe('LoginPage', () => {
     renderLogin(loginSpy);
 
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText('Email'), 'dev@nanocloud.local');
+    await user.type(screen.getByLabelText('Email'), 'dev@nubarca.local');
     await user.type(screen.getByLabelText('Password'), 'hunter2');
     await user.click(screen.getByRole('button', { name: 'Accedi' }));
 
     await waitFor(() => {
-      expect(loginSpy).toHaveBeenCalledWith('dev@nanocloud.local', 'hunter2');
+      expect(loginSpy).toHaveBeenCalledWith('dev@nubarca.local', 'hunter2');
     });
   });
 
@@ -62,7 +62,7 @@ describe('LoginPage', () => {
     renderLogin(loginSpy);
 
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText('Email'), 'dev@nanocloud.local');
+    await user.type(screen.getByLabelText('Email'), 'dev@nubarca.local');
     await user.type(screen.getByLabelText('Password'), 'wrong');
     await user.click(screen.getByRole('button', { name: 'Accedi' }));
 

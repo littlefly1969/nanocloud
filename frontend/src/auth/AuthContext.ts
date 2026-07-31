@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import type { CurrentUser } from '@nanocloud/api-client';
+import type { CurrentUser } from '@nubarca/api-client';
 
 // Three states only:
 //   * `status: 'loading'`  — the initial /api/auth/me probe is in flight.

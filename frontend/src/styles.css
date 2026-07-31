@@ -19,35 +19,76 @@
 
 :root {
   color-scheme: dark;
-  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+
+  /* ---- Official NubArca palette -------------------------------------------
+     The approved hexes, verbatim and theme-independent. Nothing outside this
+     block may invent a brand colour; the semantic tokens below are the only
+     supported way to consume them. Any deviation from an official hex is a
+     deliberate, annotated legibility tint — never a redefinition of the brand.
+     ------------------------------------------------------------------------ */
+  --brand-midnight-navy: #0a0f1a;
+  --brand-deep-blue: #0f1e3a;
+  --brand-electric-blue: #1565ff;
+  --brand-cyan-glow: #00d4ff;
+  --brand-soft-violet: #9a6cff;
+  --brand-cloud-white: #f5f7fb;
+
+  /* ---- Geometry (brand development guidelines) ---------------------------- */
+  --space-unit: 8px;
+  --radius-card: 16px;
+  --radius-button: 12px;
+
+  /* ---- Typography ---------------------------------------------------------
+     Bundled locally (see main.tsx); the fallback stack keeps the UI usable if a
+     woff2 fails to load. Monospace is deliberately untouched: logs, hashes and
+     code must stay in a real fixed-pitch face.
+     ------------------------------------------------------------------------ */
+  --font-heading: 'Space Grotesk', 'Exo 2', system-ui, -apple-system, Segoe UI, sans-serif;
+  --font-ui: 'Exo 2', system-ui, -apple-system, Segoe UI, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  font-family: var(--font-ui);
 
   /* Surfaces, back to front. */
-  --surface-canvas: #0f1013;
-  --surface-raised: #17181d;
-  --surface-overlay: #1e2026;
-  --surface-subtle: #1a1c21;
+  --surface-canvas: var(--brand-midnight-navy);
+  --surface-raised: var(--brand-deep-blue);
+  --surface-overlay: #132546;
+  --surface-subtle: #0d1729;
 
-  --border-default: #2c2e37;
-  --border-strong: #3f424d;
+  --border-default: #22355c;
+  --border-strong: #33507f;
 
-  --text-primary: #f2f3f5;
-  --text-secondary: #b9bcc4;
-  --text-muted: #8f939d;
+  --text-primary: var(--brand-cloud-white);
+  --text-secondary: #b6c4dc;
+  --text-muted: #8fa0be;
 
-  --accent: #4c9dff;
-  --accent-hover: #74b3ff;
-  /* Text/iconography placed ON an --accent fill. */
-  --accent-contrast: #08131f;
-  --accent-subtle: rgb(76 157 255 / 16%);
+  /* Electric Blue lifted to 5.3:1 on Midnight Navy. `--accent` is overwhelmingly
+     a TEXT and border colour here, and the official #1565FF only reaches 4.0:1
+     on the canvas — below AA. The exact brand hex is not lost: it is
+     `--accent-strong`, used for fills, where white text on it clears AA. */
+  --accent: #3d82ff;
+  --accent-hover: #5a97ff;
+  --accent-strong: var(--brand-electric-blue);
+  /* Text/iconography placed ON an --accent-strong fill. */
+  --accent-contrast: #ffffff;
+  --accent-subtle: rgb(21 101 255 / 20%);
+  /* Cyan Glow: the secondary accent, and the restrained glow this brand allows.
+     Soft Violet is a limited highlight — never the primary action colour. */
+  --accent-glow: var(--brand-cyan-glow);
+  --accent-secondary: var(--brand-soft-violet);
+  --glow-soft: 0 0 0 1px rgb(0 212 255 / 22%);
 
-  --focus-ring: #8cc6ff;
-  --danger: #ff8080;
+  --focus-ring: var(--brand-cyan-glow);
+  /* Kept warm and green so destructive and successful stay readable as
+     THEMSELVES, never as another shade of the brand blue. */
+  --danger: #ff7a85;
   --danger-contrast: #1a0505;
-  --success: #5cd694;
+  --success: #3fd98c;
 
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 45%);
-  --shadow-md: 0 4px 14px rgb(0 0 0 / 45%);
-  --shadow-lg: 0 18px 48px rgb(0 0 0 / 55%);
+  /* Restrained, per the brand rule against heavy shadows. */
+  --shadow-sm: 0 1px 2px rgb(2 6 16 / 40%);
+  --shadow-md: 0 4px 14px rgb(2 6 16 / 38%);
+  --shadow-lg: 0 16px 40px rgb(2 6 16 / 46%);
 
   /* Legacy aliases — do not add new usages. */
   --bg: var(--surface-canvas);
@@ -57,34 +98,58 @@
   --error: var(--danger);
 }
 
+/* Light theme, derived from the same brand palette: Cloud White canvas,
+   Midnight Navy text, and a deepened Electric Blue so accent TEXT clears AA on
+   white (the #1565FF fill reaches only 4.0:1 there). */
 :root[data-theme='light'] {
   color-scheme: light;
 
-  --surface-canvas: #f6f7f9;
+  --surface-canvas: var(--brand-cloud-white);
   --surface-raised: #ffffff;
   --surface-overlay: #ffffff;
-  --surface-subtle: #eceef2;
+  --surface-subtle: #e7ecf5;
 
-  --border-default: #d3d6dd;
-  --border-strong: #a9aeb8;
+  --border-default: #c9d4e6;
+  --border-strong: #98a9c6;
 
-  --text-primary: #15161a;
-  --text-secondary: #474b53;
-  --text-muted: #5f636b;
+  --text-primary: var(--brand-midnight-navy);
+  --text-secondary: #36455f;
+  --text-muted: #596884;
 
-  --accent: #0a5fd0;
-  --accent-hover: #08489f;
+  --accent: #0b4fd6;
+  --accent-hover: #093fac;
+  --accent-strong: #0b4fd6;
   --accent-contrast: #ffffff;
-  --accent-subtle: rgb(10 95 208 / 12%);
+  --accent-subtle: rgb(11 79 214 / 12%);
+  /* Cyan Glow is unreadable on white, so the light theme's secondary accent is
+     the deep blue itself; Soft Violet darkens just enough to stay legible. */
+  --accent-glow: #0b4fd6;
+  --accent-secondary: #6d3fd6;
+  --glow-soft: 0 0 0 1px rgb(11 79 214 / 18%);
 
-  --focus-ring: #0a5fd0;
-  --danger: #bf1220;
+  --focus-ring: #0b4fd6;
+  --danger: #c21127;
   --danger-contrast: #ffffff;
-  --success: #12643a;
+  --success: #0e6b42;
 
-  --shadow-sm: 0 1px 2px rgb(15 22 36 / 10%);
-  --shadow-md: 0 4px 14px rgb(15 22 36 / 12%);
-  --shadow-lg: 0 18px 48px rgb(15 22 36 / 18%);
+  --shadow-sm: 0 1px 2px rgb(10 15 26 / 10%);
+  --shadow-md: 0 4px 14px rgb(10 15 26 / 12%);
+  --shadow-lg: 0 16px 40px rgb(10 15 26 / 16%);
+}
+
+/* Headings carry the display face; controls inherit the UI face explicitly so a
+   browser default can never pull a button back to the system font. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.01em;
+}
+
+button,
+input,
+select,
+textarea,
+optgroup {
+  font-family: var(--font-ui);
 }
 
 * {
@@ -132,14 +197,38 @@ a {
   width: min(100%, 22rem);
   padding: 2rem;
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--bg);
+  border-radius: var(--radius-card);
+  background: var(--surface-raised);
 }
 
 .login-card h1 {
   margin: 0 0 1.5rem 0;
   font-size: 1.5rem;
   text-align: center;
+}
+
+/* The sign-in heading IS the brand lockup, at a size that clears the 120px
+   minimum wordmark width with room for the brand clear space. */
+.login-title {
+  display: flex;
+  justify-content: center;
+}
+.login-title .brand-mark {
+  gap: calc(var(--space-unit) * 1.5);
+}
+.login-title .brand-mark__icon {
+  width: 40px;
+  height: 40px;
+}
+.login-title .brand-mark__wordmark {
+  font-size: 1.75rem;
+}
+/* The login lockup is the one place the wordmark must survive a narrow
+   viewport — it is the only product identification on the page. */
+@media (max-width: 26.25rem) {
+  .login-title .brand-mark__wordmark {
+    display: inline;
+  }
 }
 
 .login-card label {
@@ -797,6 +886,55 @@ a {
   color: var(--text-primary);
 }
 
+/* NubArca lockup: approved icon + live wordmark text.
+   Clear space is 25% of the logo height on every side (brand guidelines), which
+   at the 28px icon is the 7px inline padding below. */
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space-unit) * 1.25);
+  padding-inline: calc(28px * 0.25);
+  min-width: 0;
+}
+.brand-mark--compact {
+  gap: 0;
+  padding-inline: calc(24px * 0.25);
+}
+
+.brand-mark__icon {
+  flex: none;
+  /* Never below the 24px minimum icon size, and never stretched. */
+  min-width: 24px;
+  min-height: 24px;
+  object-fit: contain;
+}
+
+.brand-mark__wordmark {
+  font-family: var(--font-heading);
+  /* At this size the two-tone wordmark clears the 120px minimum width. */
+  font-size: 1.1875rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.brand-mark__wordmark-accent {
+  color: var(--accent);
+}
+
+/* Below the mobile breakpoint the wordmark would crowd the topbar controls, so
+   the lockup falls back to the icon alone rather than shrinking the wordmark
+   under its 120px minimum. */
+@media (max-width: 26.25rem) {
+  .brand-mark__wordmark {
+    display: none;
+  }
+  .brand-mark {
+    gap: 0;
+  }
+}
+
 .app-shell {
   min-height: 100vh;
   display: flex;
@@ -999,7 +1137,9 @@ a {
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 999px;
-  background: var(--accent);
+  /* Text sits on this fill, so it uses the brand Electric Blue that
+     --accent-contrast is contrast-checked against. */
+  background: var(--accent-strong);
   color: var(--accent-contrast);
   font-size: 0.8125rem;
   font-weight: 650;
@@ -6571,7 +6711,7 @@ video.lightbox-image {
   height: 1.25rem;
   padding: 0 0.3rem;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--accent-strong);
   color: var(--accent-contrast);
   font-size: 0.72rem;
   font-weight: 700;

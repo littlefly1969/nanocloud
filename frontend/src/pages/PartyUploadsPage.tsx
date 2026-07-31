@@ -7,8 +7,8 @@ import {
   setAlbumPartyMode,
   type PartyUploadItem,
   type PartyUploadList,
-} from '@nanocloud/api-client';
-import { ApiError } from '@nanocloud/api-client';
+} from '@nubarca/api-client';
+import { ApiError } from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { useI18n, type MessageKey } from '../i18n';
 

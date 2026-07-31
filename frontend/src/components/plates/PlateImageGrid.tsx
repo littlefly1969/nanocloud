@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { PlateImageListItem } from '@nanocloud/api-client';
+import type { PlateImageListItem } from '@nubarca/api-client';
 import { useI18n } from '../../i18n';
 import { PlateAnalysisStatusBadge } from './PlateAnalysisStatusBadge';
 

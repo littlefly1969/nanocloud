@@ -4,7 +4,7 @@ import {
   fetchVaultPoster,
   fetchVaultPreview,
   fetchVaultThumbnail,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 
 // Shared object-URL lifecycle for authenticated vault derived media (slice 4).
 // The Vault token can only travel in the X-Vault-Token header, so an <img src>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError } from '@nanocloud/api-client';
+import { ApiError } from '@nubarca/api-client';
 import {
   browseImport,
   cancelImportRun,
@@ -21,7 +21,7 @@ import {
   type AdminImportRunStatus,
   type AdminImportThrottleConfig,
   type AdminImportUser,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { formatSize } from '../components/format';
 

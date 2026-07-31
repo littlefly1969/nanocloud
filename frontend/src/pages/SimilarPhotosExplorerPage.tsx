@@ -9,7 +9,7 @@ import {
   type FileMetadata,
   type MediaItem,
   type SimilarPhotoItem,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { smallThumbnailUrl } from '../components/files/types';
 import { useI18n, type MessageKey } from '../i18n';

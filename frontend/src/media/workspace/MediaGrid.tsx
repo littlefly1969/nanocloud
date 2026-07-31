@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
-import type { MediaItem } from '@nanocloud/api-client';
+import type { MediaItem } from '@nubarca/api-client';
 import { formatSize } from '../../components/format';
 import { useI18n } from '../../i18n';
 import { VideoPreview } from '../../video/VideoPreview';

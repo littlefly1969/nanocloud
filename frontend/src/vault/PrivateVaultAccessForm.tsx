@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ApiError, getVaultStatus, setupVault, unlockVault } from '@nanocloud/api-client';
+import { ApiError, getVaultStatus, setupVault, unlockVault } from '@nubarca/api-client';
 import { useI18n } from '../i18n';
 
 // Shared Private Vault setup/unlock form. Used by the standalone Personal page

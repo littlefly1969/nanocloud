@@ -65,7 +65,7 @@ export function ThemeSwitcher({ className }: { className?: string }) {
               <input
                 ref={(el) => { refs.current[i] = el; }}
                 type="radio"
-                name="nanocloud-theme"
+                name="nubarca-theme"
                 value={option}
                 checked={selected}
                 onChange={() => setPreference(option)}

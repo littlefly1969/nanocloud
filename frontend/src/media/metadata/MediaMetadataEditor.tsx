@@ -5,7 +5,7 @@ import {
   updateFileMetadata,
   type FileMetadata,
   type UpdateFileMetadataRequest,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../../auth/useAuth';
 import { useI18n } from '../../i18n';
 import { MediaTagEditor } from './MediaTagEditor';

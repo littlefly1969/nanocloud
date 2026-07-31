@@ -7,7 +7,7 @@ import {
   heartbeatTvSession,
   startTvPairing,
   type TvPairingStarted,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { TvPairedExperience } from './TvPairedExperience';
 import { useI18n, toLanguage } from '../i18n';
 

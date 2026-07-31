@@ -22,7 +22,7 @@ import type {
   ImageSortField,
   ListImagesQuery,
   MediaGalleryScope,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import type { PeopleMode } from './PeopleFilterPanel';
 
 export const DEFAULT_GALLERY_LIMIT = 50;

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent } from 'react';
-import { ApiError } from '@nanocloud/api-client';
-import { uploadFileToFolder, uploadRootFile } from '@nanocloud/api-client';
+import { ApiError } from '@nubarca/api-client';
+import { uploadFileToFolder, uploadRootFile } from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { formatSize } from './format';
 import { useI18n } from '../i18n';

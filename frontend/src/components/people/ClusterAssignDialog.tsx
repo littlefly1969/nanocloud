@@ -6,7 +6,7 @@ import {
   createPerson,
   type ClusterAssignSummary,
   type Person,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useI18n } from '../../i18n';
 
 // Owner-private "Associa cluster a persona…" dialog. Search/select an existing

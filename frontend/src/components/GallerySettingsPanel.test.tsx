@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { GallerySettingsPanel } from './GallerySettingsPanel';
 import { installFetchMock, jsonResponse } from '../test-utils';
 import { I18nProvider } from '../i18n';
-import type { MediaLibraryEffective } from '@nanocloud/api-client';
+import type { MediaLibraryEffective } from '@nubarca/api-client';
 
 afterEach(() => {
   cleanup();

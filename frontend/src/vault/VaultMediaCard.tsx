@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { VaultFile } from '@nanocloud/api-client';
+import type { VaultFile } from '@nubarca/api-client';
 import { useI18n } from '../i18n';
 import { formatSize } from '../components/format';
 import { useVaultMediaObjectUrl, type VaultMediaVariant } from './useVaultMediaObjectUrl';

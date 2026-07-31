@@ -1,6 +1,7 @@
 import { useEffect, useRef, type KeyboardEvent } from 'react';
 import { useLocation } from 'react-router';
 import { useI18n } from '../../i18n';
+import { BrandMark } from '../../brand/BrandMark';
 import { Icon } from '../icons/Icon';
 import { AppNav } from './AppNav';
 
@@ -93,7 +94,7 @@ export function NavDrawer({ isAdmin, onClose, returnFocusRef }: NavDrawerProps) 
         onKeyDown={onKeyDown}
       >
         <div className="nav-drawer__head">
-          <span className="app-brand">{t('app.name')}</span>
+          <BrandMark />
           <button
             type="button"
             className="icon-button"

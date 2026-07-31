@@ -1,7 +1,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Person } from '@nanocloud/api-client';
+import type { Person } from '@nubarca/api-client';
 import { AuthedWrapper } from '../../test-utils';
 import { MediaFilterSheet } from './MediaFilterSheet';
 import { emptyMediaFilters, type MediaKindScope, type MediaWorkspaceFilters } from './mediaWorkspaceQuery';

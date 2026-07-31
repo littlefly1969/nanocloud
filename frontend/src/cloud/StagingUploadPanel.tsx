@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError } from '@nanocloud/api-client';
+import { ApiError } from '@nubarca/api-client';
 import {
   cancelStagingSession,
   createStagingSession,
@@ -16,7 +16,7 @@ import {
   type StagingMissingItem,
   type StagingSession,
   type StagingVerifyResult,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { formatSize } from '../components/format';
 import { useI18n } from '../i18n';

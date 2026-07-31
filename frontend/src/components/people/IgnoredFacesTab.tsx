@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError, getIgnoredFaces, unignoreFace, type IgnoredFace } from '@nanocloud/api-client';
+import { ApiError, getIgnoredFaces, unignoreFace, type IgnoredFace } from '@nubarca/api-client';
 import { FaceCrop } from './FaceCrop';
 import { useI18n } from '../../i18n';
 

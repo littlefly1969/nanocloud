@@ -11,7 +11,7 @@ import {
   type AestheticLabItem,
   type AestheticLabItemDetail,
   type AestheticMetric,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { useI18n, type MessageKey } from '../i18n';
 

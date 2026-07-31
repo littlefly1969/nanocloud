@@ -9,8 +9,8 @@ import {
   moveFolder,
   renameFile,
   renameFolder,
-} from '@nanocloud/api-client';
-import { ApiError } from '@nanocloud/api-client';
+} from '@nubarca/api-client';
+import { ApiError } from '@nubarca/api-client';
 import { useAuth } from '../../auth/useAuth';
 import { formatDate, formatSize } from '../format';
 import { ShareLinkPanel } from '../ShareLinkPanel';

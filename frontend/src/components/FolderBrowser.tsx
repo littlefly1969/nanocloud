@@ -6,10 +6,10 @@ import {
   moveFile,
   moveFolder,
   type FolderSummary,
-} from '@nanocloud/api-client';
-import { ApiError } from '@nanocloud/api-client';
+} from '@nubarca/api-client';
+import { ApiError } from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
-import { getMyStorageUsage, type UserStorageUsage } from '@nanocloud/api-client';
+import { getMyStorageUsage, type UserStorageUsage } from '@nubarca/api-client';
 import { type BreadcrumbEntry } from './Breadcrumb';
 import { formatSize } from './format';
 import { CreateFolderForm } from './CreateFolderForm';

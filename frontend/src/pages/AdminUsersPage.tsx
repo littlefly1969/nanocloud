@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError } from '@nanocloud/api-client';
+import { ApiError } from '@nubarca/api-client';
 import {
   createAdminUser,
   listAdminUsers,
@@ -7,7 +7,7 @@ import {
   setAdminUserAdmin,
   setAdminUserDisabled,
   type AdminUser,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { useI18n, type I18nContextValue } from '../i18n';
 import { PasswordPolicy } from '../account/passwordPolicy';

@@ -2,7 +2,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
-import type { MediaItem, MediaListResponse } from '@nanocloud/api-client';
+import type { MediaItem, MediaListResponse } from '@nubarca/api-client';
 import { AuthedWrapper, installFetchMock, jsonResponse } from '../../test-utils';
 import { MediaWorkspace } from '../workspace/MediaWorkspace';
 import { emptyIdentity, type MediaWorkspaceSource } from '../workspace/mediaWorkspaceQuery';

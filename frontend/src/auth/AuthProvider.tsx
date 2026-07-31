@@ -5,8 +5,8 @@ import {
   loginRequest,
   logoutRequest,
   type CurrentUser,
-} from '@nanocloud/api-client';
-import { ApiError } from '@nanocloud/api-client';
+} from '@nubarca/api-client';
+import { ApiError } from '@nubarca/api-client';
 import { AuthContext, type AuthState } from './AuthContext';
 import { useI18n, toLanguage } from '../i18n';
 

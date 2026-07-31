@@ -63,7 +63,7 @@ function childrenPage(opts: {
 function renderBrowser(value?: Parameters<typeof makeAuthValue>[1]) {
   if (value) {
     const auth = makeAuthValue(
-      { status: 'authed', user: { id: 'user-1', email: 'dev@nanocloud.local', displayName: 'Dev', isAdmin: false, language: 'it' } },
+      { status: 'authed', user: { id: 'user-1', email: 'dev@nubarca.local', displayName: 'Dev', isAdmin: false, language: 'it' } },
       value,
     );
     return render(

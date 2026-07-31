@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n';
+import { BrandMark } from '../brand/BrandMark';
 
 export function LoginPage() {
   const { state, login } = useAuth();
@@ -39,7 +40,9 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <form className="login-card" onSubmit={onSubmit} aria-labelledby="login-title">
-        <h1 id="login-title">NanoCloud</h1>
+        <h1 id="login-title" className="login-title">
+          <BrandMark />
+        </h1>
 
         <label htmlFor="email">{t('login.email')}</label>
         <input

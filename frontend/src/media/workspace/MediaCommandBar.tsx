@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import type { ImageSortDirection, ImageSortField } from '@nanocloud/api-client';
+import type { ImageSortDirection, ImageSortField } from '@nubarca/api-client';
 import { useI18n } from '../../i18n';
 import { Icon } from '../../components/icons/Icon';
 import { MediaLibraryScopeTabs } from './MediaLibraryScopeTabs';

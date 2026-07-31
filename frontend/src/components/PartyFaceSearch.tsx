@@ -5,7 +5,7 @@ import {
   deletePartyFaceSearch,
   partyFaceSearch,
   type PartyFaceSearchResponse,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useI18n } from '../i18n';
 
 // Public, anonymous "find your face" panel on the party landing page. A guest

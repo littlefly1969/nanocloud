@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError, getFaceContext, listPeople, type FaceContext, type Person } from '@nanocloud/api-client';
+import { ApiError, getFaceContext, listPeople, type FaceContext, type Person } from '@nubarca/api-client';
 import { mediumPreviewUrl } from '../files/types';
 import { useAuth } from '../../auth/useAuth';
 import { AssignToPersonMenu } from './AssignToPersonMenu';

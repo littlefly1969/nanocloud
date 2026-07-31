@@ -1,10 +1,10 @@
 // Shared types + tiny pure helpers for the Files UI v2. Kept dependency-free so
 // they can be unit-tested in isolation and imported by every files/* component
 // without circular imports.
-import type { FileSummary, FolderSummary } from '@nanocloud/api-client';
+import type { FileSummary, FolderSummary } from '@nubarca/api-client';
 import { looksLikeVideo } from '../VideoModal';
 
-export type { DirectorySortField, SortDirection } from '@nanocloud/api-client';
+export type { DirectorySortField, SortDirection } from '@nubarca/api-client';
 
 export type ViewMode = 'grid' | 'list';
 

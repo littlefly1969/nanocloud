@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ApiError, changeMyPassword } from '@nanocloud/api-client';
+import { ApiError, changeMyPassword } from '@nubarca/api-client';
 import { useI18n } from '../i18n';
 import { PasswordPolicy } from '../account/passwordPolicy';
 

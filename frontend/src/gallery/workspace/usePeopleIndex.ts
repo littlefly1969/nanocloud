@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { listPeople, type Person } from '@nanocloud/api-client';
+import { listPeople, type Person } from '@nubarca/api-client';
 
 // Loads the owner's people once and exposes both the list and a fast id→name
 // lookup. Shared by the filter sheet's people combobox and the active-filter

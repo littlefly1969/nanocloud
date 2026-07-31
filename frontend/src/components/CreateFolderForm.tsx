@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { ApiError } from '@nanocloud/api-client';
-import { createFolderInFolder, createRootFolder } from '@nanocloud/api-client';
+import { ApiError } from '@nubarca/api-client';
+import { createFolderInFolder, createRootFolder } from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 
 interface CreateFolderFormProps {

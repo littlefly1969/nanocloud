@@ -24,7 +24,7 @@ const en: Partial<Record<MessageKey, string>> = {
   'language.updateError': 'Could not update the language. Please try again.',
 
   // --- Primary navigation / app shell ---
-  'app.name': 'NanoCloud',
+  'app.name': 'NubArca',
   'nav.primary': 'Primary',
   'nav.groupMain': 'Main',
   'nav.groupMore': 'More',
@@ -197,7 +197,7 @@ const en: Partial<Record<MessageKey, string>> = {
     'Require approval for future party uploads?\n\nWhen enabled, new guest uploads wait for your approval before appearing on the TV or the public party page.',
 
   // --- TV pairing / browser fallback (/tv) ---
-  'tv.title': 'NanoCloud TV',
+  'tv.title': 'NubArca TV',
   'tv.preparing': 'Preparing secure pairing…',
   'tv.scanInstructions': 'Scan with your phone, sign in, and approve this TV.',
   'tv.qrLabel': 'TV pairing QR code',
@@ -232,7 +232,7 @@ const en: Partial<Record<MessageKey, string>> = {
   'tv.itemCount_other': '{count} items',
 
   // --- TV Personal Area (mode selection / PIN / shell) ---
-  'tv.modeTitle': 'How do you want to use NanoCloud?',
+  'tv.modeTitle': 'How do you want to use NubArca?',
   'tv.modeParty': 'Party',
   'tv.modePersonal': 'Personal area',
   'tv.modeBeautyLab': 'Beauty Lab',
@@ -348,7 +348,7 @@ const en: Partial<Record<MessageKey, string>> = {
   'tvGallery.infoError': 'Could not load the details.',
 
   // --- TV pairing approval (phone) ---
-  'tvPair.title': 'Pair NanoCloud TV',
+  'tvPair.title': 'Pair NubArca TV',
   'tvPair.invalidLink': 'This pairing link is invalid or incomplete.',
   'tvPair.approvedTitle': 'TV approved',
   'tvPair.approvedBody': 'You can return to the TV.',
@@ -1058,7 +1058,7 @@ const en: Partial<Record<MessageKey, string>> = {
   'cloud.organizeDesc': 'Move photos into date-structured folders (yyyy/MM/dd and more) based on their capture date. Owner-private, reversible via Trash.',
   'cloud.organizeBtn': 'Organize by date',
   'cloud.downloadArchive': 'Download photo archive',
-  'cloud.downloadArchiveDesc': 'Download all your visible photos remotely, preserving the current NanoCloud folder tree. Not a ZIP — built for large archives.',
+  'cloud.downloadArchiveDesc': 'Download all your visible photos remotely, preserving the current NubArca folder tree. Not a ZIP — built for large archives.',
   'cloud.hideExport': 'Hide export',
   'cloud.privateVault': 'Private Vault',
   'cloud.privateVaultDesc': 'A private area excluded from Gallery, AI, organizer and export. Ready for future encryption.',
@@ -1424,7 +1424,7 @@ const en: Partial<Record<MessageKey, string>> = {
 
   // --- Photo archive export panel ---
   'export.aria': 'Download photo archive',
-  'export.intro': 'Downloads your visible photos exactly as organized in NanoCloud — the current folder tree and filenames are preserved (this is NOT organized by date; run “Organize photos by date” first if you want that).',
+  'export.intro': 'Downloads your visible photos exactly as organized in NubArca — the current folder tree and filenames are preserved (this is NOT organized by date; run “Organize photos by date” first if you want that).',
   'export.noteNotZip': 'This is NOT a ZIP — it is designed for large archives.',
   'export.noteOriginals': 'Original files are downloaded (never thumbnails or previews).',
   'export.notePrivateVault': 'Future Private Vault content is excluded.',
@@ -1446,7 +1446,7 @@ const en: Partial<Record<MessageKey, string>> = {
   'export.copied': 'Copied ✓',
   'export.viewManifest': 'View manifest',
   'export.revokeSession': 'Revoke session',
-  'export.rcloneNote': 'rclone is not supported in this version (it needs a directory-listing endpoint NanoCloud does not expose yet). Use the PowerShell command above.',
+  'export.rcloneNote': 'rclone is not supported in this version (it needs a directory-listing endpoint NubArca does not expose yet). Use the PowerShell command above.',
   'export.buildFailed': 'The export could not be built. Please try creating a new session.',
   'export.sessionIs': 'This session is {status}.',
   'export.startOver': 'Start over',

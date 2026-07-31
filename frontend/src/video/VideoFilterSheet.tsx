@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { AlbumMembership } from '@nanocloud/api-client';
+import type { AlbumMembership } from '@nubarca/api-client';
 import { useI18n } from '../i18n';
 import { AlbumMembershipFilter } from '../media/filters/AlbumMembershipFilter';
 

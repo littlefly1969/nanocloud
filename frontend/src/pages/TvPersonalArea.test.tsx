@@ -47,7 +47,7 @@ describe('/tv Personal Area', () => {
     installFetchMock({ 'GET /api/tv/session': activeSession });
     renderTv();
 
-    expect(await screen.findByText('Come vuoi usare NanoCloud?')).toBeInTheDocument();
+    expect(await screen.findByText('Come vuoi usare NubArca?')).toBeInTheDocument();
     const party = screen.getByTestId('tv-mode-party');
     expect(party).toHaveFocus();
     expect(screen.getByTestId('tv-mode-personal')).toHaveTextContent('Area personale');
@@ -101,7 +101,7 @@ describe('/tv Personal Area', () => {
 
     fireEvent.keyDown(lab, { key: 'Escape' });
     // Locked → back on the mode selector.
-    expect(await screen.findByText('Come vuoi usare NanoCloud?')).toBeInTheDocument();
+    expect(await screen.findByText('Come vuoi usare NubArca?')).toBeInTheDocument();
   });
 
   it('Personal area opens PIN entry; a wrong PIN shows a generic error, clears input, and stays locked', async () => {
@@ -231,7 +231,7 @@ describe('/tv Personal Area', () => {
     fireEvent.keyDown(screen.getByTestId('tv-personal-home'), { key: 'Backspace' });
 
     // Locked: back on mode selection, lock endpoint called.
-    expect(await screen.findByText('Come vuoi usare NanoCloud?')).toBeInTheDocument();
+    expect(await screen.findByText('Come vuoi usare NubArca?')).toBeInTheDocument();
     await waitFor(() => expect(state.locks).toBe(1));
 
     // Entering the Personal Area again always re-asks the PIN.
@@ -248,7 +248,7 @@ describe('/tv Personal Area', () => {
 
     fireEvent.keyDown(screen.getByTestId('tv-personal-home'), { key: 'Backspace' });
     // The user is never trapped: mode selection is shown regardless.
-    expect(await screen.findByText('Come vuoi usare NanoCloud?')).toBeInTheDocument();
+    expect(await screen.findByText('Come vuoi usare NubArca?')).toBeInTheDocument();
   });
 
   it('pairing revocation during PIN entry returns to the revoked screen', async () => {
@@ -314,7 +314,7 @@ describe('/tv Personal Area', () => {
     // Evicted to MODE SELECTION (not pairing — the TV association is valid),
     // with the "PIN was changed" notice; the local grant was dropped and the
     // idempotent lock endpoint called.
-    expect(await screen.findByText('Come vuoi usare NanoCloud?')).toBeInTheDocument();
+    expect(await screen.findByText('Come vuoi usare NubArca?')).toBeInTheDocument();
     expect(screen.getByTestId('tv-pin-changed-notice')).toHaveTextContent(
       'Il PIN è stato modificato. Inserisci il nuovo PIN.',
     );
@@ -340,7 +340,7 @@ describe('/tv Personal Area', () => {
     const empty = await screen.findByTestId('tv-albums-empty');
 
     fireEvent.keyDown(empty.parentElement!, { key: 'Backspace' });
-    expect(await screen.findByText('Come vuoi usare NanoCloud?')).toBeInTheDocument();
+    expect(await screen.findByText('Come vuoi usare NubArca?')).toBeInTheDocument();
 
     // Party re-opens directly — no PIN gate on the Party path.
     await userEvent.setup().click(screen.getByTestId('tv-mode-party'));

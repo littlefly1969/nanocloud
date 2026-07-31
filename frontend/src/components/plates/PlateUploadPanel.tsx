@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ApiError, uploadPlateImage } from '@nanocloud/api-client';
+import { ApiError, uploadPlateImage } from '@nubarca/api-client';
 import { useAuth } from '../../auth/useAuth';
 import { useI18n } from '../../i18n';
 import type { I18nContextValue } from '../../i18n';

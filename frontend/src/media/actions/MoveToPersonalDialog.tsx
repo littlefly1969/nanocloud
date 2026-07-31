@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ApiError, getVaultStatus, type VaultMoveResult } from '@nanocloud/api-client';
+import { ApiError, getVaultStatus, type VaultMoveResult } from '@nubarca/api-client';
 import { useAuth } from '../../auth/useAuth';
 import { useI18n } from '../../i18n';
 import { PrivateVaultAccessForm } from '../../vault/PrivateVaultAccessForm';
@@ -63,7 +63,7 @@ export function MoveToPersonalDialog({ fileIds, onClose, execute }: MoveToPerson
     } catch (err) {
       tokenRef.current = null;
       if (err instanceof ApiError && err.status === 401) {
-        // Distinguish an expired Personal token from a dead NanoCloud session
+        // Distinguish an expired Personal token from a dead NubArca session
         // — only the latter should sign the user out of the whole app.
         try {
           await getVaultStatus();

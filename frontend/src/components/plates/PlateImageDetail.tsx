@@ -4,7 +4,7 @@ import {
   getPlateImage,
   withBlurFaces,
   type PlateImageDetail as PlateDetail,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../../auth/useAuth';
 import { useI18n } from '../../i18n';
 import { PlateAnalysisButton } from './PlateAnalysisButton';

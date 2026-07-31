@@ -14,7 +14,7 @@
 import type { ReactNode } from 'react';
 import { act } from 'react';
 import { vi } from 'vitest';
-import type { FileMetadata } from '@nanocloud/api-client';
+import type { FileMetadata } from '@nubarca/api-client';
 import { AuthContext, type AuthContextValue, type AuthState } from './auth/AuthContext';
 import { I18nProvider } from './i18n';
 
@@ -186,7 +186,7 @@ export function AuthedWrapper({
       status: 'authed',
       user: {
         id: 'user-1',
-        email: 'dev@nanocloud.local',
+        email: 'dev@nubarca.local',
         displayName: 'Dev User',
         isAdmin,
         language: 'it',

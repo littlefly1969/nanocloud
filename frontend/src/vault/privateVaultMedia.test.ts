@@ -5,7 +5,7 @@ import {
   fetchVaultPreview,
   fetchVaultThumbnail,
   getVaultMediaInfo,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 
 // api-client vault media byte helpers (slice 4). The token must travel ONLY in
 // the X-Vault-Token header — never the URL — and the helpers must validate the

@@ -1,4 +1,4 @@
-import type { Person, ImageSortDirection, ImageSortField } from '@nanocloud/api-client';
+import type { Person, ImageSortDirection, ImageSortField } from '@nubarca/api-client';
 import { useI18n, type MessageKey } from '../../i18n';
 import {
   dateInputToIso,

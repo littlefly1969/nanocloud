@@ -9,7 +9,7 @@ import {
   listSuggestedGroups,
   type Person,
   type SuggestedGroup,
-} from '@nanocloud/api-client';
+} from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { FaceCrop } from '../components/people/FaceCrop';
 import { FaceContextViewer } from '../components/people/FaceContextViewer';
