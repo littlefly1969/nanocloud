@@ -25,12 +25,22 @@ export function NavDrawer({ isAdmin, onClose, returnFocusRef }: NavDrawerProps) 
 
   // Close whenever the route changes — including a navigation triggered from
   // outside the drawer (back button, a link in the page behind it).
+  //
+  // This compares against the location captured when the drawer OPENED rather
+  // than skipping the first effect run with a boolean ref. That earlier shape
+  // was not idempotent: React StrictMode deliberately runs mount effects twice
+  // (effect → cleanup → effect), the ref survived because the component
+  // instance does, and the second run saw "not the first render" and closed the
+  // drawer instantly — so in development it could not be opened at all. A
+  // location comparison is a no-op when re-run with an unchanged location, so
+  // it behaves identically however many times React invokes it.
   const pathname = location.pathname;
   const search = location.search;
-  const firstRender = useRef(true);
+  const openedAt = useRef(`${pathname}${search}`);
   useEffect(() => {
-    if (firstRender.current) { firstRender.current = false; return; }
-    onClose();
+    if (`${pathname}${search}` !== openedAt.current) {
+      onClose();
+    }
   }, [pathname, search, onClose]);
 
   // Move focus into the panel on open and restore it on close.

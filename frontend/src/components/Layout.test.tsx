@@ -1,8 +1,10 @@
+import { StrictMode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { Layout } from './Layout';
+import { NavDrawer } from './nav/NavDrawer';
 import { ThemeProvider } from '../theme';
 import { AuthedWrapper, installFetchMock, jsonResponse } from '../test-utils';
 
@@ -187,6 +189,66 @@ describe('Layout mobile drawer', () => {
     await user.click(screen.getByTestId('nav-menu-button'));
     await user.click(screen.getByTestId('nav-drawer-backdrop'));
     await waitFor(() => expect(screen.queryByTestId('nav-drawer')).not.toBeInTheDocument());
+  });
+
+  it('does not close itself when its close-on-navigation effect re-runs', async () => {
+    // The regression this pins: the effect used to skip its first run via a
+    // boolean ref, which is NOT idempotent. React re-runs effects for reasons
+    // other than a real navigation — StrictMode double-invokes every mount
+    // effect, and a changed callback identity re-runs this one — and each extra
+    // run took the "not the first render" branch and closed the drawer. In a
+    // real browser the drawer could therefore never be opened at all.
+    //
+    // Re-running with an UNCHANGED location must be a no-op.
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <AuthedWrapper>
+        <MemoryRouter initialEntries={['/media']}>
+          <NavDrawer isAdmin={false} onClose={onClose} />
+        </MemoryRouter>
+      </AuthedWrapper>,
+    );
+    expect(onClose).not.toHaveBeenCalled();
+
+    // A new callback identity re-runs the effect without any navigation.
+    for (let i = 0; i < 3; i += 1) {
+      rerender(
+        <AuthedWrapper>
+          <MemoryRouter initialEntries={['/media']}>
+            <NavDrawer isAdmin={false} onClose={() => onClose()} />
+          </MemoryRouter>
+        </AuthedWrapper>,
+      );
+    }
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('still closes on a route change under StrictMode', async () => {
+    render(
+      <StrictMode>
+        <AuthedWrapper>
+          <ThemeProvider>
+            <MemoryRouter initialEntries={['/']}>
+              <Routes>
+                <Route element={<Layout />}>
+                  <Route path="/" element={<div>home page</div>} />
+                  <Route path="/albums" element={<div>albums page</div>} />
+                </Route>
+              </Routes>
+            </MemoryRouter>
+          </ThemeProvider>
+        </AuthedWrapper>
+      </StrictMode>,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId('nav-menu-button'));
+
+    const drawer = await screen.findByTestId('nav-drawer');
+    await user.click(within(drawer).getByRole('link', { name: 'Album' }));
+
+    await waitFor(() => expect(screen.queryByTestId('nav-drawer')).not.toBeInTheDocument());
+    expect(screen.getByText('albums page')).toBeInTheDocument();
   });
 
   it('keeps Tab inside the open drawer', async () => {

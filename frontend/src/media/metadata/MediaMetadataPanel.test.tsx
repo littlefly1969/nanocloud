@@ -123,6 +123,36 @@ describe('photo information drawer — actions', () => {
     expect(within(dialog).getByTestId('album-picker-create')).toBeInTheDocument();
   });
 
+  it('consumes Escape so the surface behind it is not dismissed too', async () => {
+    // The picker is opened from the media viewer's details drawer, and both
+    // listen for Escape on `window`. One Escape used to close the picker AND
+    // the viewer behind it, dropping the user out of the photo entirely.
+    const behind = vi.fn();
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') behind();
+    });
+
+    installFetchMock({
+      'GET /api/albums': () => jsonResponse([
+        { id: 'a1', name: 'Holidays', description: null, itemCount: 3, showOnTv: false,
+          createdAt: 'x', updatedAt: 'x', photoCount: 3, videoCount: 0, excludedCount: 0, coverItems: [] },
+      ]),
+    });
+    renderPanel();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByTestId('add-to-album-btn'));
+    await screen.findByTestId('album-picker-select');
+
+    await user.keyboard('{Escape}');
+
+    // The picker closes…
+    await waitFor(() =>
+      expect(screen.queryByTestId('album-picker-select')).not.toBeInTheDocument());
+    // …and the listener standing in for the viewer never saw the event.
+    expect(behind).not.toHaveBeenCalled();
+  });
+
   it('adds the single open photo to the chosen album', async () => {
     let addedTo: string | null = null;
     let addedIds: unknown = null;

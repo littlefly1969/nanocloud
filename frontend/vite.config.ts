@@ -28,7 +28,12 @@ export default defineConfig({
         target: 'http://localhost:5177',
         changeOrigin: false,
       },
-      '/s': {
+      // Share links are `/s/{token}` (ShareLinkEndpoints). This MUST stay a
+      // regexp: a plain '/s' key is a PREFIX match, so it also captured
+      // `/src/main.tsx` and every other source module, and the dev server
+      // answered them with the API's 404 — local `npm run dev` could not boot
+      // the app at all. `^/s/` matches only real share links.
+      '^/s/': {
         target: 'http://localhost:5177',
         changeOrigin: false,
       },
