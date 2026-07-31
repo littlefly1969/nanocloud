@@ -100,13 +100,21 @@ the declared band.
 ```bash
 cd frontend
 npm ci          # always `ci` for validation — never `install`
-npm run lint    # this repo's `lint` IS the tsc typecheck (tsc -b --noEmit)
+npm run lint    # this repo's `lint` IS the tsc typecheck (delegates to typecheck)
 npm run build
 npm run test:run
 ```
 
-There is no `typecheck` script and no ESLint configuration: `lint` runs the
-TypeScript compiler. That is intentional.
+There is no ESLint configuration: `lint` runs the TypeScript compiler. That is
+intentional. `lint` delegates to `typecheck`, which is `tsc -b --noEmit --force`
+— the `--force` keeps the result independent of incremental `.tsbuildinfo`
+state, so validation can never depend on a cache being correct.
+
+**Do not pipe a validation command into `head`/`tail` without
+`set -o pipefail`.** A shell pipeline reports the LAST command's exit status, so
+`npm run lint 2>&1 | tail -5` exits 0 even when the type check failed. That is a
+real false green this repo has already hit — it was mistaken for an incremental
+build-cache problem. Run validation bare, or enable `pipefail` first.
 
 ## 6. TV setup
 

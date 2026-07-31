@@ -138,14 +138,24 @@ scripts/test-backend-fast.sh
 scripts/test-backend-full.sh
 ```
 
-Frontend (repo has no `typecheck` script; `lint` is the tsc typecheck):
+Frontend (there is no ESLint in this repo; `lint` is the TypeScript check, and
+delegates to `typecheck`):
 
 ```bash
 cd frontend
-npm run lint
+npm run lint       # === npm run typecheck === tsc -b --noEmit --force
 npm run build
+npm run test:run   # `npm test` is vitest in watch mode
 cd ..
 ```
+
+`typecheck` passes `--force` so the result never depends on incremental
+`.tsbuildinfo` state.
+
+**Never pipe a validation command into `head`/`tail` without `set -o pipefail`.**
+A pipeline reports the LAST command's status, so `npm run lint 2>&1 | tail -5`
+exits 0 even when the type check failed — this has already produced one false
+green. Run it bare, or set `pipefail` first.
 
 Production validation:
 
