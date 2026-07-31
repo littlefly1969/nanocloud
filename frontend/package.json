@@ -1,5 +1,5 @@
 {
-  "name": "nanocloud-frontend",
+  "name": "nubarca-frontend",
   "private": true,
   "version": "0.2.0",
   "type": "module",
@@ -13,6 +13,8 @@
     "test:run": "vitest run"
   },
   "dependencies": {
+    "@fontsource/exo-2": "^5.3.0",
+    "@fontsource/space-grotesk": "^5.3.0",
     "@tanstack/react-virtual": "^3.13.26",
     "hls.js": "^1.6.16",
     "qrcode": "^1.5.4",
