@@ -10,9 +10,15 @@ namespace NanoCloud.Api.Aesthetics;
 // returned through any API/DTO/log.
 public static class AestheticContainerKey
 {
+    // RETAINED legacy-brand identifier (NubArca rebrand, 2026-07-31): this
+    // prefix is PERSISTED in AestheticLabItem.LogicalContainerKey for every
+    // existing row. Renaming it would orphan every stored Lab container.
     public const string Prefix = "__nanocloud_aesthetics_";
     public const string Scheme = "aesthetics:v1:";
 
+    // RETAINED legacy-brand identifier (NubArca rebrand, 2026-07-31): HMAC key
+    // material. Changing it changes every derived container key computed
+    // without a configured pepper.
     private const string DevelopmentFallbackPepper = "nanocloud-aesthetics-dev-pepper-v1";
 
     public static string Compute(string? pepper, Guid ownerUserId)

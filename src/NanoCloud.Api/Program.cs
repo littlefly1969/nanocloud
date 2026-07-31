@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi;
 using NanoCloud.Api.Admin;
 using NanoCloud.Api.Aesthetics;
 using NanoCloud.Api.Ai;
@@ -95,7 +96,61 @@ var builder = WebApplication.CreateBuilder(args);
     builder.Services.Configure<UploadOptions>(uploadSection);
 }
 
-builder.Services.AddOpenApi();
+// The OpenAPI document metadata MUST be set explicitly. With a bare
+// `AddOpenApi()` BOTH the document title AND the default tag on every untagged
+// endpoint fall back to the ASSEMBLY / APPLICATION NAME, which would publish
+// the legacy brand ("NanoCloud.Api") to every API consumer — a user-visible
+// surface. The assembly name itself is a RETAINED compatibility identifier (it
+// is the container ENTRYPOINT: `dotnet NanoCloud.Api.dll`), so the published
+// document is branded here instead of renaming the assembly.
+const string OpenApiLegacyDefaultTag = "NanoCloud.Api";
+const string OpenApiDefaultTag = "NubArca API";
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, _, _) =>
+    {
+        document.Info.Title = OpenApiDefaultTag;
+        document.Info.Version = "v1";
+        document.Info.Description =
+            "Owner-private API for NubArca — your files, your hardware, your private cloud.";
+
+        // Minimal-API endpoints that never call WithTags() are tagged with the
+        // application name. Rewrite that one default tag (both the document
+        // tag list and each operation's reference to it); explicit tags set by
+        // an endpoint are left untouched.
+        if (document.Tags is not null)
+        {
+            foreach (var tag in document.Tags)
+            {
+                if (string.Equals(tag.Name, OpenApiLegacyDefaultTag, StringComparison.Ordinal))
+                {
+                    tag.Name = OpenApiDefaultTag;
+                }
+            }
+        }
+
+        foreach (var pathItem in document.Paths.Values)
+        {
+            foreach (var operation in pathItem.Operations.Values)
+            {
+                if (operation.Tags is null
+                    || !operation.Tags.Any(t => string.Equals(
+                        t.Name, OpenApiLegacyDefaultTag, StringComparison.Ordinal)))
+                {
+                    continue;
+                }
+
+                operation.Tags = operation.Tags
+                    .Select(t => string.Equals(t.Name, OpenApiLegacyDefaultTag, StringComparison.Ordinal)
+                        ? new OpenApiTagReference(OpenApiDefaultTag, document)
+                        : t)
+                    .ToHashSet();
+            }
+        }
+
+        return Task.CompletedTask;
+    });
+});
 
 // Persist DataProtection keys to a named volume so auth cookies survive
 // container restarts and image rebuilds. The path is configured via
@@ -111,6 +166,9 @@ if (!string.IsNullOrWhiteSpace(dpKeyPath))
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
+        // RETAINED legacy-brand identifier (NubArca rebrand, 2026-07-31):
+        // the auth cookie name is persisted in every live browser session.
+        // Renaming it would sign every user out on deploy.
         options.Cookie.Name = "NanoCloud.Auth";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
@@ -136,7 +194,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization(options =>
 {
     // Minimal admin policy (slice 46). Today it gates `/api/admin/*` only.
-    // When NanoCloud grows more than one role this should move to a proper
+    // When NubArca grows more than one role this should move to a proper
     // RBAC table; the policy name stays the same so callers don't churn.
     options.AddPolicy(CookieSessionValidator.AdminRole, policy =>
         policy.RequireRole(CookieSessionValidator.AdminRole));
@@ -608,7 +666,7 @@ if (!string.IsNullOrWhiteSpace(connectionString))
     builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<FileItemSweeper>());
 
     // In-process job worker is OFF by default. Only registered as a hosted
-    // service when Jobs:WorkerEnabled = true — NanoCloud never processes jobs
+    // service when Jobs:WorkerEnabled = true — NubArca never processes jobs
     // automatically otherwise. The `jobs run-once` / `jobs worker` CLI
     // commands remain the out-of-band path.
     if (builder.Configuration.GetValue<bool>("Jobs:WorkerEnabled"))

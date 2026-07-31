@@ -29,7 +29,7 @@ public enum PlateFaceRedactionProvider
     // The deterministic, non-semantic dev/test detector (Slice 3): a fixed box.
     DeterministicDev = 1,
 
-    // Reuses NanoCloud's existing face-box detector (the AI substrate's ONNX
+    // Reuses NubArca's existing face-box detector (the AI substrate's ONNX
     // SCRFD IFaceDetector) for BOUNDING BOXES ONLY — no embeddings, clusters,
     // people, or FaceDetection rows. Boxes feed PlateFaceRedactionBox + redaction.
     ExistingNanoCloudFaceDetector = 2,

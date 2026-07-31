@@ -44,7 +44,7 @@ public interface IAdminImportService
 }
 
 // Slice 81: admin-only, opt-in, whitelist-bounded server-side directory import.
-// Imports files that already live on the NanoCloud server filesystem (under a
+// Imports files that already live on the NubArca server filesystem (under a
 // configured root) into a selected target user's library, reusing the normal
 // file-creation pipeline (dedup, quota, metadata, thumbnails, audit) and
 // recreating the directory structure as logical folders.
@@ -2438,7 +2438,7 @@ public sealed class AdminImportService : IAdminImportService
         }
         if (OverlapsInternalStorage(current))
         {
-            throw new AdminImportValidationException("This location is part of NanoCloud internal storage and cannot be imported.");
+            throw new AdminImportValidationException("This location is part of NubArca internal storage and cannot be imported.");
         }
 
         var normalized = string.Join('/', segments);

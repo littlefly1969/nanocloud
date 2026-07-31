@@ -37,11 +37,15 @@ using NanoCloud.Api.Users;
 
 namespace NanoCloud.Api.Cli;
 
-// Operator CLI for one-shot maintenance tasks. Invoked by passing a
+// NubArca operator CLI for one-shot maintenance tasks. Invoked by passing a
 // subcommand as the first program argument — e.g.
 //
 //   dotnet NanoCloud.Api.dll users ensure
 //   dotnet NanoCloud.Api.dll db migrate
+//
+// The `NanoCloud.Api.dll` entrypoint name is a RETAINED legacy-brand
+// identifier: it is the assembly baked into the container ENTRYPOINT and the
+// production runbook. Never rewrite it in usage examples.
 //
 // When `IsCliInvocation` returns true the host MUST NOT start Kestrel; see
 // the early-return branch in Program.cs. The CLI builds its own
@@ -4581,7 +4585,10 @@ public static class CliEntryPoint
     private static void WriteHelp(TextWriter stdout)
     {
         // Plain ASCII only — keep readable in any terminal locale.
-        stdout.WriteLine("NanoCloud.Api operator CLI");
+        // The banner is the product name; the USAGE lines below deliberately
+        // keep the literal `dotnet NanoCloud.Api.dll` entrypoint (retained
+        // compatibility identifier — it is the real assembly on disk).
+        stdout.WriteLine("NubArca operator CLI");
         stdout.WriteLine();
         stdout.WriteLine("USAGE");
         stdout.WriteLine("  dotnet NanoCloud.Api.dll users ensure        [options]");

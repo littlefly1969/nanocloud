@@ -14,7 +14,7 @@ namespace NanoCloud.Api.Endpoints;
 // Slice 93: web remote-staging upload. Resumable browser chunk uploads into
 // temporary per-session staging directories, verified against the persisted
 // manifest/chunk state, then handed off to the existing admin-import
-// pipeline. Staging is NOT NanoCloud storage: nothing becomes a visible file
+// pipeline. Staging is NOT NubArca storage: nothing becomes a visible file
 // until the import succeeds. All endpoints are authenticated and
 // owner-scoped (missing/foreign → 404); only admins may target another user.
 // No absolute path, storage key, hash, or payload ever crosses this boundary.

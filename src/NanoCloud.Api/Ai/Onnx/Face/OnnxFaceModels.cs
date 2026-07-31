@@ -46,7 +46,7 @@ public static class OnnxFaceModels
 {
     // InsightFace CODE is MIT, but the PRETRAINED model packages (antelopev2,
     // buffalo_l) are published for NON-COMMERCIAL research / personal use unless
-    // separately licensed. NanoCloud does NOT assume any commercial grant. Verify
+    // separately licensed. NubArca does NOT assume any commercial grant. Verify
     // the exact terms on the model card before any commercial deployment.
     private const string InsightFaceLicenseNote =
         "InsightFace code MIT; pretrained model packages are non-commercial "

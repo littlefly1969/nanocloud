@@ -10,6 +10,9 @@ namespace NanoCloud.Api.Tv;
 
 public sealed class TvPairingService : ITvPairingService
 {
+    // RETAINED legacy-brand identifier (NubArca rebrand, 2026-07-31): the TV
+    // session cookie name lives in every paired TV's cookie jar. Renaming it
+    // would un-pair every television on deploy.
     public const string CookieName = "NanoCloud.TvSession";
     public const string PairingSecretHeader = "X-Tv-Pairing-Secret";
 

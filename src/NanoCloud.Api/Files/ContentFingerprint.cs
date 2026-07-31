@@ -17,6 +17,9 @@ public static class ContentFingerprint
 
     // A fixed fallback used ONLY when no pepper is configured, so dev/test run
     // without extra setup. Production SHOULD configure a real secret pepper.
+    // RETAINED legacy-brand identifier (NubArca rebrand, 2026-07-31): this
+    // literal is HMAC key material behind the persisted deleted-content ledger.
+    // Changing it invalidates every stored fingerprint.
     private const string DevelopmentFallbackPepper = "nanocloud-deleted-content-dev-pepper-v1";
 
     // Computes the fingerprint for a blob's content hash (the SHA-256 lower-hex

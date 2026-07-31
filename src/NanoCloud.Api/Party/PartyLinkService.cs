@@ -24,6 +24,9 @@ public sealed class PartyLinkService : IPartyLinkService
     // Fallback used when Party:TokenSecret is not configured. Deriving from the
     // never-exposed row Id keeps tokens unguessable even with a known default;
     // production should still set Party__TokenSecret for defence in depth.
+    // RETAINED legacy-brand identifier (NubArca rebrand, 2026-07-31): this
+    // literal is token key material. Changing it invalidates every already
+    // issued party QR/link whose TokenHash is stored in the database.
     private const string DefaultSecret = "nanocloud-party-token-secret-v1";
 
     private readonly AppDbContext _db;

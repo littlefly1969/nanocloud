@@ -10,7 +10,7 @@ namespace NanoCloud.Api.PhotoExport;
 // Owner-private photo-archive export. Creates a read-only session, builds a
 // stable SNAPSHOT of exportable photos (PhotoExportEntry rows) via a background
 // job, and serves a streamed manifest + per-file original content. Preserves the
-// current logical NanoCloud folder tree (never reorganized by date). Never
+// current logical NubArca folder tree (never reorganized by date). Never
 // exposes StorageKey / BlobObjectId / SHA / physical paths / raw metadata; the
 // token is stored hashed (mirrors the share-link pattern).
 public sealed class PhotoExportService
@@ -372,7 +372,7 @@ public sealed class PhotoExportService
 
     // Build the logical export path: parent-folder chain (root → leaf) + name,
     // relative (no leading slash). Each segment is defensively stripped of path
-    // separators (NanoCloud names cannot contain them, but the manifest must
+    // separators (NubArca names cannot contain them, but the manifest must
     // never enable traversal in a downloader).
     internal static string BuildRelativePath(
         IReadOnlyDictionary<Guid, (Guid? ParentFolderId, string Name)> byId, Guid? parentFolderId, string name)

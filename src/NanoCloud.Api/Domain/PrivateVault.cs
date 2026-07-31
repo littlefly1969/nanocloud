@@ -2,7 +2,7 @@ namespace NanoCloud.Api.Domain;
 
 // Owner-scoped Private Vault (v0). Exclusion-first: content marked with this
 // vault's Id (FileItem.PrivateVaultId / Folder.PrivateVaultId) is removed from
-// every normal NanoCloud flow by a global EF query filter, and is only readable
+// every normal NubArca flow by a global EF query filter, and is only readable
 // after a password unlock issues a short-lived access token.
 //
 // v0 stores ONLY a password hash (ASP.NET Core PasswordHasher / PBKDF2 — the
