@@ -496,7 +496,7 @@ services:
       - "127.0.0.1:8081:80"
     volumes:
       # APKs are release artifacts, not source files. The publishing helper
-      # replaces nanocloud-tv.apk atomically in this host directory.
+      # replaces nubarca-tv.apk atomically in this host directory.
       - ${NANOCLOUD_TV_APK_DIR:-/srv/nanocloud/tv-apk}:/usr/share/nginx/html/download/tv:ro
     networks:
       - nanocloud-internal
