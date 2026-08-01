@@ -216,7 +216,10 @@ export function HlsVideoPlayer({
         if (destroyed) return;
         const level = selectInitialLevel(
           data.levels.map((l) => ({ width: l.width, height: l.height, bitrate: l.bitrate })),
-          readDisplayContext(videoRef.current),
+          // true: this player requests wrapper fullscreen on `play` (see
+          // onPlay below) and its wrapper is already 100vw x 100vh, so the
+          // viewport IS the watched size. An embedded player would pass false.
+          readDisplayContext(videoRef.current, true),
         );
         // `startLevel` picks the FIRST fragment only; it does not pin playback
         // the way assigning `currentLevel` would, so ABR stays in charge.

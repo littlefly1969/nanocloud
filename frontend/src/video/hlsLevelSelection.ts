@@ -33,15 +33,30 @@ export interface PlaybackDisplayContext {
   playerWidth: number;
   playerHeight: number;
   /**
-   * The viewport the player will occupy in fullscreen, in CSS px.
+   * The viewport the player would occupy in fullscreen, in CSS px.
    *
-   * Included because this player requests wrapper fullscreen on the `play`
-   * event, so a windowed box is almost never the size the video is watched at.
-   * Sizing for the box alone would start a 2560px display at 480p and only
-   * climb after fullscreen — exactly the delay this policy removes.
+   * Only consulted when `expectsFullscreen` is true — see below.
    */
   viewportWidth: number;
   viewportHeight: number;
+  /**
+   * Whether this player actually goes fullscreen on playback.
+   *
+   * This is deliberately explicit, and defaults to FALSE for anyone who
+   * forgets it, because getting it wrong wastes bandwidth in a way hls.js will
+   * not protect against. `capLevelToPlayerSize` does NOT clamp the first
+   * fragment: level-controller uses `hls.startLevel` verbatim and bounds it
+   * only by `levels.length - 1`, never by `autoLevelCapping` (verified in
+   * hls.js 1.6.16, `hls.mjs` startLoad + `_startLevel` clamp). So a level
+   * chosen for a fullscreen viewport while the video stays in a small embedded
+   * box would download one oversized segment before ABR pulled it back to the
+   * cap — the exact waste this flag exists to prevent.
+   *
+   * The one caller that passes true is the media viewer, whose wrapper is
+   * already 100vw x 100vh AND which requests fullscreen on `play`; there,
+   * sizing for the box alone would start a 2560px display at 480p.
+   */
+  expectsFullscreen: boolean;
   devicePixelRatio: number;
   /** navigator.connection.saveData, where the Network Information API exists. */
   saveData: boolean;
@@ -117,11 +132,13 @@ export function selectInitialLevel(
   const ascending = levelsBySize(levels);
   if (prefersLowestLevel(ctx)) return ascending[0];
 
-  // The larger of the windowed box and the fullscreen viewport: the player
-  // goes fullscreen on play, so that is the size to be ready for.
+  // A player that goes fullscreen on play is watched at viewport size, so that
+  // is the size to be ready for. A player that does NOT is watched in its box,
+  // and projecting to the viewport there would fetch an oversized first segment
+  // that ABR then has to walk back.
   const windowedArea = ctx.playerWidth * ctx.playerHeight;
   const fullscreenArea = ctx.viewportWidth * ctx.viewportHeight;
-  const [boxWidth, boxHeight] = fullscreenArea > windowedArea
+  const [boxWidth, boxHeight] = ctx.expectsFullscreen && fullscreenArea > windowedArea
     ? [ctx.viewportWidth, ctx.viewportHeight]
     : [ctx.playerWidth, ctx.playerHeight];
 
@@ -144,8 +161,17 @@ export function selectInitialLevel(
   return ascending[ascending.length - 1];
 }
 
-/** The display context of the running browser, for `selectInitialLevel`. */
-export function readDisplayContext(element: HTMLVideoElement | null): PlaybackDisplayContext {
+/**
+ * The display context of the running browser, for `selectInitialLevel`.
+ *
+ * `expectsFullscreen` has no safe default to infer — whether the element grows
+ * to the viewport is a property of the SURROUNDING component, not of the
+ * element — so the caller states it.
+ */
+export function readDisplayContext(
+  element: HTMLVideoElement | null,
+  expectsFullscreen: boolean,
+): PlaybackDisplayContext {
   const rect = element?.getBoundingClientRect();
   const connection = (navigator as Navigator & {
     connection?: { saveData?: boolean; effectiveType?: string };
@@ -155,6 +181,7 @@ export function readDisplayContext(element: HTMLVideoElement | null): PlaybackDi
     playerHeight: rect?.height ?? 0,
     viewportWidth: window.innerWidth,
     viewportHeight: window.innerHeight,
+    expectsFullscreen,
     devicePixelRatio: window.devicePixelRatio || 1,
     saveData: connection?.saveData === true,
     effectiveType: connection?.effectiveType ?? null,

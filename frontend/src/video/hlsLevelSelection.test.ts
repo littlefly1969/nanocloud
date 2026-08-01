@@ -44,6 +44,7 @@ function ctx(over: Partial<PlaybackDisplayContext> = {}): PlaybackDisplayContext
     playerHeight: 720,
     viewportWidth: 1280,
     viewportHeight: 720,
+    expectsFullscreen: true,
     devicePixelRatio: 1,
     saveData: false,
     effectiveType: null,
@@ -159,13 +160,36 @@ describe('selectInitialLevel — orientation', () => {
 });
 
 describe('selectInitialLevel — fullscreen projection', () => {
-  it('sizes for the fullscreen viewport, because the player goes fullscreen on play', () => {
+  it('sizes for the fullscreen viewport when the player goes fullscreen on play', () => {
     // A small windowed box on a large screen. Sizing for the box alone would
     // start at 480p and only climb after the fullscreen transition.
     expect(selectInitialLevel(LANDSCAPE_LADDER, ctx({
       playerWidth: 480, playerHeight: 270,
       viewportWidth: 2560, viewportHeight: 1440,
+      expectsFullscreen: true,
     }))).toBe(HIGH);
+  });
+
+  // The waste this flag exists to prevent. capLevelToPlayerSize does NOT clamp
+  // the first fragment — level-controller uses hls.startLevel verbatim and
+  // bounds it only by levels.length - 1 — so an over-ambitious start level is
+  // one oversized segment actually downloaded before ABR walks it back.
+  it('sizes for the BOX when the player stays embedded', () => {
+    expect(selectInitialLevel(LANDSCAPE_LADDER, ctx({
+      playerWidth: 480, playerHeight: 270,
+      viewportWidth: 2560, viewportHeight: 1440,
+      expectsFullscreen: false,
+    }))).toBe(LOW);
+  });
+
+  it('never projects for an embedded player, at any viewport size', () => {
+    for (const [vw, vh] of [[1440, 900], [1920, 1080], [2560, 1440], [3840, 2160]]) {
+      expect(selectInitialLevel(THREE_RUNG, ctx({
+        playerWidth: 640, playerHeight: 360,
+        viewportWidth: vw, viewportHeight: vh,
+        expectsFullscreen: false,
+      })), `${vw}x${vh}`).toBe(RUNG_480);
+    }
   });
 
   it('uses the player box when it is the larger of the two', () => {
