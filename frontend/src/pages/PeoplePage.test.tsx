@@ -40,7 +40,7 @@ function renderPeople(isAdmin = false, handlers: Record<string, MockHandler> = {
 
 it('renders tabs and suggested groups', async () => {
   renderPeople();
-  expect(await screen.findByRole('heading', { name: 'Persone' })).toBeTruthy();
+  expect(await screen.findByRole('heading', { name: 'Volti' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Gruppi suggeriti' })).toBeTruthy();
   expect(await screen.findByText('3 volti')).toBeTruthy();
   expect(screen.getByLabelText('Nome persona')).toBeTruthy();

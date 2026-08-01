@@ -170,4 +170,57 @@ describe('styles.css parses', () => {
     expect(rules).toBeGreaterThan(500);
     expect(decls).toBeGreaterThan(2000);
   });
+
+  // UX-02 §3: ONE layout system. The shell used to centre every page in a
+  // 64rem column and let media-wall pages opt out, which is how a 2560px
+  // display ended up using a third of its width for a grid.
+  it('gives the authenticated main region the available width', () => {
+    const root = postcss.parse(CSS, { from: CSS_PATH });
+    let appMain: postcss.Rule | undefined;
+    root.walkRules('.app-main', (rule) => {
+      // The base rule, not a @media override.
+      if (rule.parent?.type === 'root') appMain = rule;
+    });
+    expect(appMain, '.app-main base rule').toBeDefined();
+
+    const decls = new Map<string, string>();
+    appMain!.walkDecls((d) => { decls.set(d.prop, d.value); });
+
+    // No imposed reading measure, and no centring that implies one.
+    expect(decls.has('max-width')).toBe(false);
+    expect(decls.get('margin')).toBeUndefined();
+    expect(decls.get('width')).toBe('100%');
+    // Responsive gutters rather than a fixed pad.
+    expect(decls.get('padding-inline')).toMatch(/^clamp\(/);
+    // Flex children must be able to shrink, or a wide grid pushes the page.
+    expect(decls.get('min-width')).toBe('0');
+  });
+
+  it('keeps no second, conflicting full-width system', () => {
+    // .app-main--media was the media-wall opt-out. One system now.
+    expect(CSS).not.toContain('app-main--media');
+  });
+
+  it('offers a LOCAL reading measure for single-column forms', () => {
+    const root = postcss.parse(CSS, { from: CSS_PATH });
+    let measure: postcss.Rule | undefined;
+    root.walkRules('.form-measure', (rule) => { measure = rule; });
+    expect(measure, '.form-measure').toBeDefined();
+    const decls = new Map<string, string>();
+    measure!.walkDecls((d) => { decls.set(d.prop, d.value); });
+    // Bounded, but never wider than its container on a phone.
+    expect(decls.get('width')).toMatch(/^min\(100%,/);
+  });
+
+  it('never lets the document itself scroll sideways', () => {
+    const root = postcss.parse(CSS, { from: CSS_PATH });
+    let body: postcss.Rule | undefined;
+    root.walkRules((rule) => {
+      if (rule.selector === '.app-shell__body' && rule.parent?.type === 'root') body = rule;
+    });
+    expect(body, '.app-shell__body').toBeDefined();
+    const decls = new Map<string, string>();
+    body!.walkDecls((d) => { decls.set(d.prop, d.value); });
+    expect(decls.get('max-width')).toBe('100%');
+  });
 });

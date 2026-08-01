@@ -55,7 +55,8 @@ describe('Layout primary navigation', () => {
     expect(nav.getByRole('link', { name: 'File' })).toHaveAttribute('href', '/');
     expect(nav.getByRole('link', { name: 'Libreria' })).toHaveAttribute('href', '/media');
     expect(nav.getByRole('link', { name: 'Album' })).toHaveAttribute('href', '/albums');
-    expect(nav.getByRole('link', { name: 'Persone' })).toHaveAttribute('href', '/people');
+    expect(nav.getByRole('link', { name: 'Volti' })).toHaveAttribute('href', '/people');
+    expect(nav.getByRole('link', { name: 'Laboratorio' })).toHaveAttribute('href', '/lab');
     expect(nav.getByRole('link', { name: 'Condivisioni' })).toHaveAttribute('href', '/shares');
     expect(nav.getByRole('link', { name: 'Cestino' })).toHaveAttribute('href', '/trash');
   });

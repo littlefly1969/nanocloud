@@ -107,7 +107,8 @@ describe('AestheticsLabPage', () => {
     installFetchMock({ 'GET /api/aesthetics-lab/items': () => jsonResponse({ items: [], nextCursor: null }) });
     render(wrapper(<AestheticsLabPage />));
 
-    expect(await screen.findByRole('heading', { name: 'Laboratorio estetico' })).toBeInTheDocument();
+    // Inside the Laboratory shell the section heading is the tab name.
+    expect(await screen.findByRole('heading', { name: 'Estetica' })).toBeInTheDocument();
     expect(screen.getByRole('note')).toHaveTextContent(/valutazione estetica sperimentale/i);
     expect(await screen.findByTestId('aesthetics-empty')).toBeInTheDocument();
   });

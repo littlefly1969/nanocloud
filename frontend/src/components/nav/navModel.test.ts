@@ -10,8 +10,22 @@ describe('primary navigation model', () => {
     const routes = allRoutes(false);
     expect(routes).toEqual([
       '/', '/media', '/albums', '/people',
-      '/plates', '/lab/aesthetics', '/shares', '/cloud-functions', '/private', '/trash',
+      '/lab', '/shares', '/cloud-functions', '/private', '/trash',
     ]);
+  });
+
+  // UX-02: Plates and Aesthetics are sections of one Laboratory workspace,
+  // not two primary destinations. The entry has no `end`, so it stays active
+  // for every /lab/* child route.
+  it('offers ONE Laboratory entry, not separate Plates and Aesthetics', () => {
+    const routes = allRoutes(false);
+    expect(routes).toContain('/lab');
+    expect(routes).not.toContain('/plates');
+    expect(routes).not.toContain('/lab/aesthetics');
+    const lab = buildNavGroups({ isAdmin: false })
+      .flatMap((g) => g.items).find((i) => i.to === '/lab')!;
+    expect(lab.end).toBeUndefined();
+    expect(lab.labelKey).toBe('nav.laboratory');
   });
 
   it('excludes Upload and TV Devices — they are Cloud Functions tools now', () => {
