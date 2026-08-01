@@ -31,11 +31,13 @@ baseline and active work; do not use it as a chronological work log.
 - Read `deploy/FAST_DEPLOY.md` in full immediately before any production
   deployment, rebuild, release-pin change or production migration.
 
-## Active slice — UX-02 + VIDEO-HLS-05 wider workspaces, Laboratory, Faces, HLS
+## Released slice — UX-02 + VIDEO-HLS-05 wider workspaces, Laboratory, Faces, HLS
 
 Branch `feat/ux-lab-faces-hls`, started from `main` (`13a5a3a`, the merged
-TV-ID-01 tip). Not pushed, not merged, not deployed. No migration, no backfill,
-no TV package/APK/signing change.
+TV-ID-01 tip), merged without history rewriting and released from merge
+`70815d811ae64eeee45b30492ba63d481b29263d` on 2 August 2026. Production pins
+API, worker and frontend to `release-70815d811ae6`; no migration, backfill or
+janitor was run, and the approved TV APK was not rebuilt.
 
 - **Compact brand mark**: the approved flat-mark master draws the symbol on a
   canvas far larger than itself — 528×476 of 1024×1024, so only 51.6% of the
@@ -87,12 +89,12 @@ Decisions worth remembering:
   480p after 3 s of playback. Small viewports are unchanged (52 → 49 ms, 480p
   both).
 
-## Superseded slice — TV-ID-01 NubArca TV application identity
+## Released slice — TV-ID-01 NubArca TV application identity
 
 Branch `feat/nubarca-tv-identity`, started from `main` (`ee489a6`, which is also
-the currently deployed SHA). Not pushed, not merged, not deployed. No database,
-Docker volume, media storage or backend API identity changed; no GitHub
-repository rename.
+the pre-release production SHA), merged at `13a5a3a` and deployed as part of
+the `70815d8` release on 2 August 2026. No database, Docker volume, media storage
+or backend API identity changed; no GitHub repository rename.
 
 **NubArca and NubArca TV are separate applications sharing one backend and one
 account ecosystem.** No universal mobile/TV binary. The mobile app will sync and
@@ -110,8 +112,16 @@ Retired with no upgrade path (an applicationId cannot be renamed):
 `it.littlefly.nanocloudtv`, slug `nanocloud-tv`, runtime `tv-native-3`, storage
 key `nanocloud.tv.session.cookie`, artifact `nanocloud-tv.apk`.
 
-**BLOCKED before publication and device install.** Two operator inputs are
-missing; everything else in the slice is complete and validated.
+**Publication and device install are closed.** The definitive release-signed
+APK is live at both `/tv.apk` and `/download/tv/nubarca-tv.apk`; both URLs serve
+75,983,942 byte-identical bytes with SHA-256
+`9e20e12212733d27e0f1c836b87af88b0dc2157a5ebd221f3cc7859c8afe5622`.
+Package `it.littlefly.nubarca.tv` version `1.0.0` (`versionCode` 1) verifies with
+APK Signature Scheme v2 and v3 and the definitive NubArca TV certificate. The
+private Fire Stick passed fresh install, pairing and functional testing.
+The protected local recovery material and the server-side password record are
+present; copying the keystore and recovery credentials to an encrypted
+off-machine location remains an explicit disaster-recovery follow-up.
 
 Decisions worth remembering:
 
