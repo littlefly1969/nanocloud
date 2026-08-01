@@ -13,7 +13,6 @@ import {
 import { useAuth } from '../auth/useAuth';
 import { smallThumbnailUrl } from '../components/files/types';
 import { useI18n, type MessageKey } from '../i18n';
-import { useMediaWallLayout } from '../components/mediaWallLayout';
 import { MediaViewer, type MediaViewerItem } from '../components/MediaViewer';
 import { MediaGrid } from '../media/workspace/MediaGrid';
 import { MediaMetadataPanel } from '../media/metadata/MediaMetadataPanel';
@@ -121,8 +120,6 @@ export function SimilarPhotosExplorerPage() {
   const location = useLocation();
   const { invalidateAuth } = useAuth();
   const { t, tn } = useI18n();
-  // Same full-bleed shell the library/album walls use.
-  useMediaWallLayout();
 
   // `pct` drives the controls (50–95); `debouncedPct` drives the fetch.
   const [pct, setPct] = useState(() => pctFromParams(searchParams));
