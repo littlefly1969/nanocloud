@@ -21,6 +21,7 @@ import { PeoplePage } from './pages/PeoplePage';
 import { PersonDetailPage } from './pages/PersonDetailPage';
 import { PlatesPage } from './pages/PlatesPage';
 import { AestheticsLabPage } from './pages/AestheticsLabPage';
+import { LAB_DEFAULT_ROUTE, LaboratoryPage } from './pages/LaboratoryPage';
 import { PrivateVaultPage } from './pages/PrivateVaultPage';
 import { SharesPage } from './pages/SharesPage';
 import { LegacyCloudToolRedirect } from './cloud/LegacyCloudToolRedirect';
@@ -86,11 +87,18 @@ export function App() {
             {/* People v0: owner-private face grouping. */}
             <Route path="/people" element={<PeoplePage />} />
             <Route path="/people/:personId" element={<PersonDetailPage />} />
-            {/* Plates (Targhe): owner-private, segregated image surface. */}
-            <Route path="/plates" element={<PlatesPage />} />
-            {/* Aesthetics Lab (Laboratorio estetico): owner-private, opt-in,
-                experimental HumanAesExpert analysis space. */}
-            <Route path="/lab/aesthetics" element={<AestheticsLabPage />} />
+            {/* Laboratory (Laboratorio): ONE primary destination whose sections
+                are routes, so a tab survives refresh, is linkable and moves
+                Back/Forward. Plates and Aesthetics keep their own APIs,
+                storage and data models — only the shell is shared. */}
+            <Route path="/lab" element={<LaboratoryPage />}>
+              <Route index element={<Navigate to={LAB_DEFAULT_ROUTE} replace />} />
+              <Route path="plates" element={<PlatesPage />} />
+              <Route path="aesthetics" element={<AestheticsLabPage />} />
+            </Route>
+            {/* Plates was a top-level destination before the Laboratory existed;
+                the old deep link keeps working. */}
+            <Route path="/plates" element={<Navigate to="/lab/plates" replace />} />
             <Route path="/shares" element={<SharesPage />} />
             {/* Upload and TV Devices are Cloud Functions tools now. Their old
                 standalone routes stay valid and redirect to the canonical tool

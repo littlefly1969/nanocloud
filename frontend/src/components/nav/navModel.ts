@@ -38,8 +38,10 @@ const MAIN: NavItem[] = [
 ];
 
 const MORE: NavItem[] = [
-  { to: '/plates', labelKey: 'nav.plates', icon: 'plates' },
-  { to: '/lab/aesthetics', labelKey: 'nav.aestheticsLab', icon: 'aesthetics' },
+  // ONE Laboratory entry. Plates and Aesthetics are sections inside it now,
+  // reached by /lab/plates and /lab/aesthetics; without `end` this link stays
+  // active for every /lab/* child.
+  { to: '/lab', labelKey: 'nav.laboratory', icon: 'aesthetics' },
   { to: '/shares', labelKey: 'nav.shares', icon: 'shares' },
   { to: '/cloud-functions', labelKey: 'nav.cloudFunctions', icon: 'functions' },
   { to: '/private', labelKey: 'nav.private', icon: 'private' },

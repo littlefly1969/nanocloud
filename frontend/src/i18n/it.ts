@@ -43,8 +43,8 @@ const it = {
   'nav.gallery': 'Galleria',
   'nav.videos': 'Video',
   'nav.albums': 'Album',
-  'nav.people': 'Persone',
-  'nav.plates': 'Targhe',
+  'nav.people': 'Volti',
+  'nav.laboratory': 'Laboratorio',
   'nav.shares': 'Condivisioni',
   'nav.tvDevices': 'Dispositivi TV',
   'nav.upload': 'Carica',
@@ -1078,9 +1078,9 @@ const it = {
   'cloud.organizeHint': 'La procedura guidata mostra un’anteprima completa prima di spostare qualsiasi file.',
 
   // --- People ---
-  'people.pageAria': 'Persone',
-  'people.heading': 'Persone',
-  'people.sectionsAria': 'Sezioni persone',
+  'people.pageAria': 'Volti',
+  'people.heading': 'Volti',
+  'people.sectionsAria': 'Sezioni volti',
   'people.tabSuggested': 'Gruppi suggeriti',
   'people.tabPeople': 'Persone',
   'people.tabUnassigned': 'Volti non assegnati',
@@ -1108,7 +1108,7 @@ const it = {
 
   // --- Person detail ---
   'person.notFound': 'Persona non trovata.',
-  'person.backToPeople': '‹ Persone',
+  'person.backToPeople': '‹ Torna alle persone',
   'person.errorLabel': 'Errore.',
   'person.detailAria': 'Dettaglio persona',
   'person.namePlaceholder': 'Nome',
@@ -1771,6 +1771,12 @@ const it = {
   'gallery.command.errFailed': 'Non sono riuscito a interpretare la richiesta. Modifica la frase oppure usa i filtri manuali.',
   'gallery.command.noticeUnavailable': 'Il motore di ricerca locale non è disponibile.',
   'gallery.command.noticeIndexing': 'Le foto filtrate non sono ancora disponibili per la ricerca semantica.',
+
+  // Laboratory (Laboratorio): one workspace, two route-backed sections.
+  'lab.heading': 'Laboratorio',
+  'lab.sectionsAria': 'Sezioni del laboratorio',
+  'lab.plates': 'Targhe',
+  'lab.aesthetics': 'Estetica',
 
   // Aesthetics Lab (Laboratorio estetico)
   'nav.aestheticsLab': 'Laboratorio estetico',
