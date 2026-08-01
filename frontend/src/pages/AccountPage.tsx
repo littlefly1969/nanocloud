@@ -63,7 +63,9 @@ export function AccountPage() {
         <h2>{t('account.heading')}</h2>
       </header>
 
-      <form className="admin-card" onSubmit={(e) => void submit(e)}>
+      {/* One column of password fields: bounded locally, because the shell no
+          longer bounds anything. */}
+      <form className="admin-card form-measure" onSubmit={(e) => void submit(e)}>
         <h3>{t('account.changePassword')}</h3>
         <label>
           {t('account.currentPassword')}

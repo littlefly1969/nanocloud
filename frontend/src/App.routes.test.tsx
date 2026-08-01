@@ -57,6 +57,20 @@ describe('App route table (anonymous)', () => {
     await expectLanded('/definitely-not-a-route');
   });
 
+  // UX-02: the Laboratory subtree and the preserved /plates deep link are all
+  // protected, so an anonymous visitor lands on /login rather than seeing an
+  // unguarded workspace or a dead route.
+  it('protects the whole Laboratory subtree', async () => {
+    for (const path of ['/lab', '/lab/plates', '/lab/aesthetics']) {
+      await expectLanded(path);
+      cleanup();
+    }
+  });
+
+  it('still resolves the old /plates deep link, protected', async () => {
+    await expectLanded('/plates');
+  });
+
   it('sends a deep unknown route to /login too', async () => {
     await expectLanded('/albums/album-42/nope/deeper');
   });

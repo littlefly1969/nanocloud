@@ -39,8 +39,8 @@ const en: Partial<Record<MessageKey, string>> = {
   'nav.gallery': 'Gallery',
   'nav.videos': 'Videos',
   'nav.albums': 'Albums',
-  'nav.people': 'People',
-  'nav.plates': 'Plates',
+  'nav.people': 'Faces',
+  'nav.laboratory': 'Laboratory',
   'nav.shares': 'Shares',
   'nav.tvDevices': 'TV devices',
   'nav.upload': 'Upload',
@@ -1071,9 +1071,9 @@ const en: Partial<Record<MessageKey, string>> = {
   'cloud.organizeHint': 'The wizard shows a full preview before any file is moved.',
 
   // --- People ---
-  'people.pageAria': 'People',
-  'people.heading': 'People',
-  'people.sectionsAria': 'People sections',
+  'people.pageAria': 'Faces',
+  'people.heading': 'Faces',
+  'people.sectionsAria': 'Faces sections',
   'people.tabSuggested': 'Suggested groups',
   'people.tabPeople': 'People',
   'people.tabUnassigned': 'Unassigned faces',
@@ -1101,7 +1101,7 @@ const en: Partial<Record<MessageKey, string>> = {
 
   // --- Person detail ---
   'person.notFound': 'Person not found.',
-  'person.backToPeople': '‹ People',
+  'person.backToPeople': '‹ Back to people',
   'person.errorLabel': 'Error.',
   'person.detailAria': 'Person detail',
   'person.namePlaceholder': 'Name',
@@ -1762,6 +1762,12 @@ const en: Partial<Record<MessageKey, string>> = {
   'gallery.command.errFailed': "I couldn't interpret that request. Rephrase it or use the manual filters.",
   'gallery.command.noticeUnavailable': 'The local search engine is unavailable.',
   'gallery.command.noticeIndexing': 'The filtered photos are not yet available for semantic search.',
+
+  // Laboratory: one workspace, two route-backed sections.
+  'lab.heading': 'Laboratory',
+  'lab.sectionsAria': 'Laboratory sections',
+  'lab.plates': 'Plates',
+  'lab.aesthetics': 'Aesthetics',
 
   // Aesthetics Lab
   'nav.aestheticsLab': 'Aesthetics Lab',

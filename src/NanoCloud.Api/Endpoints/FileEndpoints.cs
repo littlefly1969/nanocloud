@@ -154,7 +154,8 @@ public static class FileEndpoints
                 {
                     VideoHlsMasterStatus.Ready => Results.Text(
                         master.MasterPlaylist!, VideoHlsServingService.MasterContentType),
-                    VideoHlsMasterStatus.Preparing => Results.Accepted(),
+                    VideoHlsMasterStatus.Preparing =>
+                        VideoHlsServingService.Preparing(httpContext.Response),
                     _ => Results.NotFound(),
                 };
             }

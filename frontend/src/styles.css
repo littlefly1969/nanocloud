@@ -895,10 +895,9 @@ a {
 /* NubArca brand artwork.
    Every image here is an approved asset copied byte-for-byte from
    assets/brand/nubarca/. The component picks the on-dark or on-light variant
-   from the resolved theme and sets the pixel size inline; CSS only positions
-   it and reserves the brand clear space (25% of the logo height, applied as
-   padding by the component). Nothing here scales artwork beyond its shipped
-   size, and nothing recolours it. */
+   from the resolved theme and publishes the box size as --brand-mark-size;
+   CSS positions it and may step that size down responsively. Nothing here
+   scales artwork beyond its shipped size, and nothing recolours it. */
 .brand-mark {
   display: inline-flex;
   align-items: center;
@@ -908,6 +907,8 @@ a {
 
 .brand-mark__icon {
   display: block;
+  width: var(--brand-mark-size);
+  height: var(--brand-mark-size);
   /* Never below the 24px minimum icon size, and never distorted. */
   min-width: 24px;
   min-height: 24px;
@@ -932,6 +933,28 @@ a {
   align-items: center;
   gap: calc(var(--space-unit) * 0.75);
   min-width: 0;
+  /* Brand clear space, supplied by the PLACEMENT rather than by padding inside
+     the mark's own box. 25% of the rendered logo height: the mark box is
+     41px, its visible artwork is 41 x 0.789 ~ 32px tall, so 8px is the
+     requirement and 10px clears it with margin to spare. Reserving it here
+     instead of inside the mark is what lets the artwork itself be 36px wide
+     rather than 36px of box holding 19px of ink. */
+  padding-inline: 10px;
+}
+
+/* The shell lockup renders the mark materially larger than the old 26px box.
+   With the compacted artwork (87.6% of its canvas) a 41px box shows ~36px of
+   visible mark on desktop and a 37px box ~32px on mobile.
+
+   The step-down targets the IMAGE, not --brand-mark-size. The component writes
+   that custom property as an inline style on the wrapper, and an inline
+   declaration beats any stylesheet rule, so overriding the property here would
+   need !important. The image carries no inline style, so a plain rule wins. */
+@media (max-width: 900px) {
+  .app-brand-lockup .brand-mark__icon {
+    width: 37px;
+    height: 37px;
+  }
 }
 .app-brand-lockup .app-brand {
   font-family: var(--font-heading);
@@ -1082,12 +1105,20 @@ a {
 }
 .app-nav-link-active .nc-icon { color: var(--accent); }
 
+/* Authenticated workspaces use the width they are given.
+   The shell used to centre every page in a 64rem column and let media-wall
+   pages opt OUT of it, which meant two layout systems and, on a 2560px
+   display, roughly a third of the screen in use while grids, tables and
+   dashboards wrapped for no reason. There is one system now: the main region
+   is full-width with responsive gutters, and the few surfaces that genuinely
+   need a reading measure (login, account forms, confirmations, prose) set a
+   LOCAL max-width instead of imposing one on everything. */
 .app-main {
   flex: 1;
   min-width: 0;
-  padding: 1.5rem;
-  max-width: 64rem;
-  margin: 0 auto;
+  width: 100%;
+  padding-block: 1.5rem;
+  padding-inline: clamp(1rem, 2.5vw, 2.5rem);
 }
 
 /* --- Mobile drawer -------------------------------------------------------- */
@@ -1121,7 +1152,9 @@ a {
   .app-topbar__menu { display: inline-flex; }
   .app-topbar__rail-toggle { display: none; }
   .app-sidebar { display: none; }
-  .app-main { padding: 1rem; }
+  /* Inline gutters already shrink via clamp(); only the block rhythm needs
+     tightening once the rail is gone. */
+  .app-main { padding-block: 1rem; }
 }
 
 /* --- User menu ------------------------------------------------------------ */
@@ -1350,17 +1383,14 @@ button.logout {
   cursor: pointer;
 }
 
-/* Media-wall pages (library / excluded / album workspace) use nearly the full
-   viewport width so the justified rows have room; every other page keeps the
-   centred, max-width shell above. Opt-in is page-declared (useMediaWallLayout),
-   not pathname-sniffed. */
-.app-main--media {
-  max-width: none;
-  width: 100%;
-  padding-inline: 10px;
-}
-@media (max-width: 640px) {
-  .app-main--media { padding-inline: 8px; }
+/* Local reading measure.
+   .app-main is full-width by design, which is right for grids, tables,
+   dashboards and media walls but wrong for a single column of form fields —
+   a password field stretched across 2560px is not more usable. Surfaces that
+   are one narrow column opt back IN here instead of the shell constraining
+   everything. */
+.form-measure {
+  width: min(100%, 34rem);
 }
 
 .placeholder {
@@ -4265,10 +4295,6 @@ video.lightbox-image {
   .admin-grid {
     grid-template-columns: 1fr;
   }
-
-  .app-main {
-    padding: 1rem;
-  }
 }
 
 /* ── Gallery lightbox: ensure full-width on mobile ───────────────── */
@@ -4547,6 +4573,29 @@ video.lightbox-image {
   letter-spacing: 0.02em;
   pointer-events: none;
 }
+/* First-frame indicator. Centred over the picture, never over the native
+   control bar at the bottom, and gone the moment a frame can be painted —
+   a permanent scrim over the controls would be worse than no indicator. */
+.media-viewer-video-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: -1.25rem 0 0 -1.25rem;
+  border: 3px solid rgba(255, 255, 255, 0.28);
+  border-top-color: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: media-viewer-spin 0.9s linear infinite;
+}
+@keyframes media-viewer-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .media-viewer-video-spinner { animation-duration: 2.4s; }
+}
+
 .media-viewer-video-preparing-label {
   position: absolute;
   bottom: 12%;
@@ -5786,12 +5835,30 @@ video.lightbox-image {
 .people-page { padding: 1rem; }
 .people-header { display: flex; align-items: center; gap: 0.75rem; }
 .people-back { text-decoration: none; }
-.people-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0 1rem; }
-.people-tab {
+/* Workspace section tabs. The Faces strip and the Laboratory strip are the same
+   control in two places, so they share one appearance — the Laboratory's are
+   links (its sections are routes) and Faces' are buttons that rewrite ?tab=,
+   which is why both element types are styled here. */
+.people-tabs, .lab-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0 1rem; }
+.people-tab, .lab-tab {
   background: transparent; border: 1px solid var(--border, #ccc);
   border-radius: 999px; padding: 0.35rem 0.85rem; cursor: pointer;
+  color: inherit; text-decoration: none; white-space: nowrap; line-height: 1.5;
 }
-.people-tab.is-active { background: var(--accent, #2563eb); color: #fff; border-color: transparent; }
+.people-tab.is-active, .lab-tab.is-active { background: var(--accent, #2563eb); color: #fff; border-color: transparent; }
+
+/* Narrow viewports: the strip scrolls on its OWN axis. Wrapping seven Faces
+   tabs onto four lines wastes the screen, and letting them overflow would give
+   the whole document a horizontal scrollbar. */
+@media (max-width: 640px) {
+  .people-tabs, .lab-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+  .people-tab, .lab-tab { flex: none; }
+}
 .people-grid {
   list-style: none; margin: 0; padding: 0; display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem;

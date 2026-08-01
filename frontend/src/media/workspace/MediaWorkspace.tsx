@@ -10,7 +10,6 @@ import {
 } from '@nubarca/api-client';
 import { useAuth } from '../../auth/useAuth';
 import { useI18n } from '../../i18n';
-import { useMediaWallLayout } from '../../components/mediaWallLayout';
 import { MediaViewer, type MediaViewerItem } from '../../components/MediaViewer';
 import { MediaMetadataPanel } from '../metadata/MediaMetadataPanel';
 import { useMediaSimilarityActions } from '../viewer/mediaViewerActions';
@@ -79,8 +78,6 @@ export function MediaWorkspace({
   const { invalidateAuth } = useAuth();
   const location = useLocation();
   const people = usePeopleIndex();
-  // Render inside the full-width media shell (no-op outside the app Layout).
-  useMediaWallLayout();
 
   const ws = useMediaWorkspace({
     source,

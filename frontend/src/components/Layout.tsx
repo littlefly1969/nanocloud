@@ -3,13 +3,12 @@ import { Outlet } from 'react-router';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n';
 import { BrandMark } from '../brand/BrandMark';
-import { PRODUCT_NAME } from '../brand/brand';
+import { PRODUCT_NAME, SHELL_MARK_VISIBLE_PX, markBoxForVisibleWidth } from '../brand/brand';
 import { readMigratedItem } from '../storage/brandedStorageKey';
 import { AppNav } from './nav/AppNav';
 import { NavDrawer } from './nav/NavDrawer';
 import { UserMenu } from './UserMenu';
 import { Icon } from './icons/Icon';
-import { MediaWallLayoutContext } from './mediaWallLayout';
 
 // Authenticated app shell: a collapsible left navigation, a compact top utility
 // bar and a full-width content region.
@@ -37,9 +36,6 @@ export function Layout() {
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-  // Media-wall pages opt into a full-bleed main via useMediaWallLayout(); every
-  // other page keeps the centred, max-width content column.
-  const [mediaFullWidth, setMediaFullWidth] = useState(false);
 
   const toggleRail = useCallback(() => {
     setCollapsed((prev) => {
@@ -98,7 +94,9 @@ export function Layout() {
         </button>
 
         <span className="app-topbar__brand app-brand-lockup">
-          <BrandMark size={26} />
+          {/* Clear space comes from .app-brand-lockup's padding, not from
+              padding inside the mark that would shrink the artwork. */}
+          <BrandMark size={markBoxForVisibleWidth(SHELL_MARK_VISIBLE_PX.desktop)} clearSpace={false} />
           <span className="app-brand">{PRODUCT_NAME}</span>
         </span>
 
@@ -119,10 +117,8 @@ export function Layout() {
           <AppNav isAdmin={isAdmin} collapsed={collapsed} />
         </nav>
 
-        <main className={`app-main${mediaFullWidth ? ' app-main--media' : ''}`}>
-          <MediaWallLayoutContext.Provider value={setMediaFullWidth}>
-            <Outlet />
-          </MediaWallLayoutContext.Provider>
+        <main className="app-main">
+          <Outlet />
         </main>
       </div>
 

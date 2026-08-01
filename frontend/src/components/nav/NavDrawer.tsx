@@ -2,7 +2,7 @@ import { useEffect, useRef, type KeyboardEvent } from 'react';
 import { useLocation } from 'react-router';
 import { useI18n } from '../../i18n';
 import { BrandMark } from '../../brand/BrandMark';
-import { PRODUCT_NAME } from '../../brand/brand';
+import { PRODUCT_NAME, SHELL_MARK_VISIBLE_PX, markBoxForVisibleWidth } from '../../brand/brand';
 import { Icon } from '../icons/Icon';
 import { AppNav } from './AppNav';
 
@@ -96,7 +96,7 @@ export function NavDrawer({ isAdmin, onClose, returnFocusRef }: NavDrawerProps) 
       >
         <div className="nav-drawer__head">
           <span className="app-brand-lockup">
-            <BrandMark size={26} />
+            <BrandMark size={markBoxForVisibleWidth(SHELL_MARK_VISIBLE_PX.desktop)} clearSpace={false} />
             <span className="app-brand">{PRODUCT_NAME}</span>
           </span>
           <button

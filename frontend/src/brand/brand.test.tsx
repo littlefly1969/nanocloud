@@ -14,11 +14,14 @@ import { BrandMark } from './BrandMark';
 import {
   BRAND_ASSETS,
   LOGO_CLEAR_SPACE_RATIO,
+  MARK_CONTENT_RATIO,
   MIN_ICON_SIZE_PX,
   MIN_WORDMARK_WIDTH_PX,
   PRODUCT_NAME,
+  SHELL_MARK_VISIBLE_PX,
   TV_PRODUCT_NAME,
   flatMarkUrl,
+  markBoxForVisibleWidth,
   wordmarkAsset,
 } from './brand';
 
@@ -330,6 +333,27 @@ describe('brand mark', () => {
     expect(pad).toBeCloseTo(40 * LOGO_CLEAR_SPACE_RATIO, 0);
   });
 
+  it('drops its own padding where the placement supplies the clear space', () => {
+    renderMark({ size: 41, clearSpace: false });
+    expect(screen.getByTestId('brand-mark').style.padding).toBe('');
+  });
+
+  it('publishes the box size so a placement can step it down in CSS', () => {
+    renderMark({ size: 41 });
+    expect(screen.getByTestId('brand-mark').style.getPropertyValue('--brand-mark-size'))
+      .toBe('41px');
+  });
+
+  // The defect this slice fixes: the shell mark was a 26px box holding ~13.5px
+  // of artwork. Both halves moved — a bigger box AND artwork that fills it.
+  it('renders a materially larger VISIBLE mark in the shell than before', () => {
+    const box = markBoxForVisibleWidth(SHELL_MARK_VISIBLE_PX.desktop);
+    const visible = box * MARK_CONTENT_RATIO.width;
+    expect(visible).toBeGreaterThanOrEqual(35);
+    // The pre-UX-02 shell: a 26px box of artwork that occupied 51.6% of it.
+    expect(visible).toBeGreaterThan(26 * 0.516 * 2);
+  });
+
   it('never points at a reference board or a source master', () => {
     for (const props of [{}, { variant: 'wordmark' as const }]) {
       cleanup();
@@ -426,6 +450,35 @@ describe('brand geometry and palette tokens', () => {
     expect(MIN_ICON_SIZE_PX).toBe(24);
     expect(MIN_WORDMARK_WIDTH_PX).toBe(120);
     expect(ruleBody('.brand-mark__icon')).toContain(`min-width: ${MIN_ICON_SIZE_PX}px`);
+  });
+
+  // UX-02: the mark box is published as a custom property so ONE topbar can
+  // serve a desktop and a mobile size without a second component instance.
+  it('sizes the mark from the custom property the component publishes', () => {
+    const icon = ruleBody('.brand-mark__icon');
+    expect(icon).toContain('width: var(--brand-mark-size)');
+    expect(icon).toContain('height: var(--brand-mark-size)');
+  });
+
+  it('steps the shell mark down on mobile without a second instance', () => {
+    const mobileBox = markBoxForVisibleWidth(SHELL_MARK_VISIBLE_PX.mobile);
+    // The override targets the IMAGE. --brand-mark-size is written as an inline
+    // style by the component, and an inline declaration beats a stylesheet
+    // rule — a media query on the custom property is silently ignored, which
+    // is exactly what the browser matrix caught.
+    expect(CSS).toMatch(
+      new RegExp(`\\.app-brand-lockup \\.brand-mark__icon \\{\\s*width: ${mobileBox}px;`),
+    );
+  });
+
+  it('supplies the shell clear space from the placement, not from mark padding', () => {
+    // The requirement is 25% of the RENDERED LOGO HEIGHT. Reserving it as
+    // padding inside a fixed box is what made the old mark look small.
+    const box = markBoxForVisibleWidth(SHELL_MARK_VISIBLE_PX.desktop);
+    const requiredPx = box * MARK_CONTENT_RATIO.height * LOGO_CLEAR_SPACE_RATIO;
+    const lockup = ruleBody('.app-brand-lockup');
+    const declared = Number.parseFloat(/padding-inline:\s*([\d.]+)px/.exec(lockup)![1]);
+    expect(declared).toBeGreaterThanOrEqual(requiredPx);
   });
 
   it('loads no font from a third-party origin', () => {

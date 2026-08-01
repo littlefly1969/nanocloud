@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import {
   ApiError,
   addFaceToPerson,
@@ -20,6 +20,7 @@ import { FaceContextViewer } from '../components/people/FaceContextViewer';
 import { AssignToPersonMenu } from '../components/people/AssignToPersonMenu';
 import { PersonVideosSection } from '../components/people/PersonVideosSection';
 import { useI18n } from '../i18n';
+import { FACES_FALLBACK_RETURN, resolveFacesReturn } from './facesTabs';
 
 const MIN_PCT = 20;
 const MAX_PCT = 95;
@@ -32,6 +33,12 @@ const DEBOUNCE_MS = 400;
 export function PersonDetailPage() {
   const { personId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  // The Faces tab that opened this person. A direct link, a new tab or a
+  // bookmark carries no state, so this resolves to the named-people tab
+  // rather than depending on a history entry that may not exist. That is
+  // also why Back is a LINK and not navigate(-1).
+  const backTo = resolveFacesReturn(location.state);
   const { invalidateAuth } = useAuth();
   const { t } = useI18n();
 
@@ -76,7 +83,7 @@ export function PersonDetailPage() {
     if (personId === undefined) return;
     try {
       await archivePerson(personId);
-      navigate('/people');
+      navigate(FACES_FALLBACK_RETURN);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) invalidateAuth();
     }
@@ -93,7 +100,7 @@ export function PersonDetailPage() {
   }
 
   if (phase === 'notfound') {
-    return <section className="people-page"><p className="muted">{t('person.notFound')}</p><Link to="/people">{t('person.backToPeople')}</Link></section>;
+    return <section className="people-page"><p className="muted">{t('person.notFound')}</p><Link to={backTo}>{t('person.backToPeople')}</Link></section>;
   }
   if (phase === 'error') {
     return (
@@ -108,7 +115,7 @@ export function PersonDetailPage() {
   return (
     <section className="people-page" aria-label={t('person.detailAria')}>
       <header className="people-header">
-        <Link to="/people" className="people-back">{t('person.backToPeople')}</Link>
+        <Link to={backTo} className="people-back">{t('person.backToPeople')}</Link>
         <h2>{person?.name ?? t('people.unnamed')}</h2>
       </header>
 

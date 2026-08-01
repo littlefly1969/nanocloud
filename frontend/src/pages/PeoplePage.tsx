@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import {
   ApiError,
   assignGroup,
@@ -19,20 +19,40 @@ import { IgnoredFacesTab } from '../components/people/IgnoredFacesTab';
 import { VideoFaceReviewTab } from '../components/people/VideoFaceReviewTab';
 import { ClusterAssignDialog } from '../components/people/ClusterAssignDialog';
 import { useI18n } from '../i18n';
+import { type FacesTab, resolveFacesTab } from './facesTabs';
 
-type Tab = 'suggested' | 'people' | 'unassigned' | 'review' | 'videoFaces' | 'ignored' | 'settings';
+type Tab = FacesTab;
 
 // Tabs that load their own data inside their component (not via `reload`).
 const SELF_LOADING_TABS: Tab[] = ['settings', 'unassigned', 'ignored', 'videoFaces'];
 
-// Owner-private People page (Persone). Suggested groups → name a person; People →
-// browse; Review → low-confidence groups; Settings → admin thresholds. No raw
-// vectors, scores tables, or storage internals are shown.
+// Owner-private Faces page (Volti). Suggested groups → name a person; People →
+// browse named clusters; Review → low-confidence groups; Settings → admin
+// thresholds. No raw vectors, scores tables, or storage internals are shown.
+//
+// The selected tab lives in the URL (?tab=), not in state: see facesTabs.ts.
 export function PeoplePage() {
   const { state, invalidateAuth } = useAuth();
   const { t } = useI18n();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isAdmin = state.status === 'authed' && state.user.isAdmin;
-  const [tab, setTab] = useState<Tab>('suggested');
+
+  const requestedTab = searchParams.get('tab');
+  const tab = resolveFacesTab(requestedTab, isAdmin);
+
+  // Normalize an absent, unknown or unauthorized ?tab= to the resolved one.
+  // `replace` on purpose: a URL the user never chose must not become a Back
+  // stop. Real tab changes below push, so Back walks the tabs they did choose.
+  useEffect(() => {
+    if (requestedTab === tab) return;
+    setSearchParams({ tab }, { replace: true });
+  }, [requestedTab, tab, setSearchParams]);
+
+  const selectTab = useCallback((next: Tab) => {
+    setSearchParams({ tab: next });
+  }, [setSearchParams]);
+
   const [people, setPeople] = useState<Person[]>([]);
   const [groups, setGroups] = useState<SuggestedGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,14 +104,14 @@ export function PeoplePage() {
       </header>
 
       <nav className="people-tabs" aria-label={t('people.sectionsAria')}>
-        <TabButton active={tab === 'suggested'} onClick={() => setTab('suggested')}>{t('people.tabSuggested')}</TabButton>
-        <TabButton active={tab === 'people'} onClick={() => setTab('people')}>{t('people.tabPeople')}</TabButton>
-        <TabButton active={tab === 'unassigned'} onClick={() => setTab('unassigned')}>{t('people.tabUnassigned')}</TabButton>
-        <TabButton active={tab === 'review'} onClick={() => setTab('review')}>{t('people.tabReview')}</TabButton>
-        <TabButton active={tab === 'videoFaces'} onClick={() => setTab('videoFaces')}>{t('people.tabVideoFaces')}</TabButton>
-        <TabButton active={tab === 'ignored'} onClick={() => setTab('ignored')}>{t('people.tabIgnored')}</TabButton>
+        <TabButton active={tab === 'suggested'} onClick={() => selectTab('suggested')}>{t('people.tabSuggested')}</TabButton>
+        <TabButton active={tab === 'people'} onClick={() => selectTab('people')}>{t('people.tabPeople')}</TabButton>
+        <TabButton active={tab === 'unassigned'} onClick={() => selectTab('unassigned')}>{t('people.tabUnassigned')}</TabButton>
+        <TabButton active={tab === 'review'} onClick={() => selectTab('review')}>{t('people.tabReview')}</TabButton>
+        <TabButton active={tab === 'videoFaces'} onClick={() => selectTab('videoFaces')}>{t('people.tabVideoFaces')}</TabButton>
+        <TabButton active={tab === 'ignored'} onClick={() => selectTab('ignored')}>{t('people.tabIgnored')}</TabButton>
         {isAdmin && (
-          <TabButton active={tab === 'settings'} onClick={() => setTab('settings')}>{t('people.tabSettings')}</TabButton>
+          <TabButton active={tab === 'settings'} onClick={() => selectTab('settings')}>{t('people.tabSettings')}</TabButton>
         )}
       </nav>
 
@@ -110,7 +130,7 @@ export function PeoplePage() {
       ) : loading ? (
         <p className="muted" role="status">{t('common.loading')}</p>
       ) : tab === 'people' ? (
-        <PeopleGrid people={people} />
+        <PeopleGrid people={people} returnTo={`${location.pathname}${location.search}`} />
       ) : (
         <GroupsGrid
           groups={groups}
@@ -158,7 +178,9 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   );
 }
 
-function PeopleGrid({ people }: { people: Person[] }) {
+// `returnTo` travels in router state so the person detail's visible Back
+// action lands on the tab that opened it, not on the default landing tab.
+function PeopleGrid({ people, returnTo }: { people: Person[]; returnTo: string }) {
   const { t, tn } = useI18n();
   if (people.length === 0) {
     return <p className="muted">{t('people.noPeople')}</p>;
@@ -167,7 +189,11 @@ function PeopleGrid({ people }: { people: Person[] }) {
     <ul className="people-grid">
       {people.map((p) => (
         <li key={p.personId} className="people-card">
-          <Link to={`/people/${p.personId}`} className="people-card-link">
+          <Link
+            to={`/people/${p.personId}`}
+            state={{ facesReturn: returnTo }}
+            className="people-card-link"
+          >
             {p.representative ? (
               <FaceCrop
                 faceId={p.representative.faceId}

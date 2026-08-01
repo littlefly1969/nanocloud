@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using NanoCloud.Api.Data;
@@ -109,6 +110,25 @@ public sealed class VideoHlsServingService
     }
 
     public const string MasterContentType = "application/vnd.apple.mpegurl";
+
+    // Advertised on the "preparing" 202 so a client does not have to guess how
+    // soon a ladder might exist. Retry-After is a MINIMUM wait (RFC 9110
+    // 10.2.3), not an appointment: this endpoint is stateless and cannot
+    // estimate a transcode, so it states the floor it is willing to be asked
+    // again at and leaves the backoff to the caller. Two seconds is short
+    // enough that a small clip's ladder is picked up almost as soon as it
+    // lands, and long enough that a poll is not a busy-wait.
+    //
+    // The body and the status code are unchanged; this is additive.
+    public const int PreparingRetryAfterSeconds = 2;
+
+    /// <summary>The "still preparing" response: 202, plus the Retry-After floor.</summary>
+    public static IResult Preparing(HttpResponse response)
+    {
+        response.Headers.RetryAfter =
+            PreparingRetryAfterSeconds.ToString(CultureInfo.InvariantCulture);
+        return Results.Accepted();
+    }
 
     // Owner-scoped + soft-delete-aware + server-detected-video gate — the
     // exact pair of checks the legacy /video stream performs, so both worlds

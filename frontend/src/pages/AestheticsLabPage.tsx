@@ -180,7 +180,8 @@ export function AestheticsLabPage() {
   return (
     <section className="aesthetics-page" aria-label={t('aesthetics.heading')}>
       <header className="page-header">
-        <h1>{t('aesthetics.heading')}</h1>
+        {/* h3: the Laboratory shell owns the h2. */}
+        <h3>{t('lab.aesthetics')}</h3>
         <p className="page-intro">{t('aesthetics.intro')}</p>
         <p className="aesthetics-disclaimer" role="note">
           {t('aesthetics.disclaimer')}

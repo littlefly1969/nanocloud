@@ -71,7 +71,8 @@ export function PlatesPage() {
 
   return (
     <div className="page-container">
-      <h2>{t('plates.heading')}</h2>
+      {/* h3: the Laboratory shell owns the h2. */}
+      <h3>{t('lab.plates')}</h3>
       <p className="plates-intro">{t('plates.intro')}</p>
 
       <PlateUploadPanel onUploaded={load} />

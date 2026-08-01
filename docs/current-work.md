@@ -31,7 +31,63 @@ baseline and active work; do not use it as a chronological work log.
 - Read `deploy/FAST_DEPLOY.md` in full immediately before any production
   deployment, rebuild, release-pin change or production migration.
 
-## Active slice — TV-ID-01 NubArca TV application identity
+## Active slice — UX-02 + VIDEO-HLS-05 wider workspaces, Laboratory, Faces, HLS
+
+Branch `feat/ux-lab-faces-hls`, started from `main` (`13a5a3a`, the merged
+TV-ID-01 tip). Not pushed, not merged, not deployed. No migration, no backfill,
+no TV package/APK/signing change.
+
+- **Compact brand mark**: the approved flat-mark master draws the symbol on a
+  canvas far larger than itself — 528×476 of 1024×1024, so only 51.6% of the
+  width and 46.5% of the height was ink, and a 16px favicon rendered ~10×8px of
+  symbol. `scripts/generate-compact-brand-marks.py` crops that transparent
+  excess once, at the source, and re-pads to a 603px square with a uniform safe
+  margin (~1 physical pixel at 16px). Same geometry, same colours, no redraw.
+  Package version 2.1. The shell mark is a 41px box showing ~36px of artwork
+  (37px/~32px on mobile), up from a 26px box showing ~13.5px.
+- **One layout system**: `.app-main` is full-width with `clamp(1rem, 2.5vw,
+  2.5rem)` gutters. The media-wall opt-out (`app-main--media`,
+  `mediaWallLayout.ts`) is gone; surfaces that need a reading measure use the
+  local `.form-measure` instead.
+- **Laboratory**: one primary destination at `/lab`, with route-backed sections
+  `/lab/plates` and `/lab/aesthetics`; `/plates` redirects. Plates and
+  Aesthetics keep their own APIs, storage and data models — only the shell is
+  shared.
+- **Faces**: the general area reads Volti/Faces; the named-cluster tab stays
+  Persone/People. Routes, endpoints, DTOs and tables untouched — terminology,
+  not a migration. The selected tab lives in `?tab=`, and a person detail
+  returns to the tab that opened it (`facesTabs.ts`).
+- **HLS startup**: the first fragment loads at a level chosen for the display
+  and connection (`hlsLevelSelection.ts`); recovery is bounded
+  (`hlsRecovery.ts`); preparation polling ramps 1.5→2.5→5 s and honours
+  `Retry-After`, which the 202 now advertises.
+
+Decisions worth remembering:
+
+- The master playlist lists the HIGHEST rendition FIRST — ffmpeg's
+  `-var_stream_map` is `v:0,a:0,name:high v:1,a:1,name:low`, verified against a
+  real run. hls.js re-sorts its `levels` by bitrate, but nothing of ours may
+  assume either order, so the selector sorts by pixel count itself.
+- `Retry-After` is a MINIMUM wait (RFC 9110 §10.2.3), not an appointment. The
+  endpoint is stateless and cannot estimate a transcode, so it sends a small
+  constant and the client takes `max(localRamp, header)` — obeying it literally
+  would pin polling at 2 s forever and discard the backoff.
+- A custom property set as an INLINE style cannot be overridden by a media
+  query. The mobile mark step-down therefore sets `.brand-mark__icon`'s width,
+  not `--brand-mark-size`. The browser matrix caught this; the unit test had
+  passed against the ineffective rule.
+- hls.js's MSE branch is not reachable under the jsdom harness (the component's
+  dynamic import resolves to the real library even when the test file mocks it),
+  so the two decisions inside it are pure modules with their own tests and the
+  wiring is verified in the browser instead.
+- **Measured, not assumed**: the new policy does NOT make the first frame
+  arrive sooner. On 2560×1440 the median time to first frame went 80 ms →
+  154 ms, because the correct rendition means a bigger first segment. What it
+  fixes is the rendition: 854×480 → 1920×1080, where the old path was still at
+  480p after 3 s of playback. Small viewports are unchanged (52 → 49 ms, 480p
+  both).
+
+## Superseded slice — TV-ID-01 NubArca TV application identity
 
 Branch `feat/nubarca-tv-identity`, started from `main` (`ee489a6`, which is also
 the currently deployed SHA). Not pushed, not merged, not deployed. No database,

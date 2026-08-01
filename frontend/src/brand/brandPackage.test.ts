@@ -117,6 +117,49 @@ describe('every catalogued asset', () => {
     }
   });
 
+  // UX-02 compaction. The favicon family IS the light-surface flat mark, and
+  // favicon.ico is a container holding exactly those PNG frames — so the tab
+  // icon can never drift from the mark it is supposed to be.
+  it('keeps the favicon family byte-identical to the light flat mark', () => {
+    for (const px of [16, 24, 32, 48, 64]) {
+      expect(
+        sha256(resolve(PACKAGE, `runtime/favicon/favicon-${px}.png`)),
+        `favicon-${px}.png is not the light flat mark`,
+      ).toBe(sha256(resolve(PACKAGE, `runtime/web/nubarca-mark-flat-on-light-${px}.png`)));
+    }
+  });
+
+  it('assembles favicon.ico from the shipped PNG frames themselves', () => {
+    const ico = readFileSync(resolve(PACKAGE, 'runtime/favicon/favicon.ico'));
+    expect(ico.readUInt16LE(0), 'ICONDIR reserved').toBe(0);
+    expect(ico.readUInt16LE(2), 'ICONDIR type (1 = icon)').toBe(1);
+    const frames = ico.readUInt16LE(4);
+    expect(frames).toBe(4);
+    const seen: number[] = [];
+    for (let i = 0; i < frames; i += 1) {
+      const entry = 6 + i * 16;
+      const size = ico.readUInt8(entry) || 256;
+      const bytes = ico.readUInt32LE(entry + 8);
+      const offset = ico.readUInt32LE(entry + 12);
+      const frame = ico.subarray(offset, offset + bytes);
+      expect(frame, `ICO frame ${size} is not the shipped PNG`)
+        .toEqual(readFileSync(resolve(PACKAGE, `runtime/favicon/favicon-${size}.png`)));
+      seen.push(size);
+    }
+    expect(seen).toEqual([16, 24, 32, 48]);
+  });
+
+  it('records the flat marks and favicons as compact derivatives', () => {
+    const compact = manifest.assets.filter(
+      (a) => /nubarca-mark-flat-on-(dark|light)-\d+\.png$/.test(a.path)
+        || a.path.startsWith('runtime/favicon/'),
+    );
+    expect(compact.length).toBe(23);
+    for (const a of compact) {
+      expect(a.notes, `${a.path} is not recorded as compacted`).toContain('Compact derivative');
+    }
+  });
+
   it('is catalogued — no stray files in the package', () => {
     const catalogued = new Set(manifest.assets.map((a) => a.path));
     const docs = new Set(['README.md', 'NUBARCA_BRAND_HANDOFF.md', 'brand-manifest.json', 'checksums.sha256']);

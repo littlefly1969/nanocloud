@@ -119,6 +119,42 @@ public sealed class FileVideoHlsEndpointTests : IDisposable
         Assert.Single(await HlsJobsAsync());
     }
 
+    // UX-02: the 202 carries a Retry-After floor so a client does not have to
+    // guess a poll interval. Additive only — the status code and the (empty)
+    // body are the existing contract.
+    [Fact]
+    public async Task Preparing_202_Advertises_A_RetryAfter_Floor()
+    {
+        var (owner, client) = await _factory.CreateAuthenticatedClientAsync();
+        var file = await UploadAsync(owner, BulkyMp4(), "clip.mp4", "video/mp4");
+
+        var resp = await client.GetAsync($"/api/files/{file.Id}/video");
+
+        Assert.Equal(HttpStatusCode.Accepted, resp.StatusCode);
+        Assert.True(resp.Headers.TryGetValues("Retry-After", out var values));
+        var value = Assert.Single(values!);
+        Assert.Equal(
+            VideoHlsServingService.PreparingRetryAfterSeconds.ToString(
+                System.Globalization.CultureInfo.InvariantCulture),
+            value);
+        // Delta-seconds, not an HTTP-date: the client parses the numeric form.
+        Assert.True(int.TryParse(value, out var seconds));
+        Assert.InRange(seconds, 1, 30);
+    }
+
+    [Fact]
+    public async Task Ready_200_Carries_No_RetryAfter()
+    {
+        var (owner, client) = await _factory.CreateAuthenticatedClientAsync();
+        var file = await UploadAsync(owner, BulkyMp4(), "clip.mp4", "video/mp4");
+        await PublishReadyLadderAsync(file);
+
+        var resp = await client.GetAsync($"/api/files/{file.Id}/video");
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        Assert.False(resp.Headers.Contains("Retry-After"));
+    }
+
     [Fact]
     public async Task Ready_Row_With_Wiped_Bytes_Returns_202_And_Reenqueues()
     {

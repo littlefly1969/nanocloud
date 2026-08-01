@@ -1,7 +1,7 @@
 {
   "brandName": "NubArca",
   "tvBrandName": "NubArca TV",
-  "version": "2.0",
+  "version": "2.1",
   "effectiveDate": "2026-07-31",
   "palette": {
     "midnight": "#0A0F1A",
@@ -187,11 +187,11 @@
     {
       "path": "runtime/favicon/favicon-16.png",
       "role": "favicon family",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 16,
       "height": 16,
       "aspectRatio": "16:16",
@@ -202,16 +202,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "4e89f925c5ad264ac610c626520f619c940b5d976890e5af40a8ebe165b34d39"
+      "sha256": "2a5c8b95d003784e8a3110992afdb05de3b92bf5593c18a3604142e7148cb0b5"
     },
     {
       "path": "runtime/favicon/favicon-24.png",
       "role": "favicon family",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 24,
       "height": 24,
       "aspectRatio": "24:24",
@@ -222,16 +222,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "0f07e495f461684b1329232fcc4d30e1b436c81bbeeee60fc51223afd8bb4e5f"
+      "sha256": "f61e7d40f4ea4802d045b78b1460cb1fb4b63cf75e68c7edde57648cead27777"
     },
     {
       "path": "runtime/favicon/favicon-32.png",
       "role": "favicon family",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 32,
       "height": 32,
       "aspectRatio": "32:32",
@@ -242,16 +242,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "29dada833908dedf3174ed5c46228fe5f713173fdfa05b563c1193ebe6f9741e"
+      "sha256": "ceadfad26f5c411885d5533b47dab8518621e4af53bcd0fcfd1d8d570ea5cc30"
     },
     {
       "path": "runtime/favicon/favicon-48.png",
       "role": "favicon family",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 48,
       "height": 48,
       "aspectRatio": "48:48",
@@ -262,16 +262,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "b35964bbae2ff3e4a391b902ebb927fcf026dc80ffc164c2c3c1285d65c812fd"
+      "sha256": "95e65d4d8aa4fcc921f530293ad2e8b67760b53e988a33deaf0fcb1553261262"
     },
     {
       "path": "runtime/favicon/favicon-64.png",
       "role": "favicon family",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 64,
       "height": 64,
       "aspectRatio": "64:64",
@@ -282,16 +282,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "84a27cc66722886e693804513e5714c9721f63cfbeab9db364f7c3c2cb5f8272"
+      "sha256": "959aaaa1c47a3d2d9b8b2e8e7f4d74e91a3cfd101c5af2e1f719f016398b59ee"
     },
     {
       "path": "runtime/favicon/favicon-source-1024.png",
       "role": "favicon family",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 1024,
       "height": 1024,
       "aspectRatio": "1024:1024",
@@ -302,16 +302,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "b262cd864fc2d3ef694ba4af08ae3864994f338581accc2bca3a23fb9299edab"
+      "sha256": "c5ae51575b7fb8de7fbdc21c11b9ef471cd373e81977cb27d9c4ffa9cbca5dcc"
     },
     {
       "path": "runtime/favicon/favicon.ico",
       "role": "favicon family",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "ico",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 48,
       "height": 48,
       "aspectRatio": "48:48",
@@ -322,7 +322,7 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "789df0895db5f24648ffb6fe106bc638828e33ef19fbe472945923429dc5362c"
+      "sha256": "939bb6126fc47bcf4fba96e7ff84452534cede79abbcdbc4bdc5fc1f616552e6"
     },
     {
       "path": "runtime/pwa/nubarca-apple-touch-icon-180.png",
@@ -567,11 +567,11 @@
     {
       "path": "runtime/web/nubarca-mark-flat-on-dark-128.png",
       "role": "flat mark on dark",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 128,
       "height": 128,
       "aspectRatio": "128:128",
@@ -582,16 +582,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "1489007566d5d1fecdb05a5e5b1bd71f6687ce0d45ba5c8d9350f460d028b324"
+      "sha256": "4995737ba41aaba112af1b133091066975708f147c4e1d448edead5639ce0195"
     },
     {
       "path": "runtime/web/nubarca-mark-flat-on-dark-16.png",
       "role": "flat mark on dark",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 16,
       "height": 16,
       "aspectRatio": "16:16",
@@ -602,16 +602,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "d65b40fde753fe1275c8f489adf7630c3ebd9bd34a8b290967dbbf8b831e14e9"
+      "sha256": "b51489fbedee91ff55b857f4b34d4e4bb809979bbc5b27ac1ced562d270db088"
     },
     {
       "path": "runtime/web/nubarca-mark-flat-on-dark-24.png",
       "role": "flat mark on dark",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 24,
       "height": 24,
       "aspectRatio": "24:24",
@@ -622,16 +622,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "c1ef0a8a4314d0dfe3fb052a75f5c16696a0a15f5b9bcd6489ba7feb88df9e7e"
+      "sha256": "e99af9097934fa540b039b1dce83a6620db4b641935e04d3d8f06c5c4c088dfb"
     },
     {
       "path": "runtime/web/nubarca-mark-flat-on-dark-256.png",
       "role": "flat mark on dark",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 256,
       "height": 256,
       "aspectRatio": "256:256",
@@ -642,16 +642,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "a8aacf10ed594fff87fea24d1529b4a34beda291d00ea7ea57078ebc60551c0c"
+      "sha256": "c66a40ce1a240c96173b233527473ec3c09c8ea4169c4cc2ccbfb63d68b50148"
     },
     {
       "path": "runtime/web/nubarca-mark-flat-on-dark-32.png",
       "role": "flat mark on dark",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 32,
       "height": 32,
       "aspectRatio": "32:32",
@@ -662,16 +662,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "4c562eb54f16bf237bb63ce4a263dc167c2b29869c018d8733db8bd743109471"
+      "sha256": "ec31b6ef853fca824a194276ba7221b668d21edba6f4fab6f8199dc3fb701cfd"
     },
     {
       "path": "runtime/web/nubarca-mark-flat-on-dark-48.png",
       "role": "flat mark on dark",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 48,
       "height": 48,
       "aspectRatio": "48:48",
@@ -682,16 +682,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "8969d6157eb3e3e73afb2e4a969be681c6a3df4cfc9eda1b3e65c50589d74f66"
+      "sha256": "fb875698694102c6e147367f772246537c350e93026db7fac698e7944eeb5b5c"
     },
     {
       "path": "runtime/web/nubarca-mark-flat-on-dark-512.png",
       "role": "flat mark on dark",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 512,
       "height": 512,
       "aspectRatio": "512:512",
@@ -702,16 +702,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "fae64905bce9b19e36fff5e7194ec5be8c858d49b2ab3f002c28c2eb6a5573b7"
+      "sha256": "c53e742a51ece048ad31cf02ad0a237f675c8c2928864898ad63f3398a9a8bda"
     },
     {
       "path": "runtime/web/nubarca-mark-flat-on-dark-64.png",
       "role": "flat mark on dark",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 64,
       "height": 64,
       "aspectRatio": "64:64",
@@ -722,16 +722,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "513861d3fb70526b4ba9c2d3d7780d5362f5861bbcac15ccac391a1756dddb31"
+      "sha256": "8987fb9045b81849c2609310984ed9fb5da5fac93d6480d2b59ba9ae663adbe2"
     },
     {
       "path": "runtime/web/nubarca-mark-flat-on-light-128.png",
       "role": "flat mark on light",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 128,
       "height": 128,
       "aspectRatio": "128:128",
@@ -742,16 +742,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "00298e4512ef826d53a7edf1c5fc09c644922be4aad7b54a4158e70b719f1544"
+      "sha256": "0d8e79c3d70fbd2b33cc2647b6b64d733c50bcf3b448e504acbe0b4abfc46f69"
     },
     {
       "path": "runtime/web/nubarca-mark-flat-on-light-16.png",
       "role": "flat mark on light",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 16,
       "height": 16,
       "aspectRatio": "16:16",
@@ -762,16 +762,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "4e89f925c5ad264ac610c626520f619c940b5d976890e5af40a8ebe165b34d39"
+      "sha256": "2a5c8b95d003784e8a3110992afdb05de3b92bf5593c18a3604142e7148cb0b5"
     },
     {
       "path": "runtime/web/nubarca-mark-flat-on-light-24.png",
       "role": "flat mark on light",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 24,
       "height": 24,
       "aspectRatio": "24:24",
@@ -782,16 +782,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "0f07e495f461684b1329232fcc4d30e1b436c81bbeeee60fc51223afd8bb4e5f"
+      "sha256": "f61e7d40f4ea4802d045b78b1460cb1fb4b63cf75e68c7edde57648cead27777"
     },
     {
       "path": "runtime/web/nubarca-mark-flat-on-light-256.png",
       "role": "flat mark on light",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 256,
       "height": 256,
       "aspectRatio": "256:256",
@@ -802,16 +802,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "81fcf6d12a11e2e73c568613de758a4a22de799d189c0a4e3da04f82df8a8a7d"
+      "sha256": "a35ff2b566370625b5c1ab66566fff332c72749b89aaf90a118fb5d98428430c"
     },
     {
       "path": "runtime/web/nubarca-mark-flat-on-light-32.png",
       "role": "flat mark on light",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 32,
       "height": 32,
       "aspectRatio": "32:32",
@@ -822,16 +822,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "29dada833908dedf3174ed5c46228fe5f713173fdfa05b563c1193ebe6f9741e"
+      "sha256": "ceadfad26f5c411885d5533b47dab8518621e4af53bcd0fcfd1d8d570ea5cc30"
     },
     {
       "path": "runtime/web/nubarca-mark-flat-on-light-48.png",
       "role": "flat mark on light",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 48,
       "height": 48,
       "aspectRatio": "48:48",
@@ -842,16 +842,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "b35964bbae2ff3e4a391b902ebb927fcf026dc80ffc164c2c3c1285d65c812fd"
+      "sha256": "95e65d4d8aa4fcc921f530293ad2e8b67760b53e988a33deaf0fcb1553261262"
     },
     {
       "path": "runtime/web/nubarca-mark-flat-on-light-512.png",
       "role": "flat mark on light",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 512,
       "height": 512,
       "aspectRatio": "512:512",
@@ -862,16 +862,16 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "d1decc039736e12b5c471ae460c63136d5735e8a1350a768ed3f8d5af1ddbe29"
+      "sha256": "745a39de6dacef2d85c5e4bad5704ebb627d7342bcff6aef28e6cfccd2ed60c9"
     },
     {
       "path": "runtime/web/nubarca-mark-flat-on-light-64.png",
       "role": "flat mark on light",
-      "source": "derived from approved NubArca raster master",
+      "source": "derived from approved NubArca raster master (compacted)",
       "format": "png",
       "runtimeReady": true,
       "conditionallyReady": false,
-      "notes": "",
+      "notes": "Compact derivative: the approved artwork cropped to its alpha bounds and re-padded to a 603 px square with a uniform safe margin (scripts/generate-compact-brand-marks.py). Geometry and colours are the approved ones; only transparent excess was removed.",
       "width": 64,
       "height": 64,
       "aspectRatio": "64:64",
@@ -882,7 +882,7 @@
       "minimumDisplaySizePx": 16,
       "safeArea": "",
       "glow": false,
-      "sha256": "84a27cc66722886e693804513e5714c9721f63cfbeab9db364f7c3c2cb5f8272"
+      "sha256": "959aaaa1c47a3d2d9b8b2e8e7f4d74e91a3cfd101c5af2e1f719f016398b59ee"
     },
     {
       "path": "runtime/web/nubarca-wordmark-on-dark-1440w.png",
