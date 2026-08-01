@@ -7,23 +7,60 @@ targeting **Fire Stick / Android TV** first. It is intentionally NOT the mobile
 app and NOT a full NubArca client — see the architecture strategy in
 [../docs/current-work.md](../docs/current-work.md).
 
+## Application identity
+
+The product was renamed from **NanoCloud** to **NubArca** on 2026-07-31, and
+TV-ID-01 then reset this app's installed identity to match.
+
+**NubArca and NubArca TV are separate applications sharing one backend and one
+account ecosystem.** There is no universal mobile/TV binary. The mobile app will
+sync and upload through the shared backend; this app stays remote-first and uses
+only the limited TV pairing and `/api/tv/*` contracts.
+
+| | NubArca TV (this app) | NubArca (mobile, reserved) |
+| --- | --- | --- |
+| Display name | `NubArca TV` | `NubArca` |
+| Android applicationId | `it.littlefly.nubarca.tv` | `it.littlefly.nubarca` |
+| Android namespace | `it.littlefly.nubarca.tv` | — |
+| iOS bundle identifier | — | `it.littlefly.nubarca` |
+| Expo slug | `nubarca-tv` | `nubarca` |
+| Deep-link scheme | `nubarca-tv` | `nubarca` |
+| Version / versionCode | `1.0.0` / `1` | — |
+| OTA runtime series | `nubarca-tv-native-*` | — |
+| AsyncStorage session key | `nubarca.tv.session.cookie` | — |
+| Published artifact | `nubarca-tv.apk` | — |
+
+`tv/scripts/appIdentity.test.mjs` pins every value in the left column.
+
+### The retired TV identity
+
+This app previously shipped as `it.littlefly.nanocloudtv` (slug `nanocloud-tv`,
+version 0.2.0, versionCode 3, runtime `tv-native-3`, storage key
+`nanocloud.tv.session.cookie`, artifact `nanocloud-tv.apk`).
+
+An Android applicationId has **no in-place rename**, so there is no upgrade path
+across this change. The one private device holding that install was migrated by
+uninstalling and installing fresh:
+
+```bash
+adb uninstall it.littlefly.nanocloudtv
+adb install <signed-nubarca-tv-apk>     # never `install -r` across a package change
+```
+
+There is deliberately **no** migration of the old AsyncStorage key: the new
+applicationId gets its own private storage sandbox, so the old value is not
+reachable. Every install starts unpaired and pairs once.
+
 ## Retained legacy-brand identifiers (do not rename)
 
-The product was renamed from **NanoCloud** to **NubArca** (TV product: **NubArca
-TV**) on 2026-07-31. The rename covers the *display* surface only. The following
-identifiers deliberately keep their old `nanocloud` / `NanoCloud` spelling because
-renaming them would break already-deployed installs, paired devices, or operator
-environments. Treat every one of them as a **retained legacy identifier**:
+These keep their old spelling because they are backend wire contracts or
+operator configuration, not user-visible application identity:
 
 | Identifier | Where | Why it must not change |
 | --- | --- | --- |
-| `it.littlefly.nanocloudtv` | `app.config.js` → `android.package` | Android applicationId. A new id installs as a **separate** app with no upgrade path. |
-| `nanocloud-tv` | `app.config.js` → `slug` | Part of the EAS / OTA update identity that published updates are keyed to. |
 | `NanoCloud.TvSession` | server cookie, `src/api/client.ts` | Wire contract with the backend `/api/tv` endpoints. |
 | `NanoCloud.Auth` | server cookie (never received here) | Wire contract with the backend owner endpoints. |
-| `nanocloud.tv.session.cookie` | AsyncStorage key, `src/api/client.ts` | Already persisted on every paired TV; renaming logs every device out. |
 | `EXPO_PUBLIC_NANOCLOUD_API_BASE_URL`, `NANOCLOUD_TV_*` | build/runtime env vars | Operators already have them set in production `.env` files and CI. |
-| `nanocloud-tv.apk` | published APK artifact name | Existing download links and sideload instructions point at it. |
 
 The user-visible strings (launcher name, pairing title, in-app copy) **are**
 rebranded — see `src/i18n/it.ts` (canonical) and `src/i18n/en.ts`.
@@ -561,16 +598,25 @@ cd android
 ```
 
 `assembleRelease` succeeds locally against platform android-36 / build-tools 36 /
-NDK 27 and produces a ~65 MB sideloadable APK (debug-keystore signed by the
-template; real release signing is out of scope).
+NDK 27 and produces a ~72 MB sideloadable APK.
+
+Release builds require the NubArca TV release key
+(`NUBARCA_TV_RELEASE_STORE_FILE` and friends, as Gradle properties or
+environment variables). `plugins/withReleaseSigning.js` wires it in on every
+prebuild and **fails the build** when it is missing, rather than falling back to
+the React Native template's public debug keystore. See
+[`../docs/tv-apk-distribution.md`](../docs/tv-apk-distribution.md#signing).
 
 Sideload to a Fire Stick (only with a device IP; enable ADB debugging on the
 device first):
 
 ```bash
 adb connect <FIRE_STICK_IP>:5555
-adb install -r android/app/build/outputs/apk/release/app-release.apk
+adb install android/app/build/outputs/apk/release/app-release.apk
 ```
+
+Use plain `adb install`, not `adb install -r`, when replacing an app whose
+package name differs — uninstall the old package first.
 
 Or via EAS Build with a TV profile (`EXPO_TV=1`) for reproducible cloud builds.
 

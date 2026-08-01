@@ -150,6 +150,13 @@ def self_test(rules: list[Rule]) -> int:
         ("frontend/src/brand/x.ts", "export const NAME = 'nanocloud';"),
         ("tv/src/i18n/en.ts", "'title': 'NANOCLOUD TV',"),
         ("mobile/src/App.tsx", "const n = 'Nano-Cloud';"),
+        # TV-ID-01 retired the old TV identity outright. Regressing any of these
+        # four values must fail, which is only true because the entries that
+        # used to allow them were deleted rather than merely narrowed.
+        ("tv/app.config.js", "package: 'it.littlefly.nanocloudtv',"),
+        ("tv/app.config.js", "slug: 'nanocloud-tv',"),
+        ("tv/src/api/client.ts", "const SESSION_STORAGE_KEY = 'nanocloud.tv.session.cookie';"),
+        ("deploy/publish-tv-apk.sh", 'remote_name="nanocloud-tv.apk"'),
         # Ordinary product prose in CURRENT documentation. These used to be
         # accepted by a single `match: .` rule spanning all of docs/** and
         # deploy/**.md — the exact hole this suite now closes.
@@ -165,7 +172,6 @@ def self_test(rules: list[Rule]) -> int:
         ("src/NanoCloud.Api/Tv/TvPairingService.cs", 'const string CookieName = "NanoCloud.TvSession";'),
         ("src/NanoCloud.Api/Plates/PlateContainerKey.cs", 'public const string Prefix = "__nanocloud_plates_";'),
         ("src/NanoCloud.Api/Endpoints/FileEndpoints.cs", "using NanoCloud.Api.Files;"),
-        ("tv/app.config.js", "package: 'it.littlefly.nanocloudtv',"),
         ("docker-compose.prod.yml", "container_name: nanocloud-postgres"),
         ("docker-compose.prod.yml", "- /var/lib/nanocloud/storage"),
         (".env.example", "NANOCLOUD_TV_OTA_CHANNEL=production"),
@@ -179,7 +185,12 @@ def self_test(rules: list[Rule]) -> int:
         ("deploy/FAST_DEPLOY.md", "$DC exec api dotnet NanoCloud.Api.dll ai status"),
         ("docs/OPERATIONS.md", "dotnet NanoCloud.Api.dll storage blobs audit-references"),
         ("docs/tv-apk-distribution.md", "https://nanocloud.littlefly.it/download/tv/nanocloud-tv.apk"),
-        ("frontend/nginx.conf", 'alias /usr/share/nginx/html/download/tv/nanocloud-tv.apk;'),
+        # The unadvertised alias routes that keep pre-rename links from 404ing.
+        ("frontend/nginx.conf", 'location = /download/tv/nanocloud-tv.apk {'),
+        # Documentation may still name the retired TV package, so the uninstall
+        # step in the runbook can say what to uninstall.
+        ("tv/README.md", "adb uninstall it.littlefly.nanocloudtv"),
+        ("docs/tv-apk-distribution.md", "replaces it.littlefly.nanocloudtv"),
         ("CHANGELOG.md", "Effective 31 July 2026, NanoCloud was renamed **NubArca**."),
         ("tv/README.md", "The product was renamed from **NanoCloud** to **NubArca**."),
         ("deploy/FIRST_DEPLOY.md", "git clone https://github.com/<your-fork>/nanocloud.git"),

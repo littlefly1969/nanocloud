@@ -31,7 +31,68 @@ baseline and active work; do not use it as a chronological work log.
 - Read `deploy/FAST_DEPLOY.md` in full immediately before any production
   deployment, rebuild, release-pin change or production migration.
 
-## Active slice — BRAND-01C NubArca asset integration (closes the rebrand)
+## Active slice — TV-ID-01 NubArca TV application identity
+
+Branch `feat/nubarca-tv-identity`, started from `main` (`ee489a6`, which is also
+the currently deployed SHA). Not pushed, not merged, not deployed. No database,
+Docker volume, media storage or backend API identity changed; no GitHub
+repository rename.
+
+**NubArca and NubArca TV are separate applications sharing one backend and one
+account ecosystem.** No universal mobile/TV binary. The mobile app will sync and
+upload through the shared backend; TV stays remote-first on the limited pairing
+and `/api/tv/*` contracts.
+
+| | NubArca TV (now) | NubArca mobile (reserved) |
+| --- | --- | --- |
+| applicationId / bundle id | `it.littlefly.nubarca.tv` | `it.littlefly.nubarca` |
+| slug / scheme | `nubarca-tv` | `nubarca` |
+| version / versionCode | `1.0.0` / `1` | — |
+| OTA runtime | `nubarca-tv-native-1` | — |
+
+Retired with no upgrade path (an applicationId cannot be renamed):
+`it.littlefly.nanocloudtv`, slug `nanocloud-tv`, runtime `tv-native-3`, storage
+key `nanocloud.tv.session.cookie`, artifact `nanocloud-tv.apk`.
+
+**BLOCKED before publication and device install.** Two operator inputs are
+missing; everything else in the slice is complete and validated.
+
+Decisions worth remembering:
+
+- **The release build was never really signed.** `expo prebuild` regenerates
+  `android/` from the RN template, whose release buildType is
+  `signingConfig signingConfigs.debug`. The published 0.2.0 APK is signed
+  `CN=Android Debug` (`fac61745…`) — a publicly known key, so anyone could have
+  produced an "update" for it. A committed edit to `android/` cannot fix this
+  because prebuild deletes it; `tv/plugins/withReleaseSigning.js` re-applies the
+  fix every time and **fails** `assembleRelease` (at task-graph time, in ~40 s)
+  rather than falling back.
+- **The API base URL is resolved twice.** `app.config.js` runs once for prebuild
+  and again for the Gradle JS-bundling step, and only the second decides what
+  the shipped app talks to. Exporting the URL for prebuild alone produced a
+  release APK that passed *every* manifest check — package, label, leanback,
+  banner, signature — while its bundle pointed at the LAN dev default with
+  cleartext already disabled: it installs, launches, and can never reach a
+  server. Now guarded in two places: `app.config.js` throws under
+  `NODE_ENV=production`, and `deploy/publish-tv-apk.sh` refuses to publish an
+  APK whose embedded `extra.apiBaseUrl` is not HTTPS.
+- OTA isolation is structural, not conventional: publications and channel
+  pointers are keyed by runtime (`publications/android/<runtime>/`), so the
+  retired `tv-native-*` series and `nubarca-tv-native-*` cannot cross. The
+  backend `/api/tv-app/updates` treats the runtime as an opaque header value and
+  needed no change.
+- No AsyncStorage migration is possible, not merely skipped: the new
+  applicationId gets a fresh private storage sandbox, so the old key is
+  unreachable from the new package.
+- `apksigner verify` reports `v1: false` for this APK even though a v1 block is
+  present, because minSdk is 24 and it does not exercise the JAR path. Forcing
+  `--min-sdk-version 21` shows v1/v2/v3 all true.
+- Four compatibility entries were deleted rather than narrowed, and the source
+  files that describe the retired identity deliberately do **not** spell it, so
+  a regression to the old package id, slug, storage key or artifact name is
+  rejected by `check-brand-cleanliness.sh` instead of being excused by a comment.
+
+## Superseded slice — BRAND-01C NubArca asset integration (closes the rebrand)
 
 Branch `feat/nubarca-rebrand`, started from `main` (`60984e8`), which already
 contains the merged UX-01 work (`cfee4fd`). Not pushed, not merged, not

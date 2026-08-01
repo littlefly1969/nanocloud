@@ -6,7 +6,11 @@ OTA can replace the JavaScript/Hermes bundle and Metro-bundled assets. It cannot
 
 ## Runtime and launch behavior
 
-`NANOCLOUD_TV_RUNTIME_VERSION` is a manually managed native contract. The legacy APK uses `tv-native-1`; the first native-video APK with `expo-video` uses `tv-native-2`; the current Expo 56 patch-aligned APK uses `tv-native-3`. This explicit value is intentionally not derived from the application version: operators must increment it for every native/configuration change listed above, including changing native environment values embedded while building. TypeScript, React UI/layout, business logic, and bundled asset changes keep the existing runtime.
+`NANOCLOUD_TV_RUNTIME_VERSION` is a manually managed native contract. This explicit value is intentionally not derived from the application version: operators must increment it for every native/configuration change listed above, including changing native environment values embedded while building. TypeScript, React UI/layout, business logic, and bundled asset changes keep the existing runtime.
+
+The current NubArca TV package (`it.littlefly.nubarca.tv`) uses the `nubarca-tv-native-*` series, starting at **`nubarca-tv-native-1`**.
+
+The `tv-native-*` series is **retired**. It belongs to the previous TV package, which used `tv-native-1` for the legacy APK, `tv-native-2` for the first `expo-video` build and `tv-native-3` for the last Expo 56 build. The two series must never be mixed: an update is addressed by runtime version alone, so publishing a NubArca TV bundle under `tv-native-3` would offer it to an install of a different application. Because the publication tree and the channel pointer are both keyed by runtime (`publications/android/<runtime>/`, `channels/<channel>/android/<runtime>.json`), the new series is isolated by construction — a device asking for `tv-native-3` gets `204 No Content` once nothing is published there.
 
 The APK always embeds a bundle. `fallbackToCacheTimeout` is zero and the native automatic check is disabled, so the existing app renders immediately. App startup fires one background `checkForUpdateAsync`; overlapping/repeated checks in that JS process are suppressed. If an update exists it is downloaded, but `reloadAsync` is never called. It is selected only on a later cold launch. Network, HTTP, malformed manifest, signature, asset, storage, interruption, and damaged-update handling remains in the native `expo-updates` downloader/error-recovery path; failures are logged and the running or embedded update remains usable. Killing the app during a download leaves the prior complete update intact.
 
@@ -21,10 +25,10 @@ Build/export and server publication must use matching values:
 ```sh
 export EXPO_PUBLIC_NANOCLOUD_API_BASE_URL=https://nanocloud.littlefly.it
 export NANOCLOUD_TV_OTA_UPDATE_URL=https://nanocloud.littlefly.it/api/tv-app/updates
-export NANOCLOUD_TV_RUNTIME_VERSION=tv-native-3
+export NANOCLOUD_TV_RUNTIME_VERSION=nubarca-tv-native-1
 export NANOCLOUD_TV_OTA_CHANNEL=production
 export TV_OTA_STORAGE_ROOT=/srv/nanocloud/tv-updates
-export TV_OTA_PRIVATE_KEY_PATH=/srv/nanocloud/tv-ota-signing/tv-native-3/private-key.pem
+export TV_OTA_PRIVATE_KEY_PATH=/srv/nanocloud/tv-ota-signing/nubarca-tv-native-1/private-key.pem
 export TV_OTA_RETENTION_COUNT=5
 ```
 

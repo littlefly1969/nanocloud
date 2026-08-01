@@ -132,6 +132,14 @@ breaks:      Renaming a volume detaches the running stack from its data — an e
 remove-when: Never for branding alone.
 
 [entry]
+identifier:  TV OTA signing-material directory on the build/publish host
+match:       nanocloud-tv-ota
+paths:       .env.example,docs/**.md,deploy/**
+why:         The operator already holds the OTA private key and certificate at this path, and the running configuration points at it. It is operator filesystem layout, not application identity.
+breaks:      Publication cannot find the signing key, and the documented bootstrap/rotation procedure points at a directory that does not exist.
+remove-when: The operator moves the key material and updates .env in the same maintenance step.
+
+[entry]
 identifier:  Persistent filesystem paths inside containers and on the host
 match:       /(var/lib|opt|srv|var/cache|mnt/raid1)/nanocloud|/srv/nanocloud-models|/opt/nanocloud
 why:         Blob storage, staging, Data Protection keys, model roots and the deployment checkout live at these paths.
@@ -170,33 +178,42 @@ remove-when: The parser accepts both names for a deployment cycle.
 # 6. Client applications — installed identity
 # -----------------------------------------------------------------------------
 
-[entry]
-identifier:  Android applicationId it.littlefly.nanocloudtv
-match:       it\.littlefly\.nanocloudtv|nanocloudtv
-why:         The Android package id is the installed app's identity.
-breaks:      NubArca TV installs as a SEPARATE application beside the old one, with no upgrade path and no data. Explicitly forbidden by this work.
-remove-when: An explicit store migration is planned; there is no in-place rename for an Android applicationId.
+# TV-ID-01 RESET. Four entries were removed here, because the identifiers they
+# protected no longer exist:
+#
+#   - Android applicationId it.littlefly.nanocloudtv
+#   - Expo slug nanocloud-tv
+#   - TV AsyncStorage key nanocloud.tv.session.cookie
+#   - canonical APK artifact name nanocloud-tv.apk
+#
+# Each was retained on the argument that renaming it would strand an installed
+# app or a paired device. Exactly one private device held that install; it was
+# uninstalled deliberately and re-paired against the new package, so the
+# argument no longer holds. NubArca TV is now it.littlefly.nubarca.tv with slug
+# nubarca-tv, storage key nubarca.tv.session.cookie and artifact nubarca-tv.apk.
+#
+# What legitimately REMAINS below: the backend TvSession cookie (a wire contract
+# with /api/tv/*, not a user-visible name) and the NANOCLOUD_* operator
+# environment variables, both covered by their own entries in sections 2 and 5.
 
 [entry]
-identifier:  Expo project slugs nanocloud-tv and nanocloud-mobile
-match:       nanocloud-(tv|mobile)\b
-why:         The slug is part of the EAS project / OTA update identity that shipped devices resolve against.
-breaks:      Deployed TVs stop finding their OTA channel.
-remove-when: A coordinated EAS project migration, with a build that shipped before the change no longer in the field.
+identifier:  Expo project slug nanocloud-mobile
+match:       nanocloud-mobile\b
+paths:       mobile/**,config/**,scripts/**
+why:         The unshipped mobile app still carries this slug; the final mobile identity (slug nubarca, applicationId it.littlefly.nubarca) is reserved but not yet applied.
+breaks:      Nothing today — the mobile app has no native project and no release. Kept so the slug is declared rather than silently tolerated.
+remove-when: The mobile app takes its reserved NubArca identity, which is a separate slice from TV-ID-01.
 
 [entry]
-identifier:  TV session storage key nanocloud.tv.session.cookie
-match:       nanocloud\.tv\.session\.cookie|"nanocloud\." prefix
-why:         Persisted in AsyncStorage on every paired TV.
-breaks:      Every paired TV is signed out and must be re-paired by hand.
-remove-when: A TV release that reads the old key once and migrates it, after the fleet has taken that release.
-
-[entry]
-identifier:  Published TV APK filename and its public download route
+identifier:  Unadvertised nanocloud-tv.apk download alias
 match:       nanocloud-tv\.apk
-why:         A public, externally linked download URL, plus the matching .sha256 route and the publish script's remote name.
-breaks:      Existing links and QR codes 404; the sideload instructions people already have stop working.
-remove-when: The frontend serves both names and the old one has stopped receiving traffic.
+paths:       frontend/nginx.conf,docs/tv-apk-distribution.md,config/**,scripts/**
+# deploy/publish-tv-apk.sh is deliberately NOT listed: the publish script must
+# never be able to name the old artifact, so a regression of its remote_name
+# back to nanocloud-tv.apk is rejected rather than explained by a comment.
+why:         nginx still answers the old download path so previously shared links and QR codes do not 404 while the last old install is replaced. It is NOT the canonical artifact and nothing publishes to it.
+breaks:      Links and QR codes handed out before the rename 404 immediately instead of degrading gracefully.
+remove-when: The alias routes are deleted from frontend/nginx.conf after confirming no traffic reaches either path.
 
 
 # -----------------------------------------------------------------------------
@@ -339,6 +356,19 @@ paths:       docs/**.md,tv/**
 why:         Deployed TVs validate OTA manifests against a certificate issued with this exact subject.
 breaks:      Regenerating the certificate with a new CN invalidates OTA trust on every device already in the field.
 remove-when: A coordinated certificate rotation that ships the new trust anchor before the new CN is used.
+
+[entry]
+identifier:  The retired TV identity, named by the documents that record its replacement
+match:       it\.littlefly\.nanocloudtv|nanocloud\.tv\.session\.cookie|slug `?nanocloud-tv`?
+paths:       CHANGELOG.md,tv/README.md,docs/tv-apk-distribution.md,docs/tv-ota-updates.md,docs/current-work.md
+why:         TV-ID-01 replaced the TV application identity outright rather than renaming it. A runbook cannot explain which package to uninstall, or why the runtime series restarts at 1, without naming the identity being retired.
+breaks:      The migration record stops saying which package is being replaced, so the operator cannot tell which app to remove from the device.
+remove-when: The retired package is installed nowhere and these notes are folded into the changelog's historical entries.
+# Deliberately DOCUMENTATION ONLY. tv/app.config.js, tv/src/api/client.ts and the
+# TV tests are NOT listed: source there must not contain the retired literals at
+# all, so that a regression to the old package id or storage key is rejected by
+# this checker instead of being explained away by a comment. Their comments
+# describe the retired identity without spelling it.
 
 [entry]
 identifier:  Agent working notes excluded from the product surface
