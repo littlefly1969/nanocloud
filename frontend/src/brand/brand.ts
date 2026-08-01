@@ -39,6 +39,39 @@ export const TV_PRODUCT_NAME = 'NubArca TV';
 const FLAT_MARK_SIZES = [16, 24, 32, 48, 64, 128, 256] as const;
 
 /**
+ * Fraction of a flat-mark file that the artwork actually occupies.
+ *
+ * The approved master draws the symbol on a canvas far larger than itself:
+ * 528×476 of 1024×1024, so only 51.6% of the width and 46.5% of the height
+ * were ink. Every derivative inherited that, which is why a 16px favicon
+ * rendered ~10×8px of symbol and read as undersized however large the CSS box
+ * around it was made — the empty pixels scaled with the artwork.
+ *
+ * `scripts/generate-compact-brand-marks.py` now crops that transparent excess
+ * once, at the source, and re-pads to a 603px square with a uniform safe
+ * margin (~1 physical pixel at 16px). Same geometry, same colours, no redraw.
+ *
+ * These are the resulting occupancy ratios. They exist so callers can size the
+ * VISIBLE mark rather than its box: a 41px box renders ~36px of artwork.
+ */
+export const MARK_CONTENT_RATIO = { width: 528 / 603, height: 476 / 603 } as const;
+
+/** Box size whose VISIBLE artwork is `visibleWidthPx` wide. */
+export function markBoxForVisibleWidth(visibleWidthPx: number): number {
+  return Math.round(visibleWidthPx / MARK_CONTENT_RATIO.width);
+}
+
+/**
+ * Visible mark width in the app shell, per the UX-02 measurement.
+ *
+ * These are VISIBLE artwork widths, not box sizes — `markBoxForVisibleWidth`
+ * converts. The mobile step-down is applied in CSS (one topbar serves both
+ * widths), so the component is always given the desktop box and CSS narrows
+ * it; asking for the larger box also picks the sharper asset for both.
+ */
+export const SHELL_MARK_VISIBLE_PX = { desktop: 36, mobile: 32 } as const;
+
+/**
  * The approved flat mark for a UI slot, at the smallest shipped size that still
  * covers the rendered box on a 2× display — so a 24 px slot loads the 48 px
  * asset and stays crisp without pulling a 256 px file into a navigation bar.

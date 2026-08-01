@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { useTheme } from '../theme/useTheme';
 import {
   LOGO_CLEAR_SPACE_RATIO,
@@ -33,10 +34,23 @@ interface BrandMarkProps {
    * width for 'wordmark'. Both are clamped to the brand minimums.
    */
   size?: number;
+  /**
+   * Whether this element reserves the brand clear space itself (the default).
+   *
+   * Pass `false` where the PLACEMENT already guarantees it — the app shell
+   * lockup does, through the topbar gap and its own padding. That is the whole
+   * point: reserving clear space as padding INSIDE a fixed box shrinks the
+   * artwork to buy the margin, which is what made the shell mark look small.
+   * The requirement is about what surrounds the logo, not about where the
+   * pixels come from.
+   */
+  clearSpace?: boolean;
   className?: string;
 }
 
-export function BrandMark({ variant = 'mark', size, className }: BrandMarkProps) {
+export function BrandMark({
+  variant = 'mark', size, clearSpace = true, className,
+}: BrandMarkProps) {
   const { effective } = useTheme();
   const classes = ['brand-mark', `brand-mark--${variant}`, className].filter(Boolean).join(' ');
 
@@ -75,7 +89,14 @@ export function BrandMark({ variant = 'mark', size, className }: BrandMarkProps)
       aria-label={PRODUCT_NAME}
       data-testid="brand-mark"
       data-variant="mark"
-      style={{ padding: `${Math.round(px * LOGO_CLEAR_SPACE_RATIO)}px` }}
+      // The size travels as a custom property so a responsive placement can
+      // step it down in CSS (the one topbar serves desktop and mobile). The
+      // asset is still picked from the LARGER prop size, which is the desktop
+      // one — over-provisioning stays crisp, under-provisioning would not.
+      style={{
+        '--brand-mark-size': `${px}px`,
+        ...(clearSpace ? { padding: `${Math.round(px * LOGO_CLEAR_SPACE_RATIO)}px` } : null),
+      } as CSSProperties}
     >
       <img
         className="brand-mark__icon"
@@ -85,7 +106,6 @@ export function BrandMark({ variant = 'mark', size, className }: BrandMarkProps)
         draggable={false}
         width={px}
         height={px}
-        style={{ width: `${px}px`, height: `${px}px` }}
       />
     </span>
   );
