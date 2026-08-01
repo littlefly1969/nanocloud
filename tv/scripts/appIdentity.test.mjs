@@ -1,0 +1,188 @@
+// Pins the NubArca TV application identity and the native release-signing
+// rewrite, so neither can drift back by accident.
+//
+// The identity assertions are deliberately literal. An Android applicationId
+// has no in-place rename: getting one of these values wrong ships an app that
+// installs beside the real one instead of updating it.
+
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import { dirname, resolve } from 'node:path';
+import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+
+const require = createRequire(import.meta.url);
+const tvRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+/** Load app.config.js with a controlled environment. */
+function loadConfig(env = {}) {
+  const previous = { ...process.env };
+  Object.assign(process.env, env);
+  try {
+    delete require.cache[require.resolve(resolve(tvRoot, 'app.config.js'))];
+    return require(resolve(tvRoot, 'app.config.js'))().expo;
+  } finally {
+    for (const key of Object.keys(process.env)) delete process.env[key];
+    Object.assign(process.env, previous);
+  }
+}
+
+test('the application identity is the final NubArca TV identity', () => {
+  const expo = loadConfig();
+  assert.equal(expo.name, 'NubArca TV');
+  assert.equal(expo.slug, 'nubarca-tv');
+  assert.equal(expo.scheme, 'nubarca-tv');
+  assert.equal(expo.version, '1.0.0');
+  assert.equal(expo.android.package, 'it.littlefly.nubarca.tv');
+  assert.equal(expo.android.versionCode, 1);
+});
+
+test('the reserved mobile applicationId is not taken by the TV app', () => {
+  // NubArca (mobile) and NubArca TV are separate applications sharing one
+  // backend. it.littlefly.nubarca belongs to the future mobile binary.
+  const expo = loadConfig();
+  assert.notEqual(expo.android.package, 'it.littlefly.nubarca');
+  assert.ok(expo.android.package.startsWith('it.littlefly.nubarca.'));
+});
+
+test('no user-visible identifier carries the former product name', () => {
+  const expo = loadConfig();
+  for (const [field, value] of Object.entries({
+    name: expo.name,
+    slug: expo.slug,
+    scheme: expo.scheme,
+    package: expo.android.package,
+    runtimeVersion: expo.runtimeVersion,
+  })) {
+    assert.doesNotMatch(value, /nano[_-]?cloud/i, `${field} still carries the former product name`);
+  }
+});
+
+test('the default OTA runtime belongs to the new native series', () => {
+  const expo = loadConfig();
+  assert.equal(expo.runtimeVersion, 'nubarca-tv-native-1');
+  // The retired TV package asks for tv-native-3. Serving it a bundle built for
+  // this package would be a cross-application update.
+  assert.notEqual(expo.runtimeVersion, 'tv-native-3');
+});
+
+test('the runtime version stays operator-overridable', () => {
+  const expo = loadConfig({ NANOCLOUD_TV_RUNTIME_VERSION: 'nubarca-tv-native-2' });
+  assert.equal(expo.runtimeVersion, 'nubarca-tv-native-2');
+});
+
+test('a production https base URL builds with cleartext traffic disabled', () => {
+  const expo = loadConfig({ EXPO_PUBLIC_NANOCLOUD_API_BASE_URL: 'https://nanocloud.littlefly.it' });
+  assert.equal(expo.android.usesCleartextTraffic, false);
+  assert.equal(expo.extra.apiBaseUrl, 'https://nanocloud.littlefly.it');
+  assert.equal(expo.updates.url, 'https://nanocloud.littlefly.it/api/tv-app/updates');
+});
+
+test('the TV app stays a leanback app that does not require a touchscreen', () => {
+  const expo = loadConfig();
+  const configTv = expo.plugins.find((p) => Array.isArray(p) && p[0] === '@react-native-tvos/config-tv');
+  assert.ok(configTv, 'the TV config plugin must stay registered');
+  assert.equal(configTv[1].isTV, true);
+  assert.equal(configTv[1].androidTVRequired, true);
+  assert.match(configTv[1].androidTVBanner, /nubarca-android-tv-banner-320x180\.png$/);
+});
+
+// --- native generation -------------------------------------------------------
+
+// The exact React Native template text that prebuild writes. The plugin rewrites
+// these anchors; if the template changes, the plugin must fail loudly rather
+// than leave the debug key in place.
+const TEMPLATE_BUILD_GRADLE = `android {
+    namespace 'it.littlefly.nubarca.tv'
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            // Caution! In production, you need to generate your own keystore file.
+            // see https://reactnative.dev/docs/signed-apk-android.
+            signingConfig signingConfigs.debug
+            minifyEnabled enableMinifyInReleaseBuilds
+        }
+    }
+}
+`;
+
+const withReleaseSigning = require(resolve(tvRoot, 'plugins/withReleaseSigning.js'));
+
+/**
+ * Run the plugin's build.gradle mod against fixture text.
+ *
+ * `withAppBuildGradle` registers the mod at mods.android.appBuildGradle; the
+ * pipeline later calls it with the config carrying modResults. Doing that here
+ * exercises the real plugin body without needing a generated android/ project.
+ */
+async function applyPlugin(contents) {
+  const { mods } = withReleaseSigning({});
+  const applied = await mods.android.appBuildGradle({
+    modResults: { contents, language: 'groovy', path: 'android/app/build.gradle' },
+  });
+  return applied.modResults.contents;
+}
+
+test('the release build type is rewired away from the debug keystore', async () => {
+  const result = await applyPlugin(TEMPLATE_BUILD_GRADLE);
+  assert.match(result, /release \{\n {12}signingConfig signingConfigs\.release/);
+  // The debug build type keeps the debug key; only release moves.
+  assert.match(result, /debug \{\n {12}signingConfig signingConfigs\.debug/);
+  assert.doesNotMatch(
+    result.split('buildTypes')[1],
+    /release \{[\s\S]*?signingConfig signingConfigs\.debug/,
+    'the release build type must not reference the debug signing config',
+  );
+});
+
+test('the generated release signing config reads operator-supplied properties', async () => {
+  const result = await applyPlugin(TEMPLATE_BUILD_GRADLE);
+  for (const property of [
+    'NUBARCA_TV_RELEASE_STORE_FILE',
+    'NUBARCA_TV_RELEASE_STORE_PASSWORD',
+    'NUBARCA_TV_RELEASE_KEY_ALIAS',
+    'NUBARCA_TV_RELEASE_KEY_PASSWORD',
+  ]) {
+    assert.ok(result.includes(property), `${property} must be read by the release signing config`);
+  }
+  // No key material may ever be inlined into the generated project.
+  assert.doesNotMatch(result, /storePassword\s+'(?!android')/);
+});
+
+test('release signing enables v1, v2 and v3 schemes', async () => {
+  const result = await applyPlugin(TEMPLATE_BUILD_GRADLE);
+  assert.match(result, /enableV1Signing true/);
+  assert.match(result, /enableV2Signing true/);
+  assert.match(result, /enableV3Signing true/);
+});
+
+test('a release build without a configured key fails instead of falling back', async () => {
+  const result = await applyPlugin(TEMPLATE_BUILD_GRADLE);
+  assert.match(result, /gradle\.taskGraph\.whenReady/);
+  assert.match(result, /it\.name ==~ \/\(assemble\|bundle\|package\)Release\//);
+  assert.match(result, /throw new GradleException/);
+  assert.match(result, /buildsRelease && android\.signingConfigs\.release\.storeFile == null/);
+});
+
+test('applying the plugin twice does not duplicate the signing config', async () => {
+  const once = await applyPlugin(TEMPLATE_BUILD_GRADLE);
+  const twice = await applyPlugin(once);
+  assert.equal(once, twice);
+});
+
+test('the plugin refuses to run against an unrecognised template', async () => {
+  await assert.rejects(
+    () => applyPlugin('android {\n    buildTypes {\n        release { }\n    }\n}\n'),
+    /no longer matches the expected template/,
+  );
+});

@@ -33,10 +33,17 @@ import { tvDebug } from '../debug';
 
 // AsyncStorage key for the persisted limited TV session cookie. Bumping this
 // string invalidates any previously persisted session.
-// RETAINED LEGACY BRAND (compatibility allowlist): this value is already persisted
-// on every paired TV device. It is an opaque storage key, not a user-visible name,
-// so it deliberately keeps the "nanocloud." prefix after the NubArca rebrand.
-const SESSION_STORAGE_KEY = 'nanocloud.tv.session.cookie';
+//
+// There is deliberately NO migration from the pre-NubArca key. That key only
+// ever existed inside the retired TV package (named in tv/README.md), and an
+// Android applicationId change gives the new package its own private storage
+// sandbox — the old value is not reachable from here even if we wanted it.
+// Every install of NubArca TV starts unpaired and pairs once.
+//
+// The cookie this holds is still named NanoCloud.TvSession: that is the backend
+// wire contract with /api/tv/*, not a user-visible name, and renaming it would
+// invalidate live sessions. It stays on the compatibility allowlist.
+const SESSION_STORAGE_KEY = 'nubarca.tv.session.cookie';
 
 let _baseUrl = '';
 let _cookieJar: string | null = null;

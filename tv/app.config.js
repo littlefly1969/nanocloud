@@ -16,7 +16,10 @@
 // normal dev workflow keeps working. Point the app at production with:
 //
 //   EXPO_PUBLIC_NANOCLOUD_API_BASE_URL=https://nanocloud.littlefly.it \
-//     npm run tv:prebuild && (cd android && ./gradlew assembleDebug)
+//     npm run tv:prebuild && (cd android && ./gradlew assembleRelease)
+//
+// A release build additionally requires the NubArca TV release signing key; see
+// plugins/withReleaseSigning.js and docs/tv-apk-distribution.md.
 //
 // Cleartext (unencrypted http) traffic is enabled ONLY when the resolved base
 // URL is http:// (dev on the LAN). An https:// production base URL builds with
@@ -27,11 +30,29 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { validateCodeSigningCertificate } = require('./scripts/code-signing-certificate.cjs');
 
-const apiBaseUrl = (
-  process.env.EXPO_PUBLIC_NANOCLOUD_API_BASE_URL ||
-  process.env.NANOCLOUD_TV_API_BASE_URL ||
-  DEV_DEFAULT_BASE_URL
-).replace(/\/$/, '');
+const explicitBaseUrl =
+  process.env.EXPO_PUBLIC_NANOCLOUD_API_BASE_URL || process.env.NANOCLOUD_TV_API_BASE_URL;
+
+// This config is evaluated TWICE: once by `expo prebuild`, and again by the
+// Gradle JS-bundling step that writes assets/app.config into the APK. Only the
+// second one decides what the shipped app talks to. Exporting the base URL for
+// prebuild alone silently produces a release APK whose manifest is correct in
+// every respect — right package, label, leanback, signature — but whose bundle
+// points at DEV_DEFAULT_BASE_URL, with cleartext already disabled. The result
+// installs, launches and can never reach a server.
+//
+// So a production bundle must not be allowed to fall back. NODE_ENV is
+// 'production' during release bundling and in the documented build procedure.
+if (!explicitBaseUrl && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'EXPO_PUBLIC_NANOCLOUD_API_BASE_URL is required for a production build.\n' +
+      'Export it in the SAME shell that runs Gradle, not only for prebuild — the\n' +
+      'JS bundle is produced by the Gradle build. Refusing to embed the LAN dev\n' +
+      `default (${DEV_DEFAULT_BASE_URL}) into a production bundle.`,
+  );
+}
+
+const apiBaseUrl = (explicitBaseUrl || DEV_DEFAULT_BASE_URL).replace(/\/$/, '');
 
 // Only permit cleartext http on non-https (LAN dev) targets. A production
 // https:// base URL does not need — and does not get — cleartext traffic.
@@ -42,7 +63,14 @@ const updateUrl = (
 ).replace(/\/$/, '');
 // This value identifies one exact native ABI/configuration contract. Increment
 // it before every build containing native or build-time environment changes.
-const runtimeVersion = process.env.NANOCLOUD_TV_RUNTIME_VERSION || 'tv-native-3';
+//
+// The `nubarca-tv-native-*` series belongs to the NubArca TV application id
+// (it.littlefly.nubarca.tv) and starts over at 1. It is deliberately disjoint
+// from the retired `tv-native-*` series, which belongs to the previous TV
+// package: a device still running that package asks for `tv-native-3` and must
+// never be served a bundle built for this one. See tv/README.md for the
+// retired identity.
+const runtimeVersion = process.env.NANOCLOUD_TV_RUNTIME_VERSION || 'nubarca-tv-native-1';
 const updateChannel = process.env.NANOCLOUD_TV_OTA_CHANNEL || 'production';
 const codeSigningCertificate = process.env.NANOCLOUD_TV_OTA_CERTIFICATE;
 const codeSigningCertificateConfigPath = codeSigningCertificate
@@ -59,11 +87,9 @@ if (codeSigningCertificate) {
 module.exports = () => ({
   expo: {
     name: 'NubArca TV',
-    // RETAINED LEGACY BRAND: `slug` is part of the EAS / OTA update identity that
-    // published updates and the update URL are keyed to. It is recorded in the
-    // legacy-brand compatibility allowlist and must NOT be renamed to "nubarca-tv".
-    slug: 'nanocloud-tv',
-    version: '0.2.0',
+    slug: 'nubarca-tv',
+    scheme: 'nubarca-tv',
+    version: '1.0.0',
     runtimeVersion,
     orientation: 'landscape',
     platforms: ['android', 'ios'],
@@ -93,6 +119,11 @@ module.exports = () => ({
           androidTVBanner: './assets/brand/nubarca-android-tv-banner-320x180.png',
         },
       ],
+      // Replaces the React Native template's debug-keystore release signing with
+      // the operator-supplied NubArca TV release key, and fails the build rather
+      // than falling back. Must run on every prebuild, because prebuild
+      // regenerates android/ from that template.
+      './plugins/withReleaseSigning',
     ],
     updates: {
       url: updateUrl,
@@ -121,12 +152,19 @@ module.exports = () => ({
       otaChannel: updateChannel,
     },
     android: {
-      // RETAINED LEGACY BRAND: this is the Android applicationId. Changing it would
-      // make NubArca TV install as a SEPARATE app with no upgrade path for devices
-      // that already have it sideloaded. It is recorded in the legacy-brand
-      // compatibility allowlist and must NOT be renamed.
-      package: 'it.littlefly.nanocloudtv',
-      versionCode: 3,
+      // The final NubArca TV application id. It also becomes the Gradle
+      // `namespace`, which prebuild derives from this value.
+      //
+      // NubArca (mobile, future) and NubArca TV are separate applications that
+      // share one backend and account ecosystem, so `it.littlefly.nubarca` is
+      // RESERVED for the mobile binary and must not be taken by this one.
+      //
+      // This replaced the previous TV package outright: an Android
+      // applicationId has no in-place rename, so there is no upgrade path. The
+      // single device holding it was uninstalled and re-paired deliberately.
+      // tv/README.md names the retired package for the uninstall step.
+      package: 'it.littlefly.nubarca.tv',
+      versionCode: 1,
       usesCleartextTraffic,
       icon: './assets/brand/nubarca-fire-tv-icon-512.png',
       adaptiveIcon: {

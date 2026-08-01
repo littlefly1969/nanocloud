@@ -19,8 +19,11 @@ test('native gallery routes search through one workspace and typed bulk panels',
 });
 
 test('the native video build uses the current OTA runtime contract', () => {
-  assert.match(appConfig, /NANOCLOUD_TV_RUNTIME_VERSION \|\| 'tv-native-3'/);
-  assert.match(appConfig, /versionCode: 3/);
+  // The identity values themselves are pinned in scripts/appIdentity.test.mjs,
+  // which reads the evaluated config rather than its source text. What matters
+  // here is only the OTA launch contract.
+  assert.match(appConfig, /NANOCLOUD_TV_RUNTIME_VERSION \|\| 'nubarca-tv-native-1'/);
+  assert.match(appConfig, /versionCode: 1/);
   assert.match(appConfig, /checkAutomatically: 'NEVER'/);
   assert.match(appConfig, /fallbackToCacheTimeout: 0/);
 });
