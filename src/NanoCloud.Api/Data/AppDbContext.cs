@@ -23,6 +23,11 @@ public class AppDbContext : DbContext
     public DbSet<FileItemUserMetadata> FileItemUserMetadata => Set<FileItemUserMetadata>();
     public DbSet<Album> Albums => Set<Album>();
     public DbSet<AlbumItem> AlbumItems => Set<AlbumItem>();
+
+    // SHARE-ALBUM-01: live album shares between authenticated users. One row per
+    // (album, invited user); the album OWNER never has a row here and stays
+    // authoritative from the Album table alone. See AlbumMembership.
+    public DbSet<AlbumMembership> AlbumMemberships => Set<AlbumMembership>();
     public DbSet<BackgroundJob> BackgroundJobs => Set<BackgroundJob>();
     public DbSet<AdminImportRun> AdminImportRuns => Set<AdminImportRun>();
     public DbSet<AdminImportItem> AdminImportItems => Set<AdminImportItem>();

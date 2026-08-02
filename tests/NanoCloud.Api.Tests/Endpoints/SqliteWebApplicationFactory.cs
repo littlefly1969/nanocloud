@@ -193,6 +193,12 @@ public sealed class SqliteWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IStorageAccountingService, StorageAccountingService>();
             services.AddScoped<IMetadataService, MetadataService>();
             services.AddScoped<IAlbumService, AlbumService>();
+            // SHARE-ALBUM-01: live album sharing. Mirrors Program.cs
+            // (Postgres-only block).
+            services.AddScoped<NanoCloud.Api.Albums.Sharing.IAlbumAccessResolver,
+                NanoCloud.Api.Albums.Sharing.AlbumAccessResolver>();
+            services.AddScoped<NanoCloud.Api.Albums.Sharing.IAlbumSharingService,
+                NanoCloud.Api.Albums.Sharing.AlbumSharingService>();
             // Slice 5: unified media-workspace query service (/api/media,
             // /api/albums/{id}/media). Mirrors Program.cs (Postgres-only block).
             services.AddScoped<NanoCloud.Api.Media.IMediaCollectionQueryService,

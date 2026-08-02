@@ -88,6 +88,16 @@ export async function probeVideoPlayback(
 interface HlsVideoPlayerProps {
   fileId: string;
   className?: string;
+  // SHARE-ALBUM-01: the same player, pointed at a different route family.
+  //
+  // The owner's own playback is `/api/files/{id}/video`; a live shared album
+  // serves the identical HLS contract from `/api/shared-albums/{albumId}/media/
+  // {id}/video`, which re-authorizes the caller's grant on the master playlist
+  // AND on every segment. Both default to the owner routes, so every existing
+  // call site is unchanged — this only lets a caller that has already resolved
+  // its own authorized URLs supply them.
+  videoUrl?: string;
+  posterUrl?: string;
   // VSEM-03: open at a semantic match instead of the start. Applied ONCE, only
   // after the element reports its metadata (a seek before `loadedmetadata` is
   // ignored by the browser), and clamped to the real duration — a stale or
@@ -99,6 +109,7 @@ interface HlsVideoPlayerProps {
 
 export function HlsVideoPlayer({
   fileId, className, initialPositionMilliseconds = null,
+  videoUrl: videoUrlProp, posterUrl: posterUrlProp,
 }: HlsVideoPlayerProps) {
   const { t } = useI18n();
   const [mode, setMode] = useState<VideoPlaybackMode | 'probing'>('probing');
@@ -124,8 +135,8 @@ export function HlsVideoPlayer({
   // rendition switch must not yank playback back.
   const seekAppliedRef = useRef(false);
 
-  const videoUrl = `/api/files/${fileId}/video`;
-  const posterUrl = `/api/files/${fileId}/poster`;
+  const videoUrl = videoUrlProp ?? `/api/files/${fileId}/video`;
+  const posterUrl = posterUrlProp ?? `/api/files/${fileId}/poster`;
 
   // Leaving the player (close/navigate) while in wrapper-fullscreen: exit so
   // the viewer chrome comes back instead of a black fullscreen shell.

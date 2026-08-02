@@ -938,6 +938,81 @@ const it = {
   'albums.itemsCount_other': '{count} elementi',
   'albums.menuAria': 'Azioni album {name}',
   'albums.updatedAt': 'Aggiornato {date}',
+
+  // --- SHARE-ALBUM-01: condivisione album fra utenti NubArca ---
+  // Il pannello del PROPRIETARIO. L'invito è in due passaggi: prima si verifica
+  // l'indirizzo esatto e si vede il nome della persona, poi si invia.
+  'albumShare.openButton': 'Condividi',
+  'albumShare.title': 'Condividi «{name}»',
+  'albumShare.inviteLegend': 'Invita una persona',
+  'albumShare.inviteHelp':
+    'Inserisci l’indirizzo email esatto di un account NubArca. La persona riceverà un invito e dovrà accettarlo: nessuno ottiene accesso finché non accetta.',
+  'albumShare.emailLabel': 'Email dell’account',
+  'albumShare.emailPlaceholder': 'nome@esempio.it',
+  'albumShare.check': 'Verifica',
+  'albumShare.checking': 'Verifica…',
+  'albumShare.confirmRecipient': 'Invita {name}?',
+  'albumShare.send': 'Invia invito',
+  'albumShare.sending': 'Invio…',
+  'albumShare.emailRequired': 'Inserisci un indirizzo email.',
+  'albumShare.recipientUnavailable':
+    'Nessun account NubArca può essere invitato con questo indirizzo.',
+  'albumShare.selfOrInvalid': 'Questo album è già tuo, oppure l’indirizzo non è valido.',
+  'albumShare.alreadyInvited': 'Questa persona ha già accesso o un invito in sospeso.',
+  'albumShare.resolveError': 'Impossibile verificare l’indirizzo. Riprova.',
+  'albumShare.inviteError': 'Impossibile inviare l’invito. Riprova.',
+  'albumShare.loadError': 'Impossibile caricare le persone con cui hai condiviso.',
+  'albumShare.allowDownload': 'Consenti il download degli originali',
+  'albumShare.allowDownloadHelp':
+    'Senza questa opzione la persona può guardare le foto e i video, ma non scaricare i file originali. Puoi cambiarla in qualsiasi momento.',
+  'albumShare.membersLegend': 'Persone con accesso',
+  'albumShare.noMembers': 'Non hai ancora condiviso questo album.',
+  'albumShare.statePending': 'In attesa',
+  'albumShare.stateAccepted': 'Ha accesso',
+  'albumShare.stateDeclined': 'Ha rifiutato',
+  'albumShare.stateRevoked': 'Accesso revocato',
+  'albumShare.roleViewer': 'Visualizzatore',
+  'albumShare.invitedAt': 'Invitato il {date}',
+  'albumShare.acceptedAt': 'Ha accettato il {date}',
+  'albumShare.memberDownloadAria': 'Consenti a {name} di scaricare gli originali',
+  'albumShare.cancel': 'Annulla invito',
+  'albumShare.revoke': 'Revoca accesso',
+  'albumShare.confirmCancel': 'Annullare l’invito per {name}?',
+  // Va detto esplicitamente: la revoca vale da subito su NubArca, ma un file
+  // già scaricato sul dispositivo di un’altra persona non può essere ritirato.
+  'albumShare.confirmRevoke':
+    'Revocare l’accesso a {name}? Non potrà più aprire questo album. I file che ha già scaricato restano sul suo dispositivo.',
+  'albumShare.pastLegend': 'Inviti passati ({count})',
+
+  // Il lato DESTINATARIO: «Condivisi con me».
+  'nav.sharedAlbums': 'Condivisi con me',
+  'sharedAlbums.heading': 'Condivisi con me',
+  'sharedAlbums.intro':
+    'Album che appartengono ad altre persone e che hanno condiviso con te. Restano nella loro libreria: quello che vedi qui è sempre la versione aggiornata.',
+  'sharedAlbums.loadError': 'Impossibile caricare gli album condivisi.',
+  'sharedAlbums.empty': 'Nessuno ha ancora condiviso un album con te.',
+  'sharedAlbums.invitationsHeading': 'Inviti',
+  'sharedAlbums.albumsHeading': 'Album condivisi con te',
+  'sharedAlbums.invitedBy': '{owner} vuole condividere con te «{album}»',
+  'sharedAlbums.invitedAt': 'invitato il {date}',
+  'sharedAlbums.downloadAllowed': 'download degli originali consentito',
+  'sharedAlbums.downloadNotAllowed': 'solo visualizzazione',
+  'sharedAlbums.accept': 'Accetta',
+  'sharedAlbums.decline': 'Rifiuta',
+  'sharedAlbums.ownedBy': 'di {owner}',
+  'sharedAlbums.roleViewerLabel': 'Visualizzazione',
+
+  'sharedAlbum.loadError': 'Impossibile caricare l’album condiviso.',
+  'sharedAlbum.backToShared': '← Condivisi con me',
+  'sharedAlbum.liveOwnedBy': 'Album dal vivo di {owner}',
+  'sharedAlbum.empty': 'Questo album non contiene ancora elementi visibili.',
+  'sharedAlbum.unavailable':
+    'Questo album non è più disponibile. La condivisione potrebbe essere stata revocata o l’album rimosso.',
+  'sharedAlbum.openItem': 'Apri elemento {index} di {total}',
+  'sharedAlbum.viewerLabel': 'Visualizzatore di «{name}»',
+  'sharedAlbum.previous': 'Precedente',
+  'sharedAlbum.next': 'Successivo',
+
   'moveToExcluded.title_one': 'Sposta {count} elemento in Esclusi',
   'moveToExcluded.title_other': 'Sposta {count} elementi in Esclusi',
   'moveToExcluded.explainKept': 'Gli elementi restano nelle loro cartelle: nome, titolo, tag, metadata e associazioni vengono preservati.',

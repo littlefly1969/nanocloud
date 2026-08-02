@@ -23,6 +23,8 @@ import { PlatesPage } from './pages/PlatesPage';
 import { AestheticsLabPage } from './pages/AestheticsLabPage';
 import { LAB_DEFAULT_ROUTE, LaboratoryPage } from './pages/LaboratoryPage';
 import { PrivateVaultPage } from './pages/PrivateVaultPage';
+import { SharedAlbumDetailPage } from './pages/SharedAlbumDetailPage';
+import { SharedAlbumsPage } from './pages/SharedAlbumsPage';
 import { SharesPage } from './pages/SharesPage';
 import { LegacyCloudToolRedirect } from './cloud/LegacyCloudToolRedirect';
 import { TrashPage } from './pages/TrashPage';
@@ -69,6 +71,12 @@ export function App() {
             <Route path="/albums" element={<AlbumsPage />} />
             <Route path="/albums/:albumId" element={<AlbumDetailPage />} />
             <Route path="/albums/:albumId/party-uploads" element={<PartyUploadsPage />} />
+            {/* SHARE-ALBUM-01: albums OTHER people own and shared with this
+                user. Kept apart from /albums so "whose album is this" is never
+                ambiguous, and behind the same ProtectedRoute — a live share is
+                an authenticated surface, not a public link. */}
+            <Route path="/shared-albums" element={<SharedAlbumsPage />} />
+            <Route path="/shared-albums/:albumId" element={<SharedAlbumDetailPage />} />
             {/* Slice 5: the unified media workspace. `scope` comes from the
                 route; a distinct key per scope remounts the page (clean reset). */}
             <Route path="/media" element={<MediaLibraryPage key="active" scope="active" />} />

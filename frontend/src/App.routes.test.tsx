@@ -71,6 +71,16 @@ describe('App route table (anonymous)', () => {
     await expectLanded('/plates');
   });
 
+  // SHARE-ALBUM-01: a live share is an AUTHENTICATED surface. Unlike /party/…,
+  // which is a public token link, /shared-albums resolves nothing without a
+  // session — a pasted URL is not a capability.
+  it('protects the shared-album routes, list and deep link alike', async () => {
+    for (const path of ['/shared-albums', '/shared-albums/album-42']) {
+      await expectLanded(path);
+      cleanup();
+    }
+  });
+
   it('sends a deep unknown route to /login too', async () => {
     await expectLanded('/albums/album-42/nope/deeper');
   });

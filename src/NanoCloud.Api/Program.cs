@@ -551,6 +551,16 @@ if (!string.IsNullOrWhiteSpace(connectionString))
     builder.Services.AddScoped<IStorageAccountingService, StorageAccountingService>();
     builder.Services.AddScoped<IMetadataService, MetadataService>();
     builder.Services.AddScoped<IAlbumService, AlbumService>();
+    // SHARE-ALBUM-01: live album sharing. The resolver is the single gate for
+    // "may this authenticated user act on this album"; the sharing service owns
+    // the invitation lifecycle and the recipient read model. Neither widens the
+    // owner-only /api/files/* endpoints — see Endpoints/AlbumSharingEndpoints.cs.
+    builder.Services.AddScoped<
+        NanoCloud.Api.Albums.Sharing.IAlbumAccessResolver,
+        NanoCloud.Api.Albums.Sharing.AlbumAccessResolver>();
+    builder.Services.AddScoped<
+        NanoCloud.Api.Albums.Sharing.IAlbumSharingService,
+        NanoCloud.Api.Albums.Sharing.AlbumSharingService>();
     // Public read-only party album links (owner lifecycle + public validation)
     // and party-scoped media surfacing.
     builder.Services.AddScoped<NanoCloud.Api.Party.IPartyLinkService, NanoCloud.Api.Party.PartyLinkService>();
@@ -1070,6 +1080,13 @@ app.MapPhotoExportEndpoints();
 // (party-settings, party-uploads) are deliberately NOT part of that module
 // — they stay here as Party feature endpoints.
 app.MapAlbumEndpoints();
+
+// SHARE-ALBUM-01: owner-side member management under /api/albums/{id}/members
+// and the recipient's /api/shared-albums/* family. Registration order relative
+// to MapAlbumEndpoints does not affect matching — no album template above
+// overlaps "/api/albums/{id}/members...", and /api/shared-albums is a distinct
+// prefix.
+app.MapAlbumSharingEndpoints();
 
 // Album-nested Party settings/moderation endpoints and album item/membership
 // + bulk endpoints are also mapped by Endpoints/PartyEndpoints.cs and

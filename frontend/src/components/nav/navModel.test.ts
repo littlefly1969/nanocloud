@@ -9,9 +9,23 @@ describe('primary navigation model', () => {
   it('keeps the normal-user destinations', () => {
     const routes = allRoutes(false);
     expect(routes).toEqual([
-      '/', '/media', '/albums', '/people',
+      '/', '/media', '/albums', '/shared-albums', '/people',
       '/lab', '/shares', '/cloud-functions', '/private', '/trash',
     ]);
+  });
+
+  // SHARE-ALBUM-01: albums other people own are their OWN destination, next to
+  // — never merged into — the user's own /albums. Mixing them would make "whose
+  // album is this" a matter of reading a badge.
+  it('keeps albums shared with the user separate from their own albums', () => {
+    const routes = allRoutes(false);
+    expect(routes).toContain('/albums');
+    expect(routes).toContain('/shared-albums');
+    const shared = buildNavGroups({ isAdmin: false })
+      .flatMap((g) => g.items).find((i) => i.to === '/shared-albums')!;
+    expect(shared.labelKey).toBe('nav.sharedAlbums');
+    // No `end`: /shared-albums/:albumId keeps the entry active.
+    expect(shared.end).toBeUndefined();
   });
 
   // UX-02: Plates and Aesthetics are sections of one Laboratory workspace,

@@ -6,6 +6,7 @@ import { useI18n } from '../../i18n';
 import { VideoPreview } from '../../video/VideoPreview';
 import { getMediaAspectRatio } from './mediaAspectRatio';
 import { computeJustifiedRows, type JustifiedLayoutItem } from '../layout/computeJustifiedRows';
+import { MEDIA_WALL_GAP_PX, mediaWallRowParams } from '../layout/mediaWallGeometry';
 import type { MediaSelection } from '../../gallery/useMediaSelection';
 
 // The full-width justified media wall. Photos and videos flow into justified
@@ -15,26 +16,11 @@ import type { MediaSelection } from '../../gallery/useMediaSelection';
 // permanent card panel. Infinite scroll is owned by the parent (a sentinel below
 // the wall) — this component only lays out and virtualizes what it is given.
 
-const MEDIA_WALL_GAP_PX = 6;
 // Render (and therefore start downloading) several rows beyond the viewport in
 // each direction, so a fast scroll lands on rows whose images are already
 // loading rather than momentarily-blank tiles. Virtualization still bounds the
 // mounted set — this only widens the lead, it never mounts the whole library.
 const MEDIA_WALL_OVERSCAN_ROWS = 6;
-
-interface RowParams {
-  targetRowHeight: number;
-  minRowHeight: number;
-  maxRowHeight: number;
-}
-
-// Row-height bands per breakpoint (task §13). Smaller screens get shorter rows
-// so a comparable number of tiles stays visible.
-function rowParamsFor(width: number): RowParams {
-  if (width <= 640) return { targetRowHeight: 150, minRowHeight: 120, maxRowHeight: 185 };
-  if (width <= 1024) return { targetRowHeight: 190, minRowHeight: 155, maxRowHeight: 235 };
-  return { targetRowHeight: 230, minRowHeight: 180, maxRowHeight: 280 };
-}
 
 function formatDuration(totalSeconds: number): string {
   const s = Math.max(0, Math.round(totalSeconds));
@@ -91,7 +77,7 @@ export function MediaGrid({ items, orderedIds, selection, onOpen, semanticTimest
 
   const measured = containerWidth != null;
   const width = containerWidth ?? 0;
-  const params = rowParamsFor(width || 1);
+  const params = mediaWallRowParams(width || 1);
 
   const layoutItems = useMemo<JustifiedLayoutItem[]>(
     () => items.map((item, index) => ({

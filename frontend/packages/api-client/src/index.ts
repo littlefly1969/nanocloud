@@ -1,6 +1,7 @@
 export * from './client';
 export * from './auth';
 export * from './albums';
+export * from './albumSharing';
 export * from './folders';
 export * from './images';
 export * from './videos';

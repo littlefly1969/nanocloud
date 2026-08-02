@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n';
 import { AlbumSettingsPanel } from '../albums/AlbumSettingsPanel';
+import { AlbumSharePanel } from '../albums/AlbumSharePanel';
 import { MediaWorkspace } from '../media/workspace/MediaWorkspace';
 import {
   filtersToUrlParams,
@@ -37,6 +38,12 @@ export function AlbumDetailPage() {
   const [status, setStatus] = useState<HeaderStatus>({ kind: 'loading' });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  // SHARE-ALBUM-01: sharing is its OWN entry point, not a row buried in
+  // Settings next to Show-on-TV and Party. Those grant public/device
+  // visibility; this grants a named person an authenticated, revocable
+  // membership, and conflating the three is how a user shares the wrong way.
+  const [shareOpen, setShareOpen] = useState(false);
+  const shareButtonRef = useRef<HTMLButtonElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const source = useMemo<MediaWorkspaceSource>(
@@ -97,15 +104,26 @@ export function AlbumDetailPage() {
             <h1>{album.name}</h1>
             {album.description && <p className="album-description">{album.description}</p>}
           </div>
-          <button
-            type="button"
-            ref={settingsButtonRef}
-            className="row-action"
-            data-testid="album-open-settings"
-            onClick={() => setSettingsOpen(true)}
-          >
-            {t('mediaWs.albumSettings')}
-          </button>
+          <div className="album-detail-header-actions">
+            <button
+              type="button"
+              ref={shareButtonRef}
+              className="row-action"
+              data-testid="album-open-share"
+              onClick={() => setShareOpen(true)}
+            >
+              {t('albumShare.openButton')}
+            </button>
+            <button
+              type="button"
+              ref={settingsButtonRef}
+              className="row-action"
+              data-testid="album-open-settings"
+              onClick={() => setSettingsOpen(true)}
+            >
+              {t('mediaWs.albumSettings')}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -115,6 +133,15 @@ export function AlbumDetailPage() {
         onIdentityChange={onIdentityChange}
         searchPlaceholder={t('mediaWs.searchAlbum')}
       />
+
+      {shareOpen && (
+        <AlbumSharePanel
+          albumId={albumId}
+          albumName={album.name}
+          onClose={() => setShareOpen(false)}
+          returnFocusRef={shareButtonRef}
+        />
+      )}
 
       {settingsOpen && (
         <AlbumSettingsPanel

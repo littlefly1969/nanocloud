@@ -1,0 +1,531 @@
+using Microsoft.AspNetCore.Mvc;
+using NanoCloud.Api.Albums.Sharing;
+using NanoCloud.Api.Audit;
+using NanoCloud.Api.Files;
+using NanoCloud.Api.Http;
+using NanoCloud.Api.Security;
+
+namespace NanoCloud.Api.Endpoints;
+
+// SHARE-ALBUM-01: live album sharing between authenticated NubArca users.
+//
+// TWO ROUTE FAMILIES, ONE GATE:
+//
+//   /api/albums/{id}/members...    owner-only management (invite / permission /
+//                                  revoke). Album ownership is the requirement.
+//   /api/shared-albums/...         the recipient's view. EVERY request resolves
+//                                  an AlbumAccessGrant first.
+//
+// The ordinary owner-only endpoints under /api/files/{id}/* are NOT touched.
+// Their `OwnerUserId == caller` checks stay exactly as they were; shared media
+// is served here by resolving a grant and then calling the SAME unchanged
+// owner-scoped services with the ALBUM OWNER's id. That is the shape the public
+// Party surface already uses, and it means a defect in sharing cannot widen a
+// private endpoint.
+//
+// CACHING: shared derived media is `no-store`, unlike the owner's own
+// `private, max-age=86400`. Revocation has to take effect immediately on every
+// protected representation, and a response already sitting in the recipient's
+// HTTP cache would outlive the revoke. Correctness beats the repeat-scroll
+// saving here; the owner's own surfaces are unaffected.
+public static class AlbumSharingEndpoints
+{
+    public static IEndpointRouteBuilder MapAlbumSharingEndpoints(this IEndpointRouteBuilder app)
+    {
+        MapOwnerMemberManagement(app);
+        MapRecipientInvitations(app);
+        MapSharedAlbumReads(app);
+        MapSharedAlbumMedia(app);
+        return app;
+    }
+
+    // ── Owner-only: who is this album shared with ───────────────────────────
+
+    private static void MapOwnerMemberManagement(IEndpointRouteBuilder app)
+    {
+        app.MapGet("/api/albums/{id:guid}/members", async (
+            Guid id,
+            HttpContext httpContext,
+            [FromServices] IAlbumSharingService sharing,
+            CancellationToken cancellationToken) =>
+        {
+            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
+            var members = await sharing.ListMembersAsync(ownerUserId, id, cancellationToken);
+            return members is null ? Results.NotFound() : Results.Ok(members);
+        }).WithName("ListAlbumMembers").RequireAuthorization();
+
+        // Step 1 of inviting: confirm an exact email belongs to an invitable
+        // account. POST (not GET) so the address never lands in a URL, a server
+        // access log, a browser history entry or a Referer header.
+        app.MapPost("/api/albums/{id:guid}/members/resolve", async (
+            Guid id,
+            HttpContext httpContext,
+            [FromServices] IAlbumSharingService sharing,
+            [FromBody] ResolveAlbumRecipientRequest? body,
+            CancellationToken cancellationToken) =>
+        {
+            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
+            var resolved = await sharing.ResolveRecipientAsync(
+                ownerUserId, id, body?.Email, cancellationToken);
+            // One answer for every failure — album missing/foreign, no such
+            // account, disabled account, malformed address, or the owner's own
+            // address. Nothing here can be used to probe the user directory.
+            return resolved is null ? Results.NotFound() : Results.Ok(resolved);
+        }).WithName("ResolveAlbumRecipient").RequireAuthorization();
+
+        app.MapPost("/api/albums/{id:guid}/members", async (
+            Guid id,
+            HttpContext httpContext,
+            [FromServices] IAlbumSharingService sharing,
+            [FromServices] IAuditLogger audit,
+            [FromBody] InviteAlbumMemberRequest? body,
+            CancellationToken cancellationToken) =>
+        {
+            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
+            var ip = httpContext.Connection.RemoteIpAddress?.ToString();
+
+            if (body is null)
+            {
+                return Results.BadRequest(new { error = "Missing request body." });
+            }
+
+            var (result, member) = await sharing.InviteAsync(ownerUserId, id, body, cancellationToken);
+            switch (result)
+            {
+                case InviteAlbumMemberResult.Ok:
+                    // Audit carries the album id and the MEMBERSHIP id — never
+                    // the recipient's email, display name or user id.
+                    await audit.LogAsync(ownerUserId, AuditActions.AlbumShareInvite,
+                        AuditEntityTypes.Album, id, ip,
+                        new { membershipId = member!.MembershipId, role = member.Role }, cancellationToken);
+                    return Results.Ok(member);
+                case InviteAlbumMemberResult.AlbumNotFound:
+                    return Results.NotFound();
+                case InviteAlbumMemberResult.RecipientUnavailable:
+                    return Results.NotFound(new { error = "No NubArca account can be invited with that address." });
+                case InviteAlbumMemberResult.RecipientIsOwner:
+                    return Results.BadRequest(new { error = "You already own this album." });
+                case InviteAlbumMemberResult.AlreadyInvited:
+                    return Results.Conflict(new { error = "That person already has access or a pending invitation." });
+                case InviteAlbumMemberResult.RoleNotAssignable:
+                    return Results.BadRequest(new { error = "That role cannot be assigned." });
+                default:
+                    return Results.BadRequest(new { error = "Enter a valid email address." });
+            }
+        }).WithName("InviteAlbumMember").RequireAuthorization();
+
+        app.MapMethods("/api/albums/{id:guid}/members/{membershipId:guid}", ["PATCH"], async (
+            Guid id,
+            Guid membershipId,
+            HttpContext httpContext,
+            [FromServices] IAlbumSharingService sharing,
+            [FromServices] IAuditLogger audit,
+            [FromBody] UpdateAlbumMemberRequest? body,
+            CancellationToken cancellationToken) =>
+        {
+            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
+            var ip = httpContext.Connection.RemoteIpAddress?.ToString();
+
+            if (body is null)
+            {
+                return Results.BadRequest(new { error = "Missing request body." });
+            }
+
+            var (result, member) = await sharing.UpdateMemberAsync(
+                ownerUserId, id, membershipId, body.AllowOriginalDownload, cancellationToken);
+            if (result != AlbumMemberMutationResult.Ok)
+            {
+                return Results.NotFound();
+            }
+
+            await audit.LogAsync(ownerUserId, AuditActions.AlbumShareUpdate,
+                AuditEntityTypes.Album, id, ip,
+                new { membershipId, allowOriginalDownload = body.AllowOriginalDownload }, cancellationToken);
+            return Results.Ok(member);
+        }).WithName("UpdateAlbumMember").RequireAuthorization();
+
+        // Cancels a pending invitation OR revokes an accepted membership — one
+        // operation, because both mean the same thing to the person on the other
+        // end. Idempotent.
+        app.MapDelete("/api/albums/{id:guid}/members/{membershipId:guid}", async (
+            Guid id,
+            Guid membershipId,
+            HttpContext httpContext,
+            [FromServices] IAlbumSharingService sharing,
+            [FromServices] IAuditLogger audit,
+            CancellationToken cancellationToken) =>
+        {
+            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
+            var ip = httpContext.Connection.RemoteIpAddress?.ToString();
+
+            var result = await sharing.RevokeMemberAsync(ownerUserId, id, membershipId, cancellationToken);
+            if (result != AlbumMemberMutationResult.Ok)
+            {
+                return Results.NotFound();
+            }
+
+            await audit.LogAsync(ownerUserId, AuditActions.AlbumShareRevoke,
+                AuditEntityTypes.Album, id, ip, new { membershipId }, cancellationToken);
+            return Results.NoContent();
+        }).WithName("RevokeAlbumMember").RequireAuthorization();
+    }
+
+    // ── Recipient: invitations addressed to me ──────────────────────────────
+
+    private static void MapRecipientInvitations(IEndpointRouteBuilder app)
+    {
+        app.MapGet("/api/shared-albums/invitations", async (
+            HttpContext httpContext,
+            [FromServices] IAlbumSharingService sharing,
+            CancellationToken cancellationToken) =>
+        {
+            var actorUserId = httpContext.GetCurrentUserId()!.Value;
+            var invitations = await sharing.ListInvitationsAsync(actorUserId, cancellationToken);
+            SetNoStore(httpContext);
+            return Results.Ok(invitations);
+        }).WithName("ListAlbumInvitations").RequireAuthorization();
+
+        app.MapPost("/api/shared-albums/invitations/{membershipId:guid}/accept", async (
+            Guid membershipId,
+            HttpContext httpContext,
+            [FromServices] IAlbumSharingService sharing,
+            [FromServices] IAuditLogger audit,
+            CancellationToken cancellationToken) =>
+            await RespondAsync(membershipId, accept: true, httpContext, sharing, audit, cancellationToken))
+            .WithName("AcceptAlbumInvitation").RequireAuthorization();
+
+        app.MapPost("/api/shared-albums/invitations/{membershipId:guid}/decline", async (
+            Guid membershipId,
+            HttpContext httpContext,
+            [FromServices] IAlbumSharingService sharing,
+            [FromServices] IAuditLogger audit,
+            CancellationToken cancellationToken) =>
+            await RespondAsync(membershipId, accept: false, httpContext, sharing, audit, cancellationToken))
+            .WithName("DeclineAlbumInvitation").RequireAuthorization();
+    }
+
+    private static async Task<IResult> RespondAsync(
+        Guid membershipId,
+        bool accept,
+        HttpContext httpContext,
+        IAlbumSharingService sharing,
+        IAuditLogger audit,
+        CancellationToken cancellationToken)
+    {
+        var actorUserId = httpContext.GetCurrentUserId()!.Value;
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString();
+
+        var result = await sharing.RespondToInvitationAsync(
+            actorUserId, membershipId, accept, cancellationToken);
+        if (result != AlbumInvitationResponseResult.Ok)
+        {
+            return Results.NotFound();
+        }
+
+        // The ACTOR is the recipient here, not the album owner — the audit trail
+        // has to keep the two apart. entityId is the membership, because the
+        // recipient is not entitled to have the album id treated as theirs.
+        await audit.LogAsync(actorUserId,
+            accept ? AuditActions.AlbumShareAccept : AuditActions.AlbumShareDecline,
+            AuditEntityTypes.AlbumMembership, membershipId, ip, null, cancellationToken);
+        return Results.NoContent();
+    }
+
+    // ── Recipient: the shared album itself ──────────────────────────────────
+
+    private static void MapSharedAlbumReads(IEndpointRouteBuilder app)
+    {
+        app.MapGet("/api/shared-albums", async (
+            HttpContext httpContext,
+            [FromServices] IAlbumSharingService sharing,
+            CancellationToken cancellationToken) =>
+        {
+            var actorUserId = httpContext.GetCurrentUserId()!.Value;
+            var albums = await sharing.ListSharedWithMeAsync(actorUserId, cancellationToken);
+            SetNoStore(httpContext);
+            return Results.Ok(albums);
+        }).WithName("ListSharedAlbums").RequireAuthorization();
+
+        app.MapGet("/api/shared-albums/{albumId:guid}", async (
+            Guid albumId,
+            HttpContext httpContext,
+            [FromServices] IAlbumAccessResolver access,
+            [FromServices] IAlbumSharingService sharing,
+            CancellationToken cancellationToken) =>
+        {
+            var actorUserId = httpContext.GetCurrentUserId()!.Value;
+            var grant = await access.ResolveAsync(albumId, actorUserId, cancellationToken);
+            if (grant is null)
+            {
+                return Results.NotFound();
+            }
+
+            var detail = await sharing.GetSharedAlbumAsync(grant, cancellationToken);
+            SetNoStore(httpContext);
+            return Results.Ok(detail);
+        }).WithName("GetSharedAlbum").RequireAuthorization();
+
+        app.MapGet("/api/shared-albums/{albumId:guid}/items", async (
+            Guid albumId,
+            HttpContext httpContext,
+            [FromServices] IAlbumAccessResolver access,
+            [FromServices] IAlbumSharingService sharing,
+            CancellationToken cancellationToken) =>
+        {
+            var actorUserId = httpContext.GetCurrentUserId()!.Value;
+            var grant = await access.ResolveAsync(albumId, actorUserId, cancellationToken);
+            if (grant is null)
+            {
+                return Results.NotFound();
+            }
+
+            var items = await sharing.ListSharedItemsAsync(grant, cancellationToken);
+            SetNoStore(httpContext);
+            return Results.Ok(items);
+        }).WithName("ListSharedAlbumItems").RequireAuthorization();
+    }
+
+    // ── Recipient: media bytes ──────────────────────────────────────────────
+    //
+    // Each of these resolves the grant, then delegates to the SAME owner-scoped
+    // service the owner's own endpoint uses, passing the ALBUM OWNER's id. The
+    // services are unchanged; the only new thing is who is allowed to ask.
+
+    private static void MapSharedAlbumMedia(IEndpointRouteBuilder app)
+    {
+        app.MapGet("/api/shared-albums/{albumId:guid}/media/{fileId:guid}/thumbnail", async (
+            Guid albumId,
+            Guid fileId,
+            [FromQuery] string? size,
+            HttpContext httpContext,
+            [FromServices] IAlbumAccessResolver access,
+            [FromServices] IFileThumbnailService thumbnails,
+            CancellationToken cancellationToken) =>
+        {
+            // Only the grid size is reachable through this route; the viewer has
+            // its own /preview. An unknown value is a 400, exactly as on the
+            // owner's endpoint.
+            var requested = string.IsNullOrWhiteSpace(size) ? ThumbnailSizes.Small : size!;
+            if (requested != ThumbnailSizes.Small)
+            {
+                return Results.BadRequest(new { error = $"Unknown thumbnail size '{requested}'." });
+            }
+
+            return await ServeDerivativeAsync(
+                albumId, fileId, ThumbnailSizes.Small, only: null,
+                httpContext, access, thumbnails, cancellationToken);
+        }).WithName("GetSharedAlbumThumbnail").RequireAuthorization();
+
+        app.MapGet("/api/shared-albums/{albumId:guid}/media/{fileId:guid}/preview", async (
+            Guid albumId,
+            Guid fileId,
+            HttpContext httpContext,
+            [FromServices] IAlbumAccessResolver access,
+            [FromServices] IFileThumbnailService thumbnails,
+            CancellationToken cancellationToken) =>
+            await ServeDerivativeAsync(
+                albumId, fileId, ThumbnailSizes.Medium, only: null,
+                httpContext, access, thumbnails, cancellationToken))
+            .WithName("GetSharedAlbumPreview").RequireAuthorization();
+
+        app.MapGet("/api/shared-albums/{albumId:guid}/media/{fileId:guid}/poster", async (
+            Guid albumId,
+            Guid fileId,
+            HttpContext httpContext,
+            [FromServices] IAlbumAccessResolver access,
+            [FromServices] IFileThumbnailService thumbnails,
+            CancellationToken cancellationToken) =>
+            await ServeDerivativeAsync(
+                albumId, fileId, ThumbnailSizes.Poster, only: SharedMediaKind.Video,
+                httpContext, access, thumbnails, cancellationToken))
+            .WithName("GetSharedAlbumPoster").RequireAuthorization();
+
+        // Adaptive playback. Mirrors /api/files/{id}/video: the master playlist
+        // when the ladder is published, 202 while it is being prepared, 404
+        // otherwise — the gate inside VideoHlsServingService is unchanged and
+        // still owner-scoped, it is simply asked on the album owner's behalf.
+        app.MapGet("/api/shared-albums/{albumId:guid}/media/{fileId:guid}/video", async (
+            Guid albumId,
+            Guid fileId,
+            HttpContext httpContext,
+            [FromServices] IAlbumAccessResolver access,
+            [FromServices] VideoHlsServingService hlsServing,
+            CancellationToken cancellationToken) =>
+        {
+            var actorUserId = httpContext.GetCurrentUserId()!.Value;
+            var grant = await access.ResolveMediaAsync(
+                albumId, actorUserId, fileId, SharedMediaAccess.Derived, cancellationToken);
+            if (grant is null || grant.Kind != SharedMediaKind.Video)
+            {
+                return Results.NotFound();
+            }
+
+            // Without the HLS provider the only alternative is streaming the
+            // ORIGINAL bytes, which is exactly what `allowDownload` gates. A
+            // share must not hand over the untouched original through a
+            // playback URL, so this route is HLS-only: with the provider off it
+            // is a 404 and the client falls back to the poster.
+            if (!hlsServing.Enabled)
+            {
+                return Results.NotFound();
+            }
+
+            var master = await hlsServing.GetMasterAsync(
+                fileId, grant.MediaOwnerUserId, cancellationToken);
+            SetNoStore(httpContext);
+            return master.Status switch
+            {
+                VideoHlsMasterStatus.Ready => Results.Text(
+                    RewriteSharedMasterUris(master.MasterPlaylist!),
+                    VideoHlsServingService.MasterContentType),
+                VideoHlsMasterStatus.Preparing =>
+                    VideoHlsServingService.Preparing(httpContext.Response),
+                _ => Results.NotFound(),
+            };
+        }).WithName("GetSharedAlbumVideo").RequireAuthorization();
+
+        // Ladder child files. Re-runs the FULL grant + membership + availability
+        // check on every segment request, so a revoke mid-playback stops the
+        // next segment. `file` is untrusted URL input and is whitelisted inside
+        // HlsDerivativeStorage, unchanged.
+        app.MapGet("/api/shared-albums/{albumId:guid}/media/{fileId:guid}/video/{rendition}/{file}", async (
+            Guid albumId,
+            Guid fileId,
+            string rendition,
+            string file,
+            HttpContext httpContext,
+            [FromServices] IAlbumAccessResolver access,
+            [FromServices] VideoHlsServingService hlsServing,
+            CancellationToken cancellationToken) =>
+        {
+            if (!hlsServing.Enabled)
+            {
+                return Results.NotFound();
+            }
+
+            var actorUserId = httpContext.GetCurrentUserId()!.Value;
+            var grant = await access.ResolveMediaAsync(
+                albumId, actorUserId, fileId, SharedMediaAccess.Derived, cancellationToken);
+            if (grant is null || grant.Kind != SharedMediaKind.Video)
+            {
+                return Results.NotFound();
+            }
+
+            var content = await hlsServing.OpenLadderFileAsync(
+                fileId, grant.MediaOwnerUserId, $"{rendition}/{file}", cancellationToken);
+            if (content is null)
+            {
+                return Results.NotFound();
+            }
+
+            SetNoStore(httpContext);
+            return Results.File(content.Content, content.ContentType);
+        }).WithName("GetSharedAlbumVideoHlsFile").RequireAuthorization();
+
+        // The ORIGINAL bytes. Requires the membership's allowOriginalDownload;
+        // the check lives in ResolveMediaAsync, so "download is off" and "not a
+        // member of this album" are the same 404.
+        app.MapGet("/api/shared-albums/{albumId:guid}/media/{fileId:guid}/content", async (
+            Guid albumId,
+            Guid fileId,
+            HttpContext httpContext,
+            [FromServices] IAlbumAccessResolver access,
+            [FromServices] IFileItemService files,
+            [FromServices] IAuditLogger audit,
+            CancellationToken cancellationToken) =>
+        {
+            var actorUserId = httpContext.GetCurrentUserId()!.Value;
+            var ip = httpContext.Connection.RemoteIpAddress?.ToString();
+
+            var grant = await access.ResolveMediaAsync(
+                albumId, actorUserId, fileId, SharedMediaAccess.Original, cancellationToken);
+            if (grant is null)
+            {
+                return Results.NotFound();
+            }
+
+            var content = await files.OpenContentAsync(
+                fileId, grant.MediaOwnerUserId, cancellationToken);
+            if (content is null)
+            {
+                return Results.NotFound();
+            }
+
+            // The ACTOR is the downloader, not the media owner. Recording the
+            // owner here would make a share indistinguishable from the owner's
+            // own download in the audit trail.
+            await audit.LogAsync(actorUserId, AuditActions.AlbumShareDownload,
+                AuditEntityTypes.File, fileId, ip,
+                new { albumId, sizeBytes = content.SizeBytes }, cancellationToken);
+
+            SetNoStore(httpContext);
+            return Results.File(
+                content.Content,
+                SafeContentType.ForServing(content.DetectedContentType),
+                content.FileName);
+        }).WithName("DownloadSharedAlbumOriginal").RequireAuthorization();
+    }
+
+    // Resolve → pick the derivative that actually exists for this media kind →
+    // hand the ALBUM OWNER's id to the unchanged owner-scoped thumbnail service.
+    //
+    // `imageSize` is the derivative wanted for a STILL image. A video has no
+    // small/medium image derivative — its grid tile and its viewer image are
+    // both the poster — so a video resolves to the poster whichever of
+    // /thumbnail and /preview was asked for. /poster passes SharedMediaKind.Video
+    // as `only`, which makes it 404 on a still image rather than quietly serving
+    // that image's thumbnail under a poster URL.
+    private static async Task<IResult> ServeDerivativeAsync(
+        Guid albumId,
+        Guid fileId,
+        string imageSize,
+        SharedMediaKind? only,
+        HttpContext httpContext,
+        IAlbumAccessResolver access,
+        IFileThumbnailService thumbnails,
+        CancellationToken cancellationToken)
+    {
+        var actorUserId = httpContext.GetCurrentUserId()!.Value;
+
+        var grant = await access.ResolveMediaAsync(
+            albumId, actorUserId, fileId, SharedMediaAccess.Derived, cancellationToken);
+        if (grant is null)
+        {
+            return Results.NotFound();
+        }
+
+        if (only is not null && grant.Kind != only)
+        {
+            return Results.NotFound();
+        }
+
+        var size = grant.Kind == SharedMediaKind.Video ? ThumbnailSizes.Poster : imageSize;
+
+        var content = await thumbnails.EnsureAsync(
+            fileId, grant.MediaOwnerUserId, size, cancellationToken);
+        if (content is null)
+        {
+            return Results.NotFound();
+        }
+
+        SetNoStore(httpContext);
+        return Results.File(content.Content, content.MimeType);
+    }
+
+    // The master playlist's rendition URIs are relative to the playlist URL's
+    // directory. VideoHlsServingService already prefixes them with "video/" for
+    // the owner route .../files/{id}/video; the shared route has the same
+    // trailing "/video" segment, so the same prefix resolves correctly here and
+    // the playlist needs no further rewriting. Kept as a named no-op so the
+    // dependence is explicit rather than accidental.
+    private static string RewriteSharedMasterUris(string master) => master;
+
+    // Shared media is never stored by an intermediary or by the recipient's
+    // browser cache: a revoke has to be effective on the next request, and a
+    // cached 200 would not be. See the class comment.
+    private static void SetNoStore(HttpContext context)
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        context.Response.Headers.Pragma = "no-cache";
+    }
+}

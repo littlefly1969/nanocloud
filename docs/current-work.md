@@ -31,7 +31,93 @@ baseline and active work; do not use it as a chronological work log.
 - Read `deploy/FAST_DEPLOY.md` in full immediately before any production
   deployment, rebuild, release-pin change or production migration.
 
-## Active slice — UX-02 + VIDEO-HLS-05 wider workspaces, Laboratory, Faces, HLS
+## Active slice — SHARE-ALBUM-01 live album sharing, Viewer role
+
+Branch `feat/album-sharing-viewer`, started from `main` (`70815d8`). Not pushed,
+not merged, not deployed. ONE additive migration (`AddAlbumMemberships`, a new
+table only — nothing existing is altered). No backfill, no job, no TV/AI/storage
+change.
+
+Introduces authenticated album sharing between NubArca users. An album still has
+exactly one owner; a membership grants a DIFFERENT user bounded, revocable
+access to that one album. Only the **Viewer** role is enabled — `contributor`
+and `editor` exist in the closed role catalog + check constraint so
+SHARE-ALBUM-02/03 extend behaviour without a schema change.
+
+```text
+owner invites by exact email → recipient accepts → grant re-resolved on EVERY
+request → owner revokes → dead on the next call
+```
+
+- **One gate**: `IAlbumAccessResolver` is the only place allowed to conclude
+  that a non-owner may see an album's media. The owner-only `/api/files/{id}/*`
+  endpoints are untouched — shared media is a SEPARATE family
+  (`/api/shared-albums/...`) that resolves a grant and then calls the SAME
+  unchanged owner-scoped services with the ALBUM OWNER's id. That is the shape
+  the public Party surface already uses.
+- **Frontend**: an owner Share panel (separate from Settings, where Show-on-TV
+  and Party live), a "Condivisi con me" primary destination, invitation
+  accept/decline, and a purpose-built recipient viewer.
+
+Decisions worth remembering:
+
+- **NubArca has no public account identifier.** `Email` is the only unique
+  human-typeable field and `DisplayName` is the only one already shown as an
+  identity. So invitations are addressed by EXACT email (never a prefix — over a
+  unique identifier that is a directory-enumeration primitive). No endpoint
+  returns another user's email or user id; an owner addresses a member row by
+  its `MembershipId`.
+- **`DisplayName` is not unique, so the owner's member list carries a MASKED
+  account hint** (`RecipientEmailMask`: `m•••i@nubarca.local`). Without it an
+  owner with two members called "Mario Rossi" cannot tell which one to revoke —
+  a correctness problem for the owner, and a sharper one in SHARE-ALBUM-02 where
+  a contributor's items appear in someone else's album. The hint is served ONLY
+  by the owner-only member list, only ever masked, and is absent from every
+  recipient-facing shape. Confirmations and the download aria-label use the same
+  disambiguated label, so no destructive action is ever confirmed ambiguously.
+- **`DeleteAsync` now clears `album_memberships` too.** They carry the same FK
+  Restrict as `album_items`, so deleting an album that had EVER been shared —
+  including one whose shares were all revoked, since a revoke keeps the row for
+  the audit trail — failed on the constraint with a 500. Found in the browser,
+  not by the unit suite; now pinned by two regression tests.
+- **Shared media is `no-store`, the owner's own stays `private, max-age=86400`.**
+  Revocation must be effective on the next request, and a 200 already sitting in
+  the recipient's HTTP cache would outlive it. Verified in the browser: a
+  thumbnail URL the page already holds returns 404 the moment access is revoked.
+- **One row per (album, member), reused on re-invite.** A plain unique index
+  behaves identically on PostgreSQL and the SQLite the endpoint tests use;
+  a partial one would not. History lives in the audit log, which is where a
+  security question about it should be answered from.
+- **The owner is authoritative from the `Album` row alone.** No synthetic owner
+  membership row exists, so the owner's access cannot be broken by inconsistent
+  membership data — and "owner" is deliberately absent from `AlbumRoles`, making
+  it unrepresentable as a membership write.
+- **A disabled OWNER stops serving their shares**, not just a disabled member.
+  The listing applies the same predicate as the media routes, so it can never
+  advertise an album whose media would 404.
+- Private Vault needed no new predicate: the global `PrivateVaultId == null`
+  filter on `FileItems` already removes vaulted rows from every share query. A
+  file moved into the vault AFTER joining an album keeps a stale `album_items`
+  row — pre-existing behaviour, visible on the owner's own listing too — but it
+  is unreachable through the share. Reported, not changed.
+- **The shared wall reuses `computeJustifiedRows`.** A plain CSS grid was built
+  first and the browser pass showed it was wrong: mixed portrait/landscape media
+  left ragged rows and holes. `mediaWallRowParams` / `MEDIA_WALL_GAP_PX` were
+  extracted from `MediaGrid` so both walls lay out with one set of numbers.
+- **The lightbox does NOT reuse `.ws-sheet-backdrop`.** That is a side-sheet
+  backdrop (32% dim, `justify-content: flex-end`); reusing it left the app shell
+  fully readable behind the photo and the viewer chrome colliding with the top
+  bar. It now matches `.face-viewer` / `.party-lightbox`.
+- `HlsVideoPlayer` gained optional `videoUrl`/`posterUrl` props (defaulting to
+  the owner routes) so the shared viewer reuses the real player instead of a
+  second HLS implementation.
+- Two verification traps worth remembering: Playwright's `goBack()` on an SPA
+  returns `null` (History API, no document load), so a non-waiting `isVisible()`
+  races the re-render; and two identically-generated fixture images dedupe to
+  ONE blob, so a test that turns one into a video silently turns the other into
+  one too.
+
+## Superseded slice — UX-02 + VIDEO-HLS-05 wider workspaces, Laboratory, Faces, HLS
 
 Branch `feat/ux-lab-faces-hls`, started from `main` (`13a5a3a`, the merged
 TV-ID-01 tip). Not pushed, not merged, not deployed. No migration, no backfill,

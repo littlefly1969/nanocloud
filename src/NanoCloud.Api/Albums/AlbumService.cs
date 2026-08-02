@@ -218,9 +218,21 @@ public class AlbumService : IAlbumService
         if (album is null)
             return false;
 
-        // Delete memberships first (FK Restrict → Album).
+        // Delete item memberships first (FK Restrict → Album).
         await _db.AlbumItems
             .Where(ai => ai.AlbumId == albumId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        // SHARE-ALBUM-01: and the SHARES, which carry the same FK Restrict.
+        // Without this, deleting an album that has ever been shared — including
+        // one whose shares were all revoked, since a revoke keeps the row for
+        // the audit trail — fails on the constraint instead of deleting.
+        //
+        // Hard-deleted rather than revoked: the album is going away, so there is
+        // no grant left to describe. Who was invited, and by whom, survives in
+        // the audit log, which is where that question belongs.
+        await _db.AlbumMemberships
+            .Where(m => m.AlbumId == albumId)
             .ExecuteDeleteAsync(cancellationToken);
 
         _db.Albums.Remove(album);

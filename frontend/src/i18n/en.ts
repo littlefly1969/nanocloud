@@ -931,6 +931,80 @@ const en: Partial<Record<MessageKey, string>> = {
   'albums.itemsCount_other': '{count} items',
   'albums.menuAria': 'Album actions {name}',
   'albums.updatedAt': 'Updated {date}',
+
+  // --- SHARE-ALBUM-01: sharing an album with another NubArca user ---
+  // The OWNER's panel. Inviting is two steps: check the exact address and see
+  // who it belongs to, then send.
+  'albumShare.openButton': 'Share',
+  'albumShare.title': 'Share “{name}”',
+  'albumShare.inviteLegend': 'Invite someone',
+  'albumShare.inviteHelp':
+    'Enter the exact email address of a NubArca account. They will get an invitation and have to accept it — nobody gets access until they do.',
+  'albumShare.emailLabel': 'Account email',
+  'albumShare.emailPlaceholder': 'name@example.com',
+  'albumShare.check': 'Check',
+  'albumShare.checking': 'Checking…',
+  'albumShare.confirmRecipient': 'Invite {name}?',
+  'albumShare.send': 'Send invitation',
+  'albumShare.sending': 'Sending…',
+  'albumShare.emailRequired': 'Enter an email address.',
+  'albumShare.recipientUnavailable': 'No NubArca account can be invited with that address.',
+  'albumShare.selfOrInvalid': 'You already own this album, or that address is not valid.',
+  'albumShare.alreadyInvited': 'That person already has access or a pending invitation.',
+  'albumShare.resolveError': 'Could not check that address. Please try again.',
+  'albumShare.inviteError': 'Could not send the invitation. Please try again.',
+  'albumShare.loadError': 'Could not load who this album is shared with.',
+  'albumShare.allowDownload': 'Allow downloading originals',
+  'albumShare.allowDownloadHelp':
+    'Without this they can view the photos and videos but not download the original files. You can change it at any time.',
+  'albumShare.membersLegend': 'People with access',
+  'albumShare.noMembers': 'You have not shared this album yet.',
+  'albumShare.statePending': 'Pending',
+  'albumShare.stateAccepted': 'Has access',
+  'albumShare.stateDeclined': 'Declined',
+  'albumShare.stateRevoked': 'Access revoked',
+  'albumShare.roleViewer': 'Viewer',
+  'albumShare.invitedAt': 'Invited {date}',
+  'albumShare.acceptedAt': 'Accepted {date}',
+  'albumShare.memberDownloadAria': 'Allow {name} to download originals',
+  'albumShare.cancel': 'Cancel invitation',
+  'albumShare.revoke': 'Revoke access',
+  'albumShare.confirmCancel': 'Cancel the invitation for {name}?',
+  // Say it plainly: revoking is immediate in NubArca, but a file somebody has
+  // already downloaded to their own device cannot be called back.
+  'albumShare.confirmRevoke':
+    'Revoke access for {name}? They will no longer be able to open this album. Files they have already downloaded stay on their device.',
+  'albumShare.pastLegend': 'Past invitations ({count})',
+
+  // The RECIPIENT's side: "Shared with me".
+  'nav.sharedAlbums': 'Shared with me',
+  'sharedAlbums.heading': 'Shared with me',
+  'sharedAlbums.intro':
+    'Albums that belong to other people and have been shared with you. They stay in their owner’s library, so what you see here is always the current version.',
+  'sharedAlbums.loadError': 'Could not load shared albums.',
+  'sharedAlbums.empty': 'Nobody has shared an album with you yet.',
+  'sharedAlbums.invitationsHeading': 'Invitations',
+  'sharedAlbums.albumsHeading': 'Albums shared with you',
+  'sharedAlbums.invitedBy': '{owner} wants to share “{album}” with you',
+  'sharedAlbums.invitedAt': 'invited {date}',
+  'sharedAlbums.downloadAllowed': 'downloading originals allowed',
+  'sharedAlbums.downloadNotAllowed': 'viewing only',
+  'sharedAlbums.accept': 'Accept',
+  'sharedAlbums.decline': 'Decline',
+  'sharedAlbums.ownedBy': 'by {owner}',
+  'sharedAlbums.roleViewerLabel': 'View only',
+
+  'sharedAlbum.loadError': 'Could not load the shared album.',
+  'sharedAlbum.backToShared': '← Shared with me',
+  'sharedAlbum.liveOwnedBy': 'Live album owned by {owner}',
+  'sharedAlbum.empty': 'This album has no visible items yet.',
+  'sharedAlbum.unavailable':
+    'This album is no longer available. The share may have been revoked or the album removed.',
+  'sharedAlbum.openItem': 'Open item {index} of {total}',
+  'sharedAlbum.viewerLabel': 'Viewer for “{name}”',
+  'sharedAlbum.previous': 'Previous',
+  'sharedAlbum.next': 'Next',
+
   'moveToExcluded.title_one': 'Move {count} item to Excluded',
   'moveToExcluded.title_other': 'Move {count} items to Excluded',
   'moveToExcluded.explainKept': 'The items stay in their folders: name, title, tags, metadata and associations are preserved.',

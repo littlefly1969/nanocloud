@@ -34,6 +34,10 @@ const MAIN: NavItem[] = [
   { to: '/', labelKey: 'nav.files', icon: 'files', end: true },
   { to: '/media', labelKey: 'mediaLib.title', icon: 'library' },
   { to: '/albums', labelKey: 'nav.albums', icon: 'albums' },
+  // SHARE-ALBUM-01: albums other people own and have shared with this user. A
+  // primary destination rather than a tab inside /albums, so somebody else's
+  // content is never mixed into the list of the user's own albums.
+  { to: '/shared-albums', labelKey: 'nav.sharedAlbums', icon: 'shared-albums' },
   { to: '/people', labelKey: 'nav.people', icon: 'people' },
 ];
 

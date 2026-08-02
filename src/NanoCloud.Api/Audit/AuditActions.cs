@@ -38,6 +38,22 @@ public static class AuditActions
     // carries safe counts only (requested/succeeded/skipped), never file ids en masse.
     public const string AlbumItemsBulkAdd = "album.items_bulk_add";
     public const string AlbumItemsBulkRemove = "album.items_bulk_remove";
+
+    // SHARE-ALBUM-01: live album sharing between authenticated users. The ACTOR
+    // recorded on each event is whoever performed it — the album owner for
+    // invite/update/revoke, the RECIPIENT for accept/decline/download — so the
+    // trail never conflates the two. Metadata carries the album id, the
+    // membership id and the role only: never the recipient's email, display
+    // name or user id, never a file name, and never storage internals.
+    public const string AlbumShareInvite = "album.share_invite";
+    public const string AlbumShareUpdate = "album.share_update";
+    public const string AlbumShareRevoke = "album.share_revoke";
+    public const string AlbumShareAccept = "album.share_accept";
+    public const string AlbumShareDecline = "album.share_decline";
+    // A member downloading an ORIGINAL from a shared album. Distinct from
+    // file.download so an owner's own download and a share download are
+    // distinguishable in the trail.
+    public const string AlbumShareDownload = "album.share_download";
     // Slice 81: admin server-side import started (metadata: target user + run id).
     public const string AdminImportStart = "admin.import_start";
     // Slice 82: admin requested cancellation of an import run.
@@ -191,6 +207,10 @@ public static class AuditEntityTypes
     public const string Blob = "blob";
     public const string Trash = "trash";
     public const string Album = "album";
+    // SHARE-ALBUM-01: a recipient's accept/decline is recorded against the
+    // MEMBERSHIP, not the album — the recipient does not own the album and the
+    // entity they acted on is their own grant.
+    public const string AlbumMembership = "album_membership";
     public const string AdminImport = "admin_import";
     public const string BackgroundJob = "background_job";
     public const string StagingSession = "staging_session";
