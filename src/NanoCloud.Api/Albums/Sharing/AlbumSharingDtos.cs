@@ -64,9 +64,87 @@ public sealed record InviteAlbumMemberRequest(
     string? Role = null,
     bool AllowOriginalDownload = false);
 
-// Owner changes a member's per-member original-download permission. Role changes
-// are owner governance and land in SHARE-ALBUM-03.
+// Owner changes a member's per-member original-download permission.
 public sealed record UpdateAlbumMemberRequest(bool AllowOriginalDownload);
+
+// SHARE-ALBUM-02: owner promotes Viewer → Contributor or demotes Contributor →
+// Viewer. Owner-only and audited. Editor is refused here exactly as it is on
+// invite: it is in the catalog for SHARE-ALBUM-03, and nothing implements the
+// permissions it would imply.
+//
+// A separate request/route from UpdateAlbumMemberRequest on purpose — changing
+// what somebody may DO is a different decision from changing whether they may
+// download, and conflating them would make one audit event ambiguous.
+public sealed record ChangeAlbumMemberRoleRequest(string? Role);
+
+// One item of an album as the OWNER sees it for moderation: their own media and
+// every linked contribution, with provenance. Additive — contributions
+// deliberately do NOT flow into the owner's gallery, library or album
+// workspace, so nothing already there changes shape.
+//
+// `ContributorDisplayName` / `ContributorMaskedEmail` are null for the owner's
+// own items. When present they use the SAME privacy-safe disambiguation as the
+// member list (see RecipientEmailMask): display names are not unique, and the
+// owner must be able to tell two contributors apart before removing one's item.
+public sealed record AlbumContentItem(
+    Guid FileItemId,
+    string Kind,
+    string ThumbnailUrl,
+    // "owner" when the album owner added their own media, "contribution" when a
+    // collaborator linked media they own.
+    string Origin,
+    string? ContributorDisplayName,
+    string? ContributorMaskedEmail,
+    // The current state of the SOURCE file, so the owner can tell "this
+    // collaborator withdrew it" from "the source is temporarily unavailable".
+    // One of AlbumContentSourceStates.
+    string SourceState,
+    DateTime AddedAt);
+
+public static class AlbumContentOrigins
+{
+    // The album owner's own media, added by them.
+    public const string Owner = "owner";
+
+    // A collaborator's media, linked by that collaborator. Still owned by them,
+    // still in their library, withdrawable by them at any time.
+    public const string Contribution = "contribution";
+}
+
+public static class AlbumContentSourceStates
+{
+    // Present and servable right now.
+    public const string Available = "available";
+
+    // The row is still here, but the source cannot currently be served: the
+    // file was soft-deleted, moved out of the media library, moved into the
+    // owner's Private Vault, or its contributor's membership ended. The owner
+    // sees it so they can clean up; nobody can open it.
+    public const string Unavailable = "unavailable";
+}
+
+public enum AlbumContributionResult
+{
+    Ok,
+    // Album missing, or the actor holds no active accepted membership on it.
+    // One value for both: a non-member must not learn the album exists.
+    AlbumNotAccessible,
+    // The actor's membership does not permit contributing (Viewer).
+    RoleNotPermitted,
+    // The file is missing, not the actor's, soft-deleted, out of the media
+    // library, vaulted, or not displayable media. One value, no existence leak.
+    FileNotContributable,
+    // The item is already in this album.
+    AlreadyPresent,
+}
+
+public enum AlbumItemRemovalResult
+{
+    Ok,
+    // No such item in an album the actor can act on — or the actor is not
+    // entitled to remove this particular item.
+    NotFound,
+}
 
 // ── Recipient-facing: albums shared with me ─────────────────────────────────
 
@@ -116,7 +194,14 @@ public sealed record SharedAlbumItem(
     string? DownloadUrl,
     int? Width,
     int? Height,
-    DateTime AddedAt);
+    DateTime AddedAt,
+    // SHARE-ALBUM-02: may THIS caller withdraw this item? True only for their
+    // own contribution (they own the file and they added it), so the client can
+    // offer "Withdraw contribution" on exactly the items the server would
+    // accept it for. Deliberately a capability, not an identity: the shared
+    // viewer never learns WHO contributed the other items — that provenance
+    // belongs to the album owner's moderation surface alone.
+    bool CanWithdraw);
 
 // An invitation the caller has been sent and has not answered. Shows enough to
 // decide (who, what album, how many items, what it permits) and nothing more —

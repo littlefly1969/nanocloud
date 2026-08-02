@@ -71,6 +71,13 @@ public sealed class AlbumMembershipFilterTests : IDisposable
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        // SHARE-ALBUM-02: album_items carries provenance with an FK to users, so
+        // a hand-built row needs a real adder. These fixtures are owner-added
+        // by construction, which is what the album's own owner id means here.
+        var addedBy = await db.Albums
+            .Where(a => a.Id == albumId)
+            .Select(a => a.OwnerUserId)
+            .FirstAsync();
         foreach (var fileId in fileIds)
         {
             db.AlbumItems.Add(new AlbumItem
@@ -78,6 +85,7 @@ public sealed class AlbumMembershipFilterTests : IDisposable
                 AlbumId = albumId,
                 FileItemId = fileId,
                 AddedAt = DateTime.UtcNow,
+                AddedByUserId = addedBy,
             });
         }
         await db.SaveChangesAsync();

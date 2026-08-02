@@ -103,6 +103,10 @@ public sealed class PartyModerationService : IPartyModerationService
                     AlbumId = albumId,
                     FileItemId = fileItemId,
                     AddedAt = _clock.GetUtcNow().UtcDateTime,
+                    // Restoring a guest party upload: the file is already
+                    // owner-owned by then (checked just above), and it is the
+                    // owner's moderation decision that puts it back.
+                    AddedByUserId = ownerUserId,
                 });
             }
         }

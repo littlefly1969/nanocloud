@@ -33,6 +33,7 @@ public static class AlbumSharingEndpoints
     public static IEndpointRouteBuilder MapAlbumSharingEndpoints(this IEndpointRouteBuilder app)
     {
         MapOwnerMemberManagement(app);
+        MapContribution(app);
         MapRecipientInvitations(app);
         MapSharedAlbumReads(app);
         MapSharedAlbumMedia(app);
@@ -144,9 +145,49 @@ public static class AlbumSharingEndpoints
             return Results.Ok(member);
         }).WithName("UpdateAlbumMember").RequireAuthorization();
 
+        // SHARE-ALBUM-02: promote Viewer → Contributor / demote Contributor →
+        // Viewer. Owner-only; `editor` is refused. A demotion leaves existing
+        // contributions in place — see IAlbumSharingService.
+        app.MapMethods("/api/albums/{id:guid}/members/{membershipId:guid}/role", ["PATCH"], async (
+            Guid id,
+            Guid membershipId,
+            HttpContext httpContext,
+            [FromServices] IAlbumSharingService sharing,
+            [FromServices] IAuditLogger audit,
+            [FromBody] ChangeAlbumMemberRoleRequest? body,
+            CancellationToken cancellationToken) =>
+        {
+            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
+            var ip = httpContext.Connection.RemoteIpAddress?.ToString();
+
+            if (body is null)
+            {
+                return Results.BadRequest(new { error = "Missing request body." });
+            }
+
+            var (result, member) = await sharing.ChangeMemberRoleAsync(
+                ownerUserId, id, membershipId, body.Role, cancellationToken);
+            switch (result)
+            {
+                case InviteAlbumMemberResult.Ok:
+                    await audit.LogAsync(ownerUserId, AuditActions.AlbumShareRoleChange,
+                        AuditEntityTypes.Album, id, ip,
+                        new { membershipId, role = member!.Role }, cancellationToken);
+                    return Results.Ok(member);
+                case InviteAlbumMemberResult.RoleNotAssignable:
+                    return Results.BadRequest(new { error = "That role cannot be assigned." });
+                default:
+                    return Results.NotFound();
+            }
+        }).WithName("ChangeAlbumMemberRole").RequireAuthorization();
+
         // Cancels a pending invitation OR revokes an accepted membership — one
         // operation, because both mean the same thing to the person on the other
         // end. Idempotent.
+        //
+        // SHARE-ALBUM-02: also withdraws every item that member contributed, in
+        // the same transaction, and audits each withdrawal separately from the
+        // revocation itself.
         app.MapDelete("/api/albums/{id:guid}/members/{membershipId:guid}", async (
             Guid id,
             Guid membershipId,
@@ -158,16 +199,176 @@ public static class AlbumSharingEndpoints
             var ownerUserId = httpContext.GetCurrentUserId()!.Value;
             var ip = httpContext.Connection.RemoteIpAddress?.ToString();
 
-            var result = await sharing.RevokeMemberAsync(ownerUserId, id, membershipId, cancellationToken);
+            var (result, revoked) = await sharing.RevokeMemberAsync(
+                ownerUserId, id, membershipId, cancellationToken);
             if (result != AlbumMemberMutationResult.Ok)
             {
                 return Results.NotFound();
             }
 
             await audit.LogAsync(ownerUserId, AuditActions.AlbumShareRevoke,
-                AuditEntityTypes.Album, id, ip, new { membershipId }, cancellationToken);
+                AuditEntityTypes.Album, id, ip,
+                new { membershipId, withdrawnItems = revoked!.WithdrawnFileItemIds.Count },
+                cancellationToken);
+
+            // One event per withdrawn item. The ACTOR is the album owner who
+            // revoked; the SOURCE OWNER is the member whose media left.
+            foreach (var fileItemId in revoked.WithdrawnFileItemIds)
+            {
+                await audit.LogAsync(ownerUserId, AuditActions.AlbumContributionAutoWithdraw,
+                    AuditEntityTypes.AlbumContribution, fileItemId, ip,
+                    new
+                    {
+                        albumId = id,
+                        albumOwnerUserId = ownerUserId,
+                        sourceOwnerUserId = revoked.MemberUserId,
+                        reason = "membership_revoked",
+                    },
+                    cancellationToken);
+            }
+
             return Results.NoContent();
         }).WithName("RevokeAlbumMember").RequireAuthorization();
+
+        // The OWNER's moderation view: their own items plus every contribution,
+        // with provenance and current source state. Additive — nothing here
+        // merges into the owner's gallery, library or album workspace.
+        app.MapGet("/api/albums/{id:guid}/content", async (
+            Guid id,
+            HttpContext httpContext,
+            [FromServices] IAlbumSharingService sharing,
+            CancellationToken cancellationToken) =>
+        {
+            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
+            var content = await sharing.ListAlbumContentAsync(ownerUserId, id, cancellationToken);
+            if (content is null)
+            {
+                return Results.NotFound();
+            }
+            SetNoStore(httpContext);
+            return Results.Ok(content);
+        }).WithName("ListAlbumContent").RequireAuthorization();
+
+        // The owner removing ANY item — their own or a contribution. Album
+        // membership only; the source file is never passed to a deletion path.
+        app.MapDelete("/api/albums/{id:guid}/content/{fileId:guid}", async (
+            Guid id,
+            Guid fileId,
+            HttpContext httpContext,
+            [FromServices] IAlbumSharingService sharing,
+            [FromServices] IAuditLogger audit,
+            CancellationToken cancellationToken) =>
+        {
+            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
+            var ip = httpContext.Connection.RemoteIpAddress?.ToString();
+
+            var (result, removed) = await sharing.RemoveItemAsOwnerAsync(
+                ownerUserId, id, fileId, cancellationToken);
+            if (result != AlbumItemRemovalResult.Ok)
+            {
+                return Results.NotFound();
+            }
+
+            await audit.LogAsync(ownerUserId, AuditActions.AlbumContributionRemove,
+                AuditEntityTypes.AlbumContribution, fileId, ip,
+                new
+                {
+                    albumId = id,
+                    albumOwnerUserId = ownerUserId,
+                    sourceOwnerUserId = removed!.SourceOwnerUserId,
+                    addedByUserId = removed.AddedByUserId,
+                    reason = "removed_by_album_owner",
+                },
+                cancellationToken);
+            return Results.NoContent();
+        }).WithName("RemoveAlbumContentItem").RequireAuthorization();
+    }
+
+    // ── Contributor: linking and withdrawing own media ──────────────────────
+
+    private static void MapContribution(IEndpointRouteBuilder app)
+    {
+        app.MapPost("/api/shared-albums/{albumId:guid}/contributions", async (
+            Guid albumId,
+            HttpContext httpContext,
+            [FromServices] IAlbumSharingService sharing,
+            [FromServices] IAlbumAccessResolver access,
+            [FromServices] IAuditLogger audit,
+            [FromBody] ContributeAlbumItemRequest? body,
+            CancellationToken cancellationToken) =>
+        {
+            var actorUserId = httpContext.GetCurrentUserId()!.Value;
+            var ip = httpContext.Connection.RemoteIpAddress?.ToString();
+
+            if (body is null)
+            {
+                return Results.BadRequest(new { error = "Missing request body." });
+            }
+
+            var result = await sharing.ContributeAsync(
+                actorUserId, albumId, body.FileItemId, cancellationToken);
+            switch (result)
+            {
+                case AlbumContributionResult.Ok:
+                    // The ALBUM OWNER is recorded alongside the actor: the same
+                    // media may be contributed to several albums, and the trail
+                    // has to say whose album gained it.
+                    var grant = await access.ResolveAsync(albumId, actorUserId, cancellationToken);
+                    await audit.LogAsync(actorUserId, AuditActions.AlbumContributionAdd,
+                        AuditEntityTypes.AlbumContribution, body.FileItemId, ip,
+                        new
+                        {
+                            albumId,
+                            albumOwnerUserId = grant?.AlbumOwnerUserId,
+                            sourceOwnerUserId = actorUserId,
+                        },
+                        cancellationToken);
+                    return Results.NoContent();
+                case AlbumContributionResult.AlreadyPresent:
+                    return Results.Conflict(new { error = "That item is already in this album." });
+                case AlbumContributionResult.RoleNotPermitted:
+                    return Results.Forbid();
+                case AlbumContributionResult.FileNotContributable:
+                    // Missing, foreign, deleted, excluded, vaulted or non-media
+                    // all collapse here — no existence leak.
+                    return Results.NotFound();
+                default:
+                    return Results.NotFound();
+            }
+        }).WithName("ContributeToSharedAlbum").RequireAuthorization();
+
+        // "Remove MY contribution" — never "delete the file". Allowed after a
+        // downgrade to Viewer, and after revocation, because the right comes
+        // from owning the media and having contributed it.
+        app.MapDelete("/api/shared-albums/{albumId:guid}/contributions/{fileId:guid}", async (
+            Guid albumId,
+            Guid fileId,
+            HttpContext httpContext,
+            [FromServices] IAlbumSharingService sharing,
+            [FromServices] IAuditLogger audit,
+            CancellationToken cancellationToken) =>
+        {
+            var actorUserId = httpContext.GetCurrentUserId()!.Value;
+            var ip = httpContext.Connection.RemoteIpAddress?.ToString();
+
+            var result = await sharing.WithdrawContributionAsync(
+                actorUserId, albumId, fileId, cancellationToken);
+            if (result != AlbumItemRemovalResult.Ok)
+            {
+                return Results.NotFound();
+            }
+
+            await audit.LogAsync(actorUserId, AuditActions.AlbumContributionWithdraw,
+                AuditEntityTypes.AlbumContribution, fileId, ip,
+                new
+                {
+                    albumId,
+                    sourceOwnerUserId = actorUserId,
+                    reason = "withdrawn_by_source_owner",
+                },
+                cancellationToken);
+            return Results.NoContent();
+        }).WithName("WithdrawSharedAlbumContribution").RequireAuthorization();
     }
 
     // ── Recipient: invitations addressed to me ──────────────────────────────
@@ -529,3 +730,7 @@ public static class AlbumSharingEndpoints
         context.Response.Headers.Pragma = "no-cache";
     }
 }
+
+// SHARE-ALBUM-02 request body. The file must be one the ACTOR owns; the server
+// re-checks that rather than trusting the id.
+public sealed record ContributeAlbumItemRequest(Guid FileItemId);

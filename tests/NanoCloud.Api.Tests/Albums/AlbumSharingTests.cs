@@ -236,17 +236,16 @@ public sealed class AlbumSharingTests : IDisposable
 
     // ── Viewer-only feature gate ────────────────────────────────────────────
     //
-    // SHARE-ALBUM-01 enables exactly ONE role. `contributor` and `editor` exist
-    // in the domain catalog and in the DB check constraint so the later slices
-    // need no migration — which is precisely why the API has to refuse to
-    // ASSIGN them until the behaviour behind them exists. Without these tests
-    // the gate is one deleted line away from silently handing out a role whose
-    // permissions nothing implements.
+    // SHARE-ALBUM-02 enables `viewer` and `contributor`. `editor` stays in the
+    // domain catalog and in the DB check constraint so SHARE-ALBUM-03 needs no
+    // migration — which is precisely why the API must still refuse to ASSIGN
+    // it until the behaviour behind it exists. Without these tests the gate is
+    // one deleted line away from silently handing out a role whose permissions
+    // nothing implements.
 
     [Theory]
-    [InlineData("contributor")]
     [InlineData("editor")]
-    public async Task Roles_Beyond_Viewer_Cannot_Be_Assigned_Yet(string role)
+    public async Task Roles_Beyond_The_Enabled_Set_Cannot_Be_Assigned_Yet(string role)
     {
         var (_, owner) = await _factory.CreateAuthenticatedClientAsync(OwnerEmail);
         var (_, viewer) = await _factory.CreateAuthenticatedClientAsync(ViewerEmail);
@@ -282,7 +281,7 @@ public sealed class AlbumSharingTests : IDisposable
     }
 
     [Fact]
-    public async Task Viewer_Is_The_Default_And_The_Only_Role_Ever_Issued()
+    public async Task Viewer_Is_The_Default_When_No_Role_Is_Requested()
     {
         var (_, owner) = await _factory.CreateAuthenticatedClientAsync(OwnerEmail);
         var (_, viewer) = await _factory.CreateAuthenticatedClientAsync(ViewerEmail);

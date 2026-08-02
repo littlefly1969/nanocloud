@@ -54,6 +54,26 @@ public static class AuditActions
     // file.download so an owner's own download and a share download are
     // distinguishable in the trail.
     public const string AlbumShareDownload = "album.share_download";
+
+    // SHARE-ALBUM-02: the owner promoting Viewer → Contributor or demoting
+    // Contributor → Viewer. Metadata: membership id + the new role.
+    public const string AlbumShareRoleChange = "album.share_role_change";
+
+    // SHARE-ALBUM-02: linked, revocable contributions. Three actors are
+    // genuinely distinct here and the trail must keep them apart — the ACTOR
+    // (AuditLog.UserId), the ALBUM OWNER, and the SOURCE-FILE OWNER — because
+    // "who removed whose media from whose album" is the question these events
+    // exist to answer. Metadata therefore carries albumOwnerUserId and
+    // sourceOwnerUserId alongside the album and file ids, plus a removal
+    // reason. Never a file name, person name, storage path or blob identity.
+    public const string AlbumContributionAdd = "album.contribution_add";
+    // The source owner taking their own contribution back.
+    public const string AlbumContributionWithdraw = "album.contribution_withdraw";
+    // The album owner removing an item — their own or a contribution.
+    public const string AlbumContributionRemove = "album.contribution_remove";
+    // Automatic withdrawal because the contributor's membership was revoked.
+    // One event per withdrawn item, all inside the revocation's transaction.
+    public const string AlbumContributionAutoWithdraw = "album.contribution_auto_withdraw";
     // Slice 81: admin server-side import started (metadata: target user + run id).
     public const string AdminImportStart = "admin.import_start";
     // Slice 82: admin requested cancellation of an import run.
@@ -211,6 +231,10 @@ public static class AuditEntityTypes
     // MEMBERSHIP, not the album — the recipient does not own the album and the
     // entity they acted on is their own grant.
     public const string AlbumMembership = "album_membership";
+    // SHARE-ALBUM-02: contribution events are recorded against the FILE, since
+    // the media is what moved in or out of the album; the album id travels in
+    // the metadata.
+    public const string AlbumContribution = "album_contribution";
     public const string AdminImport = "admin_import";
     public const string BackgroundJob = "background_job";
     public const string StagingSession = "staging_session";

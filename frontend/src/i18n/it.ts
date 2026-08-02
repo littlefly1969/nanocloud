@@ -984,6 +984,63 @@ const it = {
     'Revocare l’accesso a {name}? Non potrà più aprire questo album. I file che ha già scaricato restano sul suo dispositivo.',
   'albumShare.pastLegend': 'Inviti passati ({count})',
 
+  // --- SHARE-ALBUM-02: ruoli, contributi, contenuto condiviso ---
+  // Terminologia fissa, usata identica in menu, dialoghi, toast, aria-label e
+  // conferme. «Elimina» non compare mai per un contributo: l'originale resta
+  // nella libreria del collaboratore.
+  'albumRole.viewer': 'Visualizzatore',
+  'albumRole.contributor': 'Collaboratore',
+  'albumRole.viewerHelp': 'Può visualizzare',
+  'albumRole.contributorHelp': 'Può contribuire',
+  'albumShare.roleLabel': 'Ruolo',
+  'albumShare.changeRoleAria': 'Ruolo di {name}',
+  'albumShare.roleChangeError': 'Impossibile cambiare il ruolo. Riprova.',
+  // Detto una volta sola, dove la decisione viene presa.
+  'albumShare.revokeDownloadNote':
+    'La revoca blocca gli accessi futuri. I file già scaricati sul dispositivo non possono essere richiamati.',
+
+  'albumContent.tab': 'Contenuto condiviso',
+  'albumContent.heading': 'Contenuto condiviso',
+  'albumContent.intro':
+    'Tutto ciò che compone l’album dal vivo: i tuoi elementi e i contributi dei collaboratori, nello stesso ordine che vedono i membri.',
+  'albumContent.loadError': 'Impossibile caricare il contenuto condiviso.',
+  'albumContent.empty': 'L’album non contiene ancora elementi.',
+  'albumContent.addedBy': 'Aggiunto da {name}',
+  'albumContent.ownerItem': 'Tuo elemento',
+  'albumContent.unavailable': 'Sorgente non disponibile',
+  'albumContent.unavailableHelp':
+    'Il collaboratore ha reso il file non disponibile: non è più visibile ai membri. Puoi rimuovere l’elemento dall’album.',
+  'albumContent.remove': 'Rimuovi dall’album',
+  'albumContent.removeAria': 'Rimuovi dall’album l’elemento {index} di {total}',
+  'albumContent.confirmRemoveOwn': 'Rimuovere questo elemento dall’album? Il file resta nella tua libreria.',
+  // Non «Elimina»: l'owner non può cancellare il file di un collaboratore.
+  'albumContent.confirmRemoveContribution':
+    'Rimuovere dall’album il contributo di {name}? Il file resta nella libreria del collaboratore: non viene eliminato.',
+  'albumContent.removeError': 'Impossibile rimuovere l’elemento. Riprova.',
+
+  'sharedAlbum.addToAlbum': 'Aggiungi all’album',
+  'sharedAlbum.addHeading': 'Aggiungi all’album',
+  'sharedAlbum.addIntro':
+    'Scegli foto o video dalla tua libreria. Il file resta nella tua libreria ed è collegato all’album. Puoi ritirarlo in seguito.',
+  'sharedAlbum.addPickerEmpty': 'Non hai foto o video da aggiungere.',
+  'sharedAlbum.addPickerError': 'Impossibile caricare la tua libreria.',
+  'sharedAlbum.addSelected': 'Aggiungi {count} elementi',
+  'sharedAlbum.addSelectedOne': 'Aggiungi 1 elemento',
+  'sharedAlbum.adding': 'Aggiunta…',
+  'sharedAlbum.addError': 'Impossibile aggiungere alcuni elementi. Riprova.',
+  'sharedAlbum.addAlreadyPresent': 'Alcuni elementi erano già nell’album.',
+  'sharedAlbum.addNotAllowed': 'Non puoi più aggiungere elementi a questo album.',
+  'sharedAlbum.mine': 'Tuo contributo',
+  'sharedAlbum.withdraw': 'Ritira il contributo',
+  'sharedAlbum.withdrawAria': 'Ritira il tuo contributo',
+  'sharedAlbum.confirmWithdraw':
+    'Ritirare questo contributo? Il file resta nella tua libreria: non viene eliminato.',
+  'sharedAlbum.withdrawError': 'Impossibile ritirare il contributo. Riprova.',
+  'sharedAlbum.accessChanged':
+    'Il tuo accesso a questo album è cambiato. La vista è stata aggiornata.',
+  'sharedAlbum.itemGone': 'Questo elemento non è più disponibile nell’album.',
+  'sharedAlbum.libraryNote': 'Il file resta nella tua libreria',
+
   // Il lato DESTINATARIO: «Condivisi con me».
   'nav.sharedAlbums': 'Condivisi con me',
   'sharedAlbums.heading': 'Condivisi con me',

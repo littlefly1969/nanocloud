@@ -22,11 +22,17 @@ public sealed class AlbumSharingService : IAlbumSharingService
 {
     private readonly AppDbContext _db;
     private readonly TimeProvider _time;
+    private readonly IAlbumAccessResolver _access;
 
-    public AlbumSharingService(AppDbContext db, TimeProvider time)
+    // The resolver is injected rather than re-implemented: "may this user act on
+    // this album" must have exactly one answer, and the contribution path needs
+    // the same one the media routes use. No cycle — the resolver depends only on
+    // the DbContext.
+    public AlbumSharingService(AppDbContext db, TimeProvider time, IAlbumAccessResolver access)
     {
         _db = db;
         _time = time;
+        _access = access;
     }
 
     // ── Owner side ──────────────────────────────────────────────────────────
@@ -229,19 +235,64 @@ public sealed class AlbumSharingService : IAlbumSharingService
             ToDto(membership, member?.DisplayName ?? string.Empty, member?.Email));
     }
 
-    public async Task<AlbumMemberMutationResult> RevokeMemberAsync(
+    public async Task<(InviteAlbumMemberResult Result, AlbumMemberDto? Member)> ChangeMemberRoleAsync(
+        Guid ownerUserId, Guid albumId, Guid membershipId, string? role,
+        CancellationToken cancellationToken = default)
+    {
+        var requested = role?.Trim();
+        if (!AlbumRoles.IsAssignable(requested))
+        {
+            // Includes `editor`: in the catalog and the check constraint for
+            // SHARE-ALBUM-03, but refused here exactly as it is on invite.
+            return (InviteAlbumMemberResult.RoleNotAssignable, null);
+        }
+
+        var membership = await LoadOwnedMembershipAsync(ownerUserId, albumId, membershipId, cancellationToken);
+        if (membership is null)
+        {
+            return (InviteAlbumMemberResult.AlbumNotFound, null);
+        }
+
+        // A demotion deliberately leaves existing contributions in place. The
+        // right to withdraw them survives it (see WithdrawContributionAsync), so
+        // demoting somebody does not strand their media in the album.
+        membership.Role = requested!;
+        membership.UpdatedAt = _time.GetUtcNow().UtcDateTime;
+        await _db.SaveChangesAsync(cancellationToken);
+
+        var member = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == membership.MemberUserId)
+            .Select(u => new { u.DisplayName, u.Email })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return (InviteAlbumMemberResult.Ok,
+            ToDto(membership, member?.DisplayName ?? string.Empty, member?.Email));
+    }
+
+    public async Task<(AlbumMemberMutationResult Result, RevokedMembership? Revoked)> RevokeMemberAsync(
         Guid ownerUserId, Guid albumId, Guid membershipId,
         CancellationToken cancellationToken = default)
     {
         var membership = await LoadOwnedMembershipAsync(ownerUserId, albumId, membershipId, cancellationToken);
         if (membership is null)
         {
-            return AlbumMemberMutationResult.NotFound;
+            return (AlbumMemberMutationResult.NotFound, null);
         }
 
-        // Idempotent: an already-revoked row is left as it is (its original
-        // RevokedAt is the one that matters for the audit trail).
-        if (membership.RevokedAt is null)
+        // Idempotent: an already-revoked row keeps its original RevokedAt (that
+        // is the timestamp the audit trail refers to). Its contributions are
+        // still swept, so a partially-applied earlier revoke self-heals.
+        var alreadyRevoked = membership.RevokedAt is not null;
+
+        // ONE transaction: the membership ending and its contributions leaving
+        // the album are a single fact. A crash between them would leave media in
+        // an album whose contributor no longer has access — which the resolver
+        // would refuse to serve, but which would still be visible to the owner
+        // as a phantom item.
+        await using var tx = await _db.Database.BeginTransactionAsync(cancellationToken);
+
+        if (!alreadyRevoked)
         {
             var now = _time.GetUtcNow().UtcDateTime;
             membership.State = AlbumMembershipStates.Revoked;
@@ -250,7 +301,278 @@ public sealed class AlbumSharingService : IAlbumSharingService
             await _db.SaveChangesAsync(cancellationToken);
         }
 
-        return AlbumMemberMutationResult.Ok;
+        var withdrawn = await WithdrawAllContributionsAsync(
+            albumId, membership.MemberUserId, cancellationToken);
+
+        await tx.CommitAsync(cancellationToken);
+
+        return (AlbumMemberMutationResult.Ok,
+            new RevokedMembership(membership.MemberUserId, withdrawn));
+    }
+
+    // ── Contribution ────────────────────────────────────────────────────────
+
+    public async Task<AlbumContributionResult> ContributeAsync(
+        Guid actorUserId, Guid albumId, Guid fileItemId,
+        CancellationToken cancellationToken = default)
+    {
+        // (1) + (2) The actor's own live grant on this album, which also
+        // establishes that the album exists and its owner is active. Reusing the
+        // resolver keeps "may I act on this album" in one place.
+        var grant = await _access.ResolveAsync(albumId, actorUserId, cancellationToken);
+        if (grant is null)
+        {
+            return AlbumContributionResult.AlbumNotAccessible;
+        }
+
+        // The album OWNER does not contribute — they add through the ordinary
+        // owner path, which is also the only path that may touch their own
+        // media. Sending them here would create an owner-added row through a
+        // collaborator route.
+        if (grant.IsOwner)
+        {
+            return AlbumContributionResult.RoleNotPermitted;
+        }
+
+        if (!AlbumRoles.CanContribute(grant.Role))
+        {
+            return AlbumContributionResult.RoleNotPermitted;
+        }
+
+        // (3) + (4) + (5) The file must be the ACTOR's own, servable, and
+        // displayable media. _db.FileItems carries the global Private-Vault
+        // filter, so a vaulted file is invisible here and collapses into the
+        // same single failure value as every other ineligibility.
+        var eligible = await _db.FileItems
+            .AsNoTracking()
+            .Where(f => f.Id == fileItemId
+                && f.OwnerUserId == actorUserId
+                && f.DeletedAt == null
+                && f.MediaLibraryState == MediaLibraryState.Active)
+            .Join(_db.BlobMetadata.AsNoTracking(),
+                f => f.BlobObjectId,
+                m => m.BlobObjectId,
+                (f, m) => m.MediaCategory)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (eligible is not (MediaCategories.Image or MediaCategories.Video))
+        {
+            return AlbumContributionResult.FileNotContributable;
+        }
+
+        // (6) Not already in this album — by anyone.
+        var already = await _db.AlbumItems
+            .AnyAsync(ai => ai.AlbumId == albumId && ai.FileItemId == fileItemId, cancellationToken);
+        if (already)
+        {
+            return AlbumContributionResult.AlreadyPresent;
+        }
+
+        _db.AlbumItems.Add(new AlbumItem
+        {
+            AlbumId = albumId,
+            FileItemId = fileItemId,
+            AddedAt = _time.GetUtcNow().UtcDateTime,
+            // The invariant the resolver verifies: whoever added it owns it.
+            AddedByUserId = actorUserId,
+        });
+
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            // Two concurrent contributions of the same file: the primary key
+            // decided, and the loser reports the same outcome as the sequential
+            // case rather than a 500.
+            return AlbumContributionResult.AlreadyPresent;
+        }
+
+        return AlbumContributionResult.Ok;
+    }
+
+    public async Task<AlbumItemRemovalResult> WithdrawContributionAsync(
+        Guid actorUserId, Guid albumId, Guid fileItemId,
+        CancellationToken cancellationToken = default)
+    {
+        // Withdrawal follows from OWNERSHIP + PROVENANCE, not from the role the
+        // actor holds now: a contributor downgraded to Viewer, or one whose
+        // membership was revoked, must still be able to take their media back.
+        // There is deliberately no membership check here at all.
+        var removed = await _db.AlbumItems
+            .Where(ai => ai.AlbumId == albumId
+                && ai.FileItemId == fileItemId
+                && ai.AddedByUserId == actorUserId
+                && _db.FileItems.IgnoreQueryFilters()
+                    .Any(f => f.Id == ai.FileItemId && f.OwnerUserId == actorUserId))
+            .ExecuteDeleteAsync(cancellationToken);
+
+        // IgnoreQueryFilters above on purpose: a file the actor has since moved
+        // into their Private Vault is unreachable through normal queries, and
+        // refusing to let them withdraw it would strand the row in somebody
+        // else's album permanently.
+        return removed > 0 ? AlbumItemRemovalResult.Ok : AlbumItemRemovalResult.NotFound;
+    }
+
+    public async Task<(AlbumItemRemovalResult Result, RemovedAlbumItem? Removed)> RemoveItemAsOwnerAsync(
+        Guid ownerUserId, Guid albumId, Guid fileItemId,
+        CancellationToken cancellationToken = default)
+    {
+        var ownsAlbum = await _db.Albums
+            .AsNoTracking()
+            .AnyAsync(a => a.Id == albumId && a.OwnerUserId == ownerUserId, cancellationToken);
+        if (!ownsAlbum)
+        {
+            return (AlbumItemRemovalResult.NotFound, null);
+        }
+
+        // Read provenance BEFORE deleting, so the audit can name the source
+        // owner. IgnoreQueryFilters so a vaulted source still yields its
+        // provenance — the owner must be able to clear such a row.
+        var provenance = await _db.AlbumItems
+            .AsNoTracking()
+            .Where(ai => ai.AlbumId == albumId && ai.FileItemId == fileItemId)
+            .Select(ai => new
+            {
+                ai.AddedByUserId,
+                SourceOwnerUserId = _db.FileItems.IgnoreQueryFilters()
+                    .Where(f => f.Id == ai.FileItemId)
+                    .Select(f => (Guid?)f.OwnerUserId)
+                    .FirstOrDefault(),
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (provenance is null)
+        {
+            return (AlbumItemRemovalResult.NotFound, null);
+        }
+
+        // Album membership only. The source file is never handed to a deletion
+        // service — an owner removing a collaborator's item must not be able to
+        // destroy their media, and an owner removing their OWN item is a
+        // curation action, not a delete.
+        await _db.AlbumItems
+            .Where(ai => ai.AlbumId == albumId && ai.FileItemId == fileItemId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        return (AlbumItemRemovalResult.Ok, new RemovedAlbumItem(
+            provenance.SourceOwnerUserId ?? provenance.AddedByUserId,
+            provenance.AddedByUserId));
+    }
+
+    public async Task<IReadOnlyList<AlbumContentItem>?> ListAlbumContentAsync(
+        Guid ownerUserId, Guid albumId,
+        CancellationToken cancellationToken = default)
+    {
+        var ownsAlbum = await _db.Albums
+            .AsNoTracking()
+            .AnyAsync(a => a.Id == albumId && a.OwnerUserId == ownerUserId, cancellationToken);
+        if (!ownsAlbum)
+        {
+            return null;
+        }
+
+        // Every row of the album, including ones whose source is no longer
+        // servable — this is the moderation view, so a row the owner needs to
+        // clear must be visible rather than silently filtered out.
+        // IgnoreQueryFilters reaches a source that has since been vaulted; it
+        // reports it as unavailable and never yields a URL for it.
+        var rows = await _db.AlbumItems
+            .AsNoTracking()
+            .Where(ai => ai.AlbumId == albumId)
+            .Select(ai => new
+            {
+                ai.FileItemId,
+                ai.AddedAt,
+                ai.AddedByUserId,
+                Source = _db.FileItems.IgnoreQueryFilters()
+                    .Where(f => f.Id == ai.FileItemId)
+                    .Select(f => new
+                    {
+                        f.OwnerUserId,
+                        f.DeletedAt,
+                        f.MediaLibraryState,
+                        f.PrivateVaultId,
+                        MediaCategory = _db.BlobMetadata
+                            .Where(m => m.BlobObjectId == f.BlobObjectId)
+                            .Select(m => m.MediaCategory)
+                            .FirstOrDefault(),
+                    })
+                    .FirstOrDefault(),
+                ContributorDisplayName = _db.Users
+                    .Where(u => u.Id == ai.AddedByUserId)
+                    .Select(u => u.DisplayName)
+                    .FirstOrDefault(),
+                ContributorEmail = _db.Users
+                    .Where(u => u.Id == ai.AddedByUserId)
+                    .Select(u => u.Email)
+                    .FirstOrDefault(),
+                ContributorActive = _db.Users
+                    .Any(u => u.Id == ai.AddedByUserId && u.DisabledAt == null),
+                ContributorStillMember = _db.AlbumMemberships.Any(m =>
+                    m.AlbumId == albumId
+                    && m.MemberUserId == ai.AddedByUserId
+                    && m.State == AlbumMembershipStates.Accepted
+                    && m.RevokedAt == null),
+            })
+            .OrderBy(x => x.AddedAt)
+            .ThenBy(x => x.FileItemId)
+            .ToListAsync(cancellationToken);
+
+        return rows.Select(x =>
+        {
+            var isOwnerItem = x.AddedByUserId == ownerUserId;
+            var source = x.Source;
+            var servable = source is not null
+                && source.DeletedAt == null
+                && source.MediaLibraryState == MediaLibraryState.Active
+                && source.PrivateVaultId == null
+                && source.MediaCategory is MediaCategories.Image or MediaCategories.Video
+                // A contribution is only servable while its contributor is still
+                // an active member — the same condition the resolver enforces.
+                && (isOwnerItem || (x.ContributorActive && x.ContributorStillMember));
+            var isVideo = source?.MediaCategory == MediaCategories.Video;
+
+            return new AlbumContentItem(
+                x.FileItemId,
+                isVideo ? "video" : "image",
+                // Owner-scoped URLs for the owner's own media; album-scoped for
+                // a contribution, since the owner does not own those bytes and
+                // /api/files/{id}/* would (correctly) refuse them.
+                isOwnerItem
+                    ? (isVideo
+                        ? $"/api/files/{x.FileItemId}/poster"
+                        : $"/api/files/{x.FileItemId}/thumbnail?size=small")
+                    : (isVideo
+                        ? SharedMediaUrls.Poster(albumId, x.FileItemId)
+                        : SharedMediaUrls.Thumbnail(albumId, x.FileItemId)),
+                isOwnerItem ? AlbumContentOrigins.Owner : AlbumContentOrigins.Contribution,
+                isOwnerItem ? null : x.ContributorDisplayName,
+                isOwnerItem ? null : RecipientEmailMask.Mask(x.ContributorEmail),
+                servable ? AlbumContentSourceStates.Available : AlbumContentSourceStates.Unavailable,
+                x.AddedAt);
+        }).ToList();
+    }
+
+    // Removes every item a given user contributed to an album. Used by the
+    // revocation path; the caller owns the surrounding transaction.
+    private async Task<IReadOnlyList<Guid>> WithdrawAllContributionsAsync(
+        Guid albumId, Guid memberUserId, CancellationToken cancellationToken)
+    {
+        var fileIds = await _db.AlbumItems
+            .AsNoTracking()
+            .Where(ai => ai.AlbumId == albumId && ai.AddedByUserId == memberUserId)
+            .Select(ai => ai.FileItemId)
+            .ToListAsync(cancellationToken);
+        if (fileIds.Count == 0)
+        {
+            return Array.Empty<Guid>();
+        }
+
+        await _db.AlbumItems
+            .Where(ai => ai.AlbumId == albumId && ai.AddedByUserId == memberUserId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        return fileIds;
     }
 
     // ── Recipient side ──────────────────────────────────────────────────────
@@ -462,6 +784,8 @@ public sealed class AlbumSharingService : IAlbumSharingService
                 x.Width,
                 x.Height,
                 x.Orientation,
+                x.AddedByUserId,
+                x.FileOwnerUserId,
             })
             .ToListAsync(cancellationToken);
 
@@ -488,7 +812,10 @@ public sealed class AlbumSharingService : IAlbumSharingService
                     : null,
                 width,
                 height,
-                x.AddedAt);
+                x.AddedAt,
+                // Own contribution only: owns the file AND added it. The same
+                // pair WithdrawContributionAsync checks server-side.
+                x.AddedByUserId == grant.ActorUserId && x.FileOwnerUserId == grant.ActorUserId);
         }).ToList();
     }
 
@@ -503,10 +830,14 @@ public sealed class AlbumSharingService : IAlbumSharingService
                 && m.State == AlbumMembershipStates.Accepted
                 && m.RevokedAt == null);
 
-    // Album members that are currently servable: owned by the album's owner,
-    // not soft-deleted, in the media library, and detected image/video. This is
-    // the SAME predicate AlbumAccessResolver.ResolveMediaAsync applies to a
-    // single item, so listings and media requests can never disagree.
+    // Album members that are currently servable: the album owner's own media,
+    // OR a coherent contribution whose source owner is still an active member.
+    // Not soft-deleted, in the media library, detected image/video.
+    //
+    // This mirrors AlbumAccessResolver.ResolveMediaAsync clause for clause, so a
+    // listing can never advertise an item the media routes would refuse — nor
+    // hide one they would serve. The two predicates are the single most
+    // important thing to keep in step in this slice.
     //
     // Private Vault needs no clause: the global query filter on FileItems
     // removes vaulted rows before this composes.
@@ -516,7 +847,10 @@ public sealed class AlbumSharingService : IAlbumSharingService
             .Join(_db.Albums.AsNoTracking(),
                 ai => ai.AlbumId,
                 a => a.Id,
-                (ai, a) => new { ai.AlbumId, ai.FileItemId, ai.AddedAt, a.OwnerUserId })
+                (ai, a) => new
+                {
+                    ai.AlbumId, ai.FileItemId, ai.AddedAt, ai.AddedByUserId, a.OwnerUserId,
+                })
             .Join(_db.FileItems.AsNoTracking(),
                 x => x.FileItemId,
                 f => f.Id,
@@ -525,15 +859,23 @@ public sealed class AlbumSharingService : IAlbumSharingService
                     x.AlbumId,
                     x.FileItemId,
                     x.AddedAt,
+                    x.AddedByUserId,
                     AlbumOwnerUserId = x.OwnerUserId,
                     FileOwnerUserId = f.OwnerUserId,
                     f.BlobObjectId,
                     f.DeletedAt,
                     f.MediaLibraryState,
                 })
-            .Where(x => x.FileOwnerUserId == x.AlbumOwnerUserId
-                && x.DeletedAt == null
+            .Where(x => x.DeletedAt == null
                 && x.MediaLibraryState == MediaLibraryState.Active)
+            .Where(x => x.FileOwnerUserId == x.AlbumOwnerUserId
+                || (x.AddedByUserId == x.FileOwnerUserId
+                    && _db.Users.Any(u => u.Id == x.FileOwnerUserId && u.DisabledAt == null)
+                    && _db.AlbumMemberships.Any(m =>
+                        m.AlbumId == x.AlbumId
+                        && m.MemberUserId == x.FileOwnerUserId
+                        && m.State == AlbumMembershipStates.Accepted
+                        && m.RevokedAt == null)))
             .Join(_db.BlobMetadata.AsNoTracking(),
                 x => x.BlobObjectId,
                 m => m.BlobObjectId,
@@ -543,6 +885,8 @@ public sealed class AlbumSharingService : IAlbumSharingService
                     FileItemId = x.FileItemId,
                     AddedAt = x.AddedAt,
                     AlbumOwnerUserId = x.AlbumOwnerUserId,
+                    AddedByUserId = x.AddedByUserId,
+                    FileOwnerUserId = x.FileOwnerUserId,
                     MediaCategory = m.MediaCategory,
                     DetectedContentType = m.DetectedContentType,
                     Width = m.Width,
@@ -625,6 +969,10 @@ public sealed class AlbumSharingService : IAlbumSharingService
         public Guid FileItemId { get; set; }
         public DateTime AddedAt { get; set; }
         public Guid AlbumOwnerUserId { get; set; }
+        // SHARE-ALBUM-02 provenance, carried so ListSharedItemsAsync can tell
+        // the caller which items are their OWN contribution.
+        public Guid AddedByUserId { get; set; }
+        public Guid FileOwnerUserId { get; set; }
         public string MediaCategory { get; set; } = string.Empty;
         public string? DetectedContentType { get; set; }
         public int? Width { get; set; }

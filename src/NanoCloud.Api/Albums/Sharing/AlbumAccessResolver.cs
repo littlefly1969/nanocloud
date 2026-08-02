@@ -127,14 +127,44 @@ public sealed class AlbumAccessResolver : IAlbumAccessResolver
             .Join(_db.FileItems.AsNoTracking(),
                 ai => ai.FileItemId,
                 f => f.Id,
-                (ai, f) => new { f.Id, f.OwnerUserId, f.BlobObjectId, f.DeletedAt, f.MediaLibraryState })
+                (ai, f) => new
+                {
+                    f.Id,
+                    f.OwnerUserId,
+                    f.BlobObjectId,
+                    f.DeletedAt,
+                    f.MediaLibraryState,
+                    ai.AddedByUserId,
+                })
             .Where(x => x.DeletedAt == null && x.MediaLibraryState == MediaLibraryState.Active)
-            // SHARE-ALBUM-01 shares only the album owner's own media. Contributor
-            // provenance (a collaborator-owned item in someone else's album) is
-            // SHARE-ALBUM-02; until then an item whose owner is not the album
-            // owner is not servable, which keeps this slice's blast radius to
-            // exactly "the owner's items in this album".
-            .Where(x => x.OwnerUserId == grant.AlbumOwnerUserId)
+            // SHARE-ALBUM-02. Two shapes are servable, and the second is checked
+            // POSITIVELY rather than by removing the old owner-only predicate:
+            //
+            //   * the ALBUM OWNER's own media — no membership involved, so a
+            //     synthetic owner membership is never required;
+            //
+            //   * a CONTRIBUTION, which must satisfy all of:
+            //       - provenance is coherent: whoever added it owns it. A row
+            //         where these disagree is corrupt (the API cannot create
+            //         one) and is refused rather than guessed at;
+            //       - the source owner still holds an ACCEPTED, unrevoked
+            //         membership on THIS album — any role, so a contributor
+            //         downgraded to Viewer keeps their contribution visible;
+            //       - the source owner's account is still active.
+            //
+            // Revoking a membership already withdraws that member's items in the
+            // same transaction, so this predicate is normally redundant. It is
+            // here as the fail-closed guarantee: under a race, or against
+            // inconsistent data, access ends the moment the source membership
+            // does — without waiting for the withdrawal to land.
+            .Where(x => x.OwnerUserId == grant.AlbumOwnerUserId
+                || (x.AddedByUserId == x.OwnerUserId
+                    && _db.Users.Any(u => u.Id == x.OwnerUserId && u.DisabledAt == null)
+                    && _db.AlbumMemberships.Any(m =>
+                        m.AlbumId == albumId
+                        && m.MemberUserId == x.OwnerUserId
+                        && m.State == AlbumMembershipStates.Accepted
+                        && m.RevokedAt == null)))
             .Join(_db.BlobMetadata.AsNoTracking(),
                 x => x.BlobObjectId,
                 m => m.BlobObjectId,

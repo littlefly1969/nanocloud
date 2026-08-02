@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import {
   ApiError,
+  ASSIGNABLE_ALBUM_ROLES,
   inviteAlbumMember,
   listAlbumMembers,
   resolveAlbumRecipient,
   revokeAlbumMember,
   setAlbumMemberDownload,
+  setAlbumMemberRole,
   type AlbumMember,
+  type AssignableAlbumRole,
 } from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n';
@@ -52,9 +55,15 @@ export function AlbumSharePanel({ albumId, albumName, onClose, returnFocusRef }:
   const [status, setStatus] = useState<Status>({ kind: 'loading' });
   const [email, setEmail] = useState('');
   const [allowDownload, setAllowDownload] = useState(false);
+  // SHARE-ALBUM-02. The options come from ASSIGNABLE_ALBUM_ROLES, which
+  // excludes `editor` by type — so the value cannot appear in this menu, in a
+  // payload, or as a keyboard-reachable option, even by mistake. The backend
+  // refuses it regardless; this is UX, not the gate.
+  const [inviteRole, setInviteRole] = useState<AssignableAlbumRole>('viewer');
   const [step, setStep] = useState<InviteStep>({ kind: 'idle' });
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [busyMembership, setBusyMembership] = useState<string | null>(null);
+  const [memberError, setMemberError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     abortRef.current?.abort();
@@ -119,11 +128,12 @@ export function AlbumSharePanel({ albumId, albumName, onClose, returnFocusRef }:
     setInviteError(null);
     try {
       await inviteAlbumMember(albumId, recipientEmail, {
-        role: 'viewer',
+        role: inviteRole,
         allowOriginalDownload: allowDownload,
       });
       setEmail('');
       setAllowDownload(false);
+      setInviteRole('viewer');
       setStep({ kind: 'idle' });
       load();
     } catch (err) {
@@ -152,6 +162,23 @@ export function AlbumSharePanel({ albumId, albumName, onClose, returnFocusRef }:
     return member.maskedEmail
       ? `${member.displayName} (${member.maskedEmail})`
       : member.displayName;
+  }
+
+  async function changeRole(member: AlbumMember, next: AssignableAlbumRole) {
+    setBusyMembership(member.membershipId);
+    setMemberError(null);
+    try {
+      await setAlbumMemberRole(albumId, member.membershipId, next);
+      load();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) { invalidateAuth(); return; }
+      // 404 means the membership is gone (revoked elsewhere, album deleted).
+      // Reload rather than leave a control the server no longer honours.
+      if (err instanceof ApiError && err.status === 404) { load(); return; }
+      setMemberError(t('albumShare.roleChangeError'));
+    } finally {
+      setBusyMembership(null);
+    }
   }
 
   async function toggleDownload(member: AlbumMember, next: boolean) {
@@ -244,6 +271,24 @@ export function AlbumSharePanel({ albumId, albumName, onClose, returnFocusRef }:
               />
             </label>
 
+            <label>
+              {t('albumShare.roleLabel')}
+              <select
+                data-testid="album-share-role"
+                value={inviteRole}
+                disabled={step.kind === 'sending'}
+                onChange={(e) => setInviteRole(e.target.value as AssignableAlbumRole)}
+              >
+                {ASSIGNABLE_ALBUM_ROLES.map((role) => (
+                  <option key={role} value={role}>
+                    {role === 'viewer' ? t('albumRole.viewer') : t('albumRole.contributor')}
+                    {' — '}
+                    {role === 'viewer' ? t('albumRole.viewerHelp') : t('albumRole.contributorHelp')}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <label className="album-tv-label">
               <input
                 type="checkbox"
@@ -255,6 +300,7 @@ export function AlbumSharePanel({ albumId, albumName, onClose, returnFocusRef }:
               <span>{t('albumShare.allowDownload')}</span>
             </label>
             <p className="muted">{t('albumShare.allowDownloadHelp')}</p>
+            <p className="muted">{t('albumShare.revokeDownloadNote')}</p>
 
             {inviteError && <p className="inline-error" role="alert">{inviteError}</p>}
 
@@ -301,6 +347,7 @@ export function AlbumSharePanel({ albumId, albumName, onClose, returnFocusRef }:
             {status.kind === 'error' && (
               <p className="inline-error" role="alert">{status.message}</p>
             )}
+            {memberError && <p className="inline-error" role="alert">{memberError}</p>}
 
             {status.kind === 'ready' && active.length === 0 && (
               <p className="empty-state" data-testid="album-share-empty">
@@ -330,7 +377,25 @@ export function AlbumSharePanel({ albumId, albumName, onClose, returnFocusRef }:
                           ? t('albumShare.statePending')
                           : t('albumShare.stateAccepted')}
                       </span>
-                      <span className="album-badge">{t('albumShare.roleViewer')}</span>
+                      <label className="album-share-member-role">
+                        <span className="visually-hidden">
+                          {t('albumShare.changeRoleAria', { name: memberLabel(member) })}
+                        </span>
+                        <select
+                          data-testid="album-share-member-role"
+                          value={member.role === 'contributor' ? 'contributor' : 'viewer'}
+                          disabled={busyMembership === member.membershipId}
+                          aria-label={t('albumShare.changeRoleAria', { name: memberLabel(member) })}
+                          onChange={(e) =>
+                            void changeRole(member, e.target.value as AssignableAlbumRole)}
+                        >
+                          {ASSIGNABLE_ALBUM_ROLES.map((role) => (
+                            <option key={role} value={role}>
+                              {role === 'viewer' ? t('albumRole.viewer') : t('albumRole.contributor')}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                     </div>
                     <p className="muted album-share-member-when">
                       {member.state === 'accepted' && member.acceptedAt

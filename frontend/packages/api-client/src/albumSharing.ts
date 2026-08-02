@@ -70,6 +70,25 @@ export interface SharedAlbumDetail {
   itemCount: number;
 }
 
+// One item of an album as its OWNER sees it for moderation. Additive surface:
+// contributions never appear in the owner's library, gallery or album
+// workspace. `contributorDisplayName` / `contributorMaskedEmail` are null for
+// the owner's own items and use the same privacy-safe disambiguation as the
+// member list when present.
+export interface AlbumContentItem {
+  fileItemId: string;
+  kind: 'image' | 'video';
+  thumbnailUrl: string;
+  origin: 'owner' | 'contribution';
+  contributorDisplayName: string | null;
+  contributorMaskedEmail: string | null;
+  // 'unavailable' when the source was deleted, excluded, vaulted, or its
+  // contributor's membership ended — the row is listed so the owner can clear
+  // it, but nobody can open it.
+  sourceState: 'available' | 'unavailable';
+  addedAt: string;
+}
+
 // One media item of a shared album. Deliberately carries NO file name: a
 // filename is owner-authored free text that can hold a person's name, and the
 // viewer does not need it. `downloadUrl` is null unless the membership permits
@@ -86,6 +105,11 @@ export interface SharedAlbumItem {
   width: number | null;
   height: number | null;
   addedAt: string;
+  // True only for the caller's OWN contribution (they own the file and they
+  // added it) — the same pair the server checks before accepting a withdrawal.
+  // A capability, not an identity: the shared viewer never learns who
+  // contributed the other items.
+  canWithdraw: boolean;
 }
 
 export interface AlbumInvitation {
@@ -210,6 +234,79 @@ export async function declineAlbumInvitation(
 ): Promise<void> {
   await api<void>(`/api/shared-albums/invitations/${membershipId}/decline`, {
     method: 'POST',
+    signal,
+  });
+}
+
+// ── SHARE-ALBUM-02: roles, contributions, owner moderation ──────────────────
+
+// Promote Viewer → Contributor or demote Contributor → Viewer. Owner-only.
+// `editor` exists in the backend catalog for a later slice and is refused here
+// and server-side; AlbumRole's assignable union deliberately excludes it.
+export type AssignableAlbumRole = Extract<AlbumRole, 'viewer' | 'contributor'>;
+
+export const ASSIGNABLE_ALBUM_ROLES: readonly AssignableAlbumRole[] =
+  ['viewer', 'contributor'] as const;
+
+export async function setAlbumMemberRole(
+  albumId: string,
+  membershipId: string,
+  role: AssignableAlbumRole,
+  signal?: AbortSignal,
+): Promise<AlbumMember> {
+  return api<AlbumMember>(`/api/albums/${albumId}/members/${membershipId}/role`, {
+    method: 'PATCH',
+    json: { role },
+    signal,
+  });
+}
+
+// The owner's moderation view of the live album: their own media plus every
+// linked contribution, with provenance and current source state.
+export async function listAlbumContent(
+  albumId: string,
+  signal?: AbortSignal,
+): Promise<AlbumContentItem[]> {
+  return api<AlbumContentItem[]>(`/api/albums/${albumId}/content`, { signal });
+}
+
+// The owner removing ANY item from their album — their own or a contribution.
+// Album membership only: the source file is never deleted, and for a
+// collaborator's media the owner could not delete it even if they tried.
+export async function removeAlbumContentItem(
+  albumId: string,
+  fileItemId: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  await api<void>(`/api/albums/${albumId}/content/${fileItemId}`, {
+    method: 'DELETE',
+    signal,
+  });
+}
+
+// Link media the CALLER owns into a shared album. No copy is made and ownership
+// does not move — the file stays in the contributor's library.
+export async function contributeToSharedAlbum(
+  albumId: string,
+  fileItemId: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  await api<void>(`/api/shared-albums/${albumId}/contributions`, {
+    method: 'POST',
+    json: { fileItemId },
+    signal,
+  });
+}
+
+// Take your own contribution back out of the album. Never deletes the file, and
+// still permitted after a downgrade to Viewer.
+export async function withdrawSharedAlbumContribution(
+  albumId: string,
+  fileItemId: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  await api<void>(`/api/shared-albums/${albumId}/contributions/${fileItemId}`, {
+    method: 'DELETE',
     signal,
   });
 }

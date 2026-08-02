@@ -21,6 +21,20 @@ public class AlbumItemConfiguration : IEntityTypeConfiguration<AlbumItem>
         // change — it produces no new migration.
         builder.HasIndex(ai => ai.FileItemId);
 
+        // SHARE-ALBUM-02 provenance. "Which items did this user contribute" is
+        // the predicate behind withdraw-my-contribution and behind the automatic
+        // withdrawal that a membership revocation performs, so it is indexed
+        // per album rather than globally.
+        builder.HasIndex(ai => new { ai.AlbumId, ai.AddedByUserId })
+            .HasDatabaseName("ix_album_items_album_added_by");
+
+        // FK Restrict, like every other user reference here: a user row cannot
+        // vanish while it still explains why an album item exists.
+        builder.HasOne<User>()
+            .WithMany()
+            .HasForeignKey(ai => ai.AddedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne<Album>()
             .WithMany()
             .HasForeignKey(ai => ai.AlbumId)

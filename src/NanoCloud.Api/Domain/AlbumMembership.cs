@@ -29,10 +29,10 @@ public class AlbumMembership
     // ck_album_memberships_member_not_inviter for the self-invite case).
     public Guid MemberUserId { get; set; }
 
-    // One of AlbumRoles (viewer | contributor | editor). Only `viewer` is
-    // reachable in SHARE-ALBUM-01; the other values are declared so that later
-    // slices extend behavior without a schema migration, and the check
-    // constraint documents the closed domain.
+    // One of AlbumRoles (viewer | contributor | editor). SHARE-ALBUM-02 makes
+    // `viewer` and `contributor` assignable; `editor` stays declared-but-refused
+    // so SHARE-ALBUM-03 extends behavior without a schema migration, and the
+    // check constraint documents the closed domain.
     public string Role { get; set; } = AlbumRoles.Viewer;
 
     // One of AlbumMembershipStates (pending | accepted | declined | revoked).
@@ -73,21 +73,33 @@ public static class AlbumRoles
     public const string Viewer = "viewer";
 
     // Viewer + may contribute their OWN media as a linked, revocable
-    // contribution. Reserved for SHARE-ALBUM-02.
+    // contribution. Enabled by SHARE-ALBUM-02.
     public const string Contributor = "contributor";
 
     // Contributor + may curate the album (title / description / cover / order /
-    // remove any item). Reserved for SHARE-ALBUM-03.
+    // remove any item). Reserved for SHARE-ALBUM-03: present in the catalog and
+    // in the DB check constraint, but NOT assignable — nothing implements the
+    // permissions it would imply.
     public const string Editor = "editor";
 
     public static readonly IReadOnlyList<string> All = [Viewer, Contributor, Editor];
 
-    // Roles a client may currently request. Widened by SHARE-ALBUM-02/03.
-    public static readonly IReadOnlyList<string> Assignable = [Viewer];
+    // Roles a client may currently request. Widened by SHARE-ALBUM-03.
+    public static readonly IReadOnlyList<string> Assignable = [Viewer, Contributor];
 
     public static bool IsKnown(string? role) => role is not null && All.Contains(role);
 
     public static bool IsAssignable(string? role) => role is not null && Assignable.Contains(role);
+
+    // May a member holding this role ADD media to the album?
+    //
+    // Deliberately separate from the right to WITHDRAW: withdrawal follows from
+    // owning the file and having contributed it, not from currently holding
+    // Contributor. A member downgraded to Viewer keeps their contributions in
+    // the album and keeps the right to take them back — see
+    // IAlbumSharingService.WithdrawContributionAsync.
+    public static bool CanContribute(string? role) =>
+        role is Contributor or Editor;
 }
 
 public static class AlbumMembershipStates

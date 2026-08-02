@@ -4,6 +4,7 @@ import {
   ApiError,
   getAlbum,
   getAlbumPartySettings,
+  listAlbumMembers,
   type AlbumDetail,
   type AlbumPartyStatus,
 } from '@nubarca/api-client';
@@ -11,6 +12,7 @@ import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n';
 import { AlbumSettingsPanel } from '../albums/AlbumSettingsPanel';
 import { AlbumSharePanel } from '../albums/AlbumSharePanel';
+import { AlbumSharedContentPanel } from '../albums/AlbumSharedContentPanel';
 import { MediaWorkspace } from '../media/workspace/MediaWorkspace';
 import {
   filtersToUrlParams,
@@ -44,6 +46,13 @@ export function AlbumDetailPage() {
   // membership, and conflating the three is how a user shares the wrong way.
   const [shareOpen, setShareOpen] = useState(false);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
+  // SHARE-ALBUM-02: the live album's full content — the owner's own items plus
+  // collaborator contributions. Offered only once the album actually has
+  // members, so an unshared album keeps exactly the surface it had before and
+  // there are never two near-identical views of the same album on screen.
+  const [contentOpen, setContentOpen] = useState(false);
+  const contentButtonRef = useRef<HTMLButtonElement>(null);
+  const [hasMembers, setHasMembers] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const source = useMemo<MediaWorkspaceSource>(
@@ -77,6 +86,18 @@ export function AlbumDetailPage() {
     return () => ctrl.abort();
   }, [albumId, invalidateAuth, navigate, t]);
 
+  // Whether to offer the shared-content view at all. A plain 404/401 here just
+  // leaves it hidden: it is a navigation affordance, not a permission.
+  const refreshMembership = useCallback(() => {
+    if (!albumId) return;
+    listAlbumMembers(albumId)
+      .then((members) => setHasMembers(members.some(
+        (m) => m.state === 'pending' || m.state === 'accepted')))
+      .catch(() => setHasMembers(false));
+  }, [albumId]);
+
+  useEffect(() => { refreshMembership(); }, [refreshMembership]);
+
   const onIdentityChange = useCallback((next: MediaWorkspaceIdentity) => {
     setIdentity(next);
     setSearchParams(filtersToUrlParams(next), { replace: true });
@@ -105,6 +126,17 @@ export function AlbumDetailPage() {
             {album.description && <p className="album-description">{album.description}</p>}
           </div>
           <div className="album-detail-header-actions">
+            {hasMembers && (
+              <button
+                type="button"
+                ref={contentButtonRef}
+                className="row-action"
+                data-testid="album-open-content"
+                onClick={() => setContentOpen(true)}
+              >
+                {t('albumContent.tab')}
+              </button>
+            )}
             <button
               type="button"
               ref={shareButtonRef}
@@ -138,8 +170,16 @@ export function AlbumDetailPage() {
         <AlbumSharePanel
           albumId={albumId}
           albumName={album.name}
-          onClose={() => setShareOpen(false)}
+          onClose={() => { setShareOpen(false); refreshMembership(); }}
           returnFocusRef={shareButtonRef}
+        />
+      )}
+
+      {contentOpen && (
+        <AlbumSharedContentPanel
+          albumId={albumId}
+          onClose={() => setContentOpen(false)}
+          returnFocusRef={contentButtonRef}
         />
       )}
 

@@ -976,6 +976,60 @@ const en: Partial<Record<MessageKey, string>> = {
     'Revoke access for {name}? They will no longer be able to open this album. Files they have already downloaded stay on their device.',
   'albumShare.pastLegend': 'Past invitations ({count})',
 
+  // --- SHARE-ALBUM-02: roles, contributions, shared content ---
+  // Fixed terminology, used identically in menus, dialogs, toasts, aria-labels
+  // and confirmations. "Delete" never appears for a contribution: the original
+  // stays in the collaborator's library.
+  'albumRole.viewer': 'Viewer',
+  'albumRole.contributor': 'Contributor',
+  'albumRole.viewerHelp': 'Can view',
+  'albumRole.contributorHelp': 'Can contribute',
+  'albumShare.roleLabel': 'Role',
+  'albumShare.changeRoleAria': 'Role for {name}',
+  'albumShare.roleChangeError': 'Could not change the role. Please try again.',
+  'albumShare.revokeDownloadNote':
+    'Revoking blocks future access. Files already downloaded to a device cannot be called back.',
+
+  'albumContent.tab': 'Shared content',
+  'albumContent.heading': 'Shared content',
+  'albumContent.intro':
+    'Everything the live album is made of: your own items and your collaborators’ contributions, in the order members see them.',
+  'albumContent.loadError': 'Could not load the shared content.',
+  'albumContent.empty': 'This album has no items yet.',
+  'albumContent.addedBy': 'Added by {name}',
+  'albumContent.ownerItem': 'Your item',
+  'albumContent.unavailable': 'Source unavailable',
+  'albumContent.unavailableHelp':
+    'The collaborator made this file unavailable, so members can no longer see it. You can remove the item from the album.',
+  'albumContent.remove': 'Remove from album',
+  'albumContent.removeAria': 'Remove item {index} of {total} from the album',
+  'albumContent.confirmRemoveOwn': 'Remove this item from the album? The file stays in your library.',
+  'albumContent.confirmRemoveContribution':
+    'Remove {name}’s contribution from the album? The file stays in their library — it is not deleted.',
+  'albumContent.removeError': 'Could not remove the item. Please try again.',
+
+  'sharedAlbum.addToAlbum': 'Add to album',
+  'sharedAlbum.addHeading': 'Add to album',
+  'sharedAlbum.addIntro':
+    'Choose photos or videos from your library. The file remains in your library and is linked to the album. You can withdraw it later.',
+  'sharedAlbum.addPickerEmpty': 'You have no photos or videos to add.',
+  'sharedAlbum.addPickerError': 'Could not load your library.',
+  'sharedAlbum.addSelected': 'Add {count} items',
+  'sharedAlbum.addSelectedOne': 'Add 1 item',
+  'sharedAlbum.adding': 'Adding…',
+  'sharedAlbum.addError': 'Could not add some items. Please try again.',
+  'sharedAlbum.addAlreadyPresent': 'Some items were already in the album.',
+  'sharedAlbum.addNotAllowed': 'You can no longer add items to this album.',
+  'sharedAlbum.mine': 'Your contribution',
+  'sharedAlbum.withdraw': 'Withdraw contribution',
+  'sharedAlbum.withdrawAria': 'Withdraw your contribution',
+  'sharedAlbum.confirmWithdraw':
+    'Withdraw this contribution? The file stays in your library — it is not deleted.',
+  'sharedAlbum.withdrawError': 'Could not withdraw the contribution. Please try again.',
+  'sharedAlbum.accessChanged': 'Your access to this album changed. The view has been refreshed.',
+  'sharedAlbum.itemGone': 'That item is no longer available in this album.',
+  'sharedAlbum.libraryNote': 'The file remains in your library',
+
   // The RECIPIENT's side: "Shared with me".
   'nav.sharedAlbums': 'Shared with me',
   'sharedAlbums.heading': 'Shared with me',

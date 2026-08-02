@@ -4,12 +4,14 @@ import {
   ApiError,
   getSharedAlbum,
   listSharedAlbumItems,
+  withdrawSharedAlbumContribution,
   type SharedAlbumDetail,
   type SharedAlbumItem,
 } from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n';
 import { HlsVideoPlayer } from '../video/HlsVideoPlayer';
+import { ContributeToAlbumPanel } from '../albums/ContributeToAlbumPanel';
 import { computeJustifiedRows, type JustifiedLayoutItem } from '../media/layout/computeJustifiedRows';
 import { MEDIA_WALL_GAP_PX, mediaWallRowParams } from '../media/layout/mediaWallGeometry';
 
@@ -45,6 +47,11 @@ export function SharedAlbumDetailPage() {
   const abortRef = useRef<AbortController | null>(null);
   const lightboxRef = useRef<HTMLDivElement>(null);
   const wallRef = useRef<HTMLDivElement>(null);
+  const [contributeOpen, setContributeOpen] = useState(false);
+  const contributeButtonRef = useRef<HTMLButtonElement>(null);
+  // A transient notice for state that changed under the user (role downgrade,
+  // revocation, an item removed by the owner) — shown once, never as a loop.
+  const [notice, setNotice] = useState<string | null>(null);
   // `null` until the real width is known, so tiles never render at an invented
   // size and then reflow — the same rule MediaGrid follows.
   const [wallWidth, setWallWidth] = useState<number | null>(null);
@@ -130,6 +137,26 @@ export function SharedAlbumDetailPage() {
     });
   }, [items, wallWidth]);
 
+  async function withdraw(item: SharedAlbumItem) {
+    if (!window.confirm(t('sharedAlbum.confirmWithdraw'))) return;
+    try {
+      await withdrawSharedAlbumContribution(albumId!, item.fileItemId);
+      setOpenIndex(null);
+      load();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) { invalidateAuth(); return; }
+      // Already gone — the owner removed it, or a second tab withdrew it.
+      // Reload to the truth instead of reporting a failure for a no-op.
+      if (err instanceof ApiError && err.status === 404) {
+        setNotice(t('sharedAlbum.itemGone'));
+        setOpenIndex(null);
+        load();
+        return;
+      }
+      setNotice(t('sharedAlbum.withdrawError'));
+    }
+  }
+
   if (state.status !== 'authed' || !albumId) return null;
 
   if (status.kind === 'loading') {
@@ -173,8 +200,26 @@ export function SharedAlbumDetailPage() {
             </p>
             {album.description && <p className="album-description">{album.description}</p>}
           </div>
-          <span className="album-badge album-badge-shared">{t('sharedAlbums.roleViewerLabel')}</span>
+          <div className="album-detail-header-actions">
+            <span className="album-badge album-badge-shared">
+              {album.role === 'contributor' ? t('albumRole.contributor') : t('albumRole.viewer')}
+            </span>
+            {/* Offered only to a Contributor. The server refuses a Viewer
+                regardless — hiding it is UX, not the gate. */}
+            {album.role === 'contributor' && (
+              <button
+                type="button"
+                ref={contributeButtonRef}
+                className="row-action"
+                data-testid="shared-album-add"
+                onClick={() => setContributeOpen(true)}
+              >
+                {t('sharedAlbum.addToAlbum')}
+              </button>
+            )}
+          </div>
         </div>
+        {notice && <p className="inline-error" role="status" data-testid="shared-album-notice">{notice}</p>}
       </header>
 
       {items.length === 0 ? (
@@ -213,6 +258,14 @@ export function SharedAlbumDetailPage() {
                       {item.kind === 'video' && (
                         <span className="shared-media-video-badge" aria-hidden="true">▶</span>
                       )}
+                      {/* Which of these are mine, so "withdraw" is never a
+                          guess. Discreet: no contributor identity is shown to
+                          a member — that provenance is the owner's surface. */}
+                      {item.canWithdraw && (
+                        <span className="shared-media-mine-badge" data-testid="shared-media-mine">
+                          {t('sharedAlbum.mine')}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -220,6 +273,16 @@ export function SharedAlbumDetailPage() {
             ))}
           </div>
         </>
+      )}
+
+      {contributeOpen && (
+        <ContributeToAlbumPanel
+          albumId={albumId}
+          presentFileIds={new Set(items.map((i) => i.fileItemId))}
+          onContributed={load}
+          onClose={() => setContributeOpen(false)}
+          returnFocusRef={contributeButtonRef}
+        />
       )}
 
       {open && openIndex !== null && (
@@ -241,6 +304,17 @@ export function SharedAlbumDetailPage() {
               <div className="shared-lightbox-actions">
                 {/* Rendered only when the membership permits originals. The
                     endpoint enforces the same rule — this is a courtesy. */}
+                {open.canWithdraw && (
+                  <button
+                    type="button"
+                    className="row-action"
+                    data-testid="shared-withdraw"
+                    aria-label={t('sharedAlbum.withdrawAria')}
+                    onClick={() => void withdraw(open)}
+                  >
+                    {t('sharedAlbum.withdraw')}
+                  </button>
+                )}
                 {open.downloadUrl && (
                   <a
                     className="row-action"

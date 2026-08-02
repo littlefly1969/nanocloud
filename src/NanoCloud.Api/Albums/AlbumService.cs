@@ -301,7 +301,11 @@ public class AlbumService : IAlbumService
         {
             AlbumId = albumId,
             FileItemId = fileItemId,
-            AddedAt = _time.GetUtcNow().UtcDateTime
+            AddedAt = _time.GetUtcNow().UtcDateTime,
+            // This path is owner-only (the file ownership check above), so the
+            // adder is always the album owner. A Contributor adds through
+            // IAlbumSharingService, never here.
+            AddedByUserId = ownerUserId,
         });
         await _db.SaveChangesAsync(cancellationToken);
         return true;
@@ -363,6 +367,7 @@ public class AlbumService : IAlbumService
                 AlbumId = albumId,
                 FileItemId = id,
                 AddedAt = now,
+                AddedByUserId = ownerUserId,
             });
         }
         if (toAdd.Count > 0)
