@@ -21,6 +21,19 @@ namespace NanoCloud.Api.Domain;
 // answered by the audit log, which is where that question belongs.
 public class AlbumItem
 {
+    // SHARE-ALBUM-03: a stable surrogate identity for the MEMBERSHIP row.
+    //
+    // The primary key stays (AlbumId, FileItemId) — that is what enforces "one
+    // row per file per album" and it is not weakened here. This id exists so a
+    // reorder can name the rows it is reordering unambiguously, rather than
+    // naming files and relying on the album context to disambiguate them. It
+    // also keeps the reorder contract stable if the model ever allows the same
+    // file to appear twice in one album.
+    //
+    // An alternate key, not the primary key: changing the PK would be a
+    // rewrite of a table three other slices already query, for no gain.
+    public Guid Id { get; set; }
+
     public Guid AlbumId { get; set; }
     public Guid FileItemId { get; set; }
     public DateTime AddedAt { get; set; }
@@ -35,4 +48,19 @@ public class AlbumItem
     // accurate rather than a placeholder. Non-nullable, so no "null means the
     // owner" special case leaks into the query predicates.
     public Guid AddedByUserId { get; set; }
+
+    // SHARE-ALBUM-03: the item's position in the album's own order.
+    //
+    // Until this slice every surface ordered by AddedAt — which is not an order
+    // anybody chose, and which bulk-adds make ambiguous because they share a
+    // timestamp. SortOrder is the album's curated sequence.
+    //
+    // Backfilled by AddAlbumOrderingAndCover from the previous implicit order
+    // (AddedAt, then FileItemId as the stable tie-break the read paths already
+    // used), so no album visibly reshuffles when this ships. New items append.
+    //
+    // Never assumed contiguous or unique: every read applies FileItemId as a
+    // final tie-break, so two rows that somehow share a SortOrder still produce
+    // a stable, repeatable order rather than one that shuffles per query.
+    public int SortOrder { get; set; }
 }

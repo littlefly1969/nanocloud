@@ -561,6 +561,12 @@ if (!string.IsNullOrWhiteSpace(connectionString))
     builder.Services.AddScoped<
         NanoCloud.Api.Albums.Sharing.IAlbumSharingService,
         NanoCloud.Api.Albums.Sharing.AlbumSharingService>();
+    // SHARE-ALBUM-03: the collaborative editing surface. One implementation for
+    // Owner and Editor, so neither can drift from the other's authorization,
+    // concurrency or audit.
+    builder.Services.AddScoped<
+        NanoCloud.Api.Albums.Sharing.IAlbumEditingService,
+        NanoCloud.Api.Albums.Sharing.AlbumEditingService>();
     // Public read-only party album links (owner lifecycle + public validation)
     // and party-scoped media surfacing.
     builder.Services.AddScoped<NanoCloud.Api.Party.IPartyLinkService, NanoCloud.Api.Party.PartyLinkService>();

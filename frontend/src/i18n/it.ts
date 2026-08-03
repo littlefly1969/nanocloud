@@ -992,6 +992,8 @@ const it = {
   'albumRole.contributor': 'Collaboratore',
   'albumRole.viewerHelp': 'Può visualizzare',
   'albumRole.contributorHelp': 'Può contribuire',
+  'albumRole.editor': 'Redattore',
+  'albumRole.editorHelp': 'Può modificare',
   'albumShare.roleLabel': 'Ruolo',
   'albumShare.changeRoleAria': 'Ruolo di {name}',
   'albumShare.roleChangeError': 'Impossibile cambiare il ruolo. Riprova.',
@@ -1017,6 +1019,38 @@ const it = {
   'albumContent.confirmRemoveContribution':
     'Rimuovere dall’album il contributo di {name}? Il file resta nella libreria del collaboratore: non viene eliminato.',
   'albumContent.removeError': 'Impossibile rimuovere l’elemento. Riprova.',
+
+  'albumContent.reorderHelp':
+    'Usa le frecce per spostare un elemento. L’ordine è quello che vedono i membri.',
+  'albumContent.moveGroup': 'Sposta l’elemento {position}',
+  'albumContent.moveUp': 'Sposta prima l’elemento {position}',
+  'albumContent.moveDown': 'Sposta dopo l’elemento {position}',
+  'albumContent.moveFirst': 'Sposta all’inizio l’elemento {position}',
+  'albumContent.moveLast': 'Sposta alla fine l’elemento {position}',
+  'albumContent.moved': 'Spostato in posizione {position} di {total}.',
+  'albumContent.position': '{position} di {total}',
+  'albumContent.useAsCover': 'Usa come copertina',
+  'albumContent.clearCover': 'Rimuovi copertina',
+  'albumContent.isCover': 'Copertina dell’album',
+  'albumContent.coverFallback':
+    'Senza una copertina scelta, NubArca usa automaticamente i primi elementi dell’album.',
+  'albumContent.confirmRemoveCover':
+    'È la copertina attuale: l’album tornerà alla copertina automatica.',
+  'albumContent.conflict':
+    'L’album è stato modificato da un altro utente. Abbiamo caricato la versione più recente; controlla le modifiche prima di riprovare.',
+  'albumContent.noLongerAllowed': 'Non hai più i permessi per modificare questo album.',
+
+  'albumEdit.open': 'Modifica album',
+  'albumEdit.title': 'Modifica album',
+  'albumEdit.name': 'Titolo',
+  'albumEdit.description': 'Descrizione',
+  'albumEdit.save': 'Salva',
+  'albumEdit.saving': 'Salvataggio…',
+  'albumEdit.nameRequired': 'Il titolo è obbligatorio.',
+  'albumEdit.saveError': 'Impossibile salvare le modifiche. Riprova.',
+  'albumEdit.conflict':
+    'L’album è stato modificato da un altro utente. Abbiamo caricato la versione più recente; controlla le modifiche prima di riprovare.',
+  'albumEdit.noLongerAllowed': 'Non hai più i permessi per modificare questo album.',
 
   'sharedAlbum.addToAlbum': 'Aggiungi all’album',
   'sharedAlbum.addHeading': 'Aggiungi all’album',

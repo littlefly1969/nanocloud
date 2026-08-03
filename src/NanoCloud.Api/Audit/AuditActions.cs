@@ -74,6 +74,20 @@ public static class AuditActions
     // Automatic withdrawal because the contributor's membership was revoked.
     // One event per withdrawn item, all inside the revocation's transaction.
     public const string AlbumContributionAutoWithdraw = "album.contribution_auto_withdraw";
+
+    // SHARE-ALBUM-03: COLLABORATIVE curation. The actor is whoever performed it
+    // — an Editor or the Owner — and is never inferred from album ownership,
+    // because on this surface the two are genuinely different people.
+    // Metadata carries the album id and the resulting version; never a file
+    // name, person name, storage path or blob identity.
+    public const string AlbumEditDetails = "album.edit_details";
+    public const string AlbumEditCover = "album.edit_cover";
+    public const string AlbumEditReorder = "album.edit_reorder";
+    // Editorial removal of ANY item. Distinct from album.contribution_withdraw
+    // (the source owner taking their own item back) because they are different
+    // ACTIONS: which one is recorded follows the endpoint invoked, not the
+    // actor's identity.
+    public const string AlbumEditRemoveItem = "album.edit_remove_item";
     // Slice 81: admin server-side import started (metadata: target user + run id).
     public const string AdminImportStart = "admin.import_start";
     // Slice 82: admin requested cancellation of an import run.

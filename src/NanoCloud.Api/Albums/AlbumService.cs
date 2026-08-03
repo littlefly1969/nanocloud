@@ -160,6 +160,10 @@ public class AlbumService : IAlbumService
         album.Name = name;
         album.Description = description;
         album.UpdatedAt = _time.GetUtcNow().UtcDateTime;
+        // The LEGACY owner-only route does not require expectedVersion — that
+        // would break every existing caller — but it must still move the token,
+        // or a collaborator's stale version would silently look current.
+        album.Version += 1;
 
         try
         {
@@ -207,6 +211,29 @@ public class AlbumService : IAlbumService
 
         return new AlbumDetail(album.Id, album.Name, album.Description, album.ShowOnTv, album.CreatedAt, album.UpdatedAt);
     }
+
+    // The next append position for a new item. Album membership is small, so a
+    // MAX is cheaper than maintaining a counter and cannot drift from reality.
+    private async Task<int> NextSortOrderAsync(Guid albumId, CancellationToken cancellationToken)
+    {
+        var max = await _db.AlbumItems
+            .Where(ai => ai.AlbumId == albumId)
+            .Select(ai => (int?)ai.SortOrder)
+            .MaxAsync(cancellationToken);
+        return (max ?? 0) + 1;
+    }
+
+    // SHARE-ALBUM-03: every change to what the album LOOKS like moves the
+    // content version. Membership changes (invite, role, allowDownload) do not
+    // — they change who may look, not what is there — and are documented as
+    // outside the content version on IAlbumEditingService.
+    private Task BumpVersionAsync(Guid albumId, CancellationToken cancellationToken) =>
+        _db.Albums
+            .Where(a => a.Id == albumId)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(a => a.Version, a => a.Version + 1)
+                      .SetProperty(a => a.UpdatedAt, _ => _time.GetUtcNow().UtcDateTime),
+                cancellationToken);
 
     public async Task<bool> DeleteAsync(
         Guid albumId, Guid ownerUserId,
@@ -299,6 +326,7 @@ public class AlbumService : IAlbumService
 
         _db.AlbumItems.Add(new AlbumItem
         {
+            Id = Guid.NewGuid(),
             AlbumId = albumId,
             FileItemId = fileItemId,
             AddedAt = _time.GetUtcNow().UtcDateTime,
@@ -306,7 +334,12 @@ public class AlbumService : IAlbumService
             // adder is always the album owner. A Contributor adds through
             // IAlbumSharingService, never here.
             AddedByUserId = ownerUserId,
+            // New items APPEND to the album's curated order.
+            SortOrder = await NextSortOrderAsync(albumId, cancellationToken),
         });
+        // Adding an item changes the album's representation, so the content
+        // version moves — a collaborator holding the old one must re-read.
+        await BumpVersionAsync(albumId, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return true;
     }
@@ -320,9 +353,14 @@ public class AlbumService : IAlbumService
         if (!albumExists)
             return false;
 
-        await _db.AlbumItems
+        var removed = await _db.AlbumItems
             .Where(ai => ai.AlbumId == albumId && ai.FileItemId == fileItemId)
             .ExecuteDeleteAsync(cancellationToken);
+        if (removed > 0)
+        {
+            await BumpVersionAsync(albumId, cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
+        }
         return true;
     }
 
@@ -360,18 +398,27 @@ public class AlbumService : IAlbumService
 
         var toAdd = eligible.Where(id => !alreadySet.Contains(id)).ToList();
         var now = _time.GetUtcNow().UtcDateTime;
+        // One query for the append position, then a deterministic run: a bulk
+        // add shares AddedAt, which is exactly the case that made the old
+        // implicit ordering ambiguous.
+        var next = await NextSortOrderAsync(albumId, cancellationToken);
         foreach (var id in toAdd)
         {
             _db.AlbumItems.Add(new AlbumItem
             {
+                Id = Guid.NewGuid(),
                 AlbumId = albumId,
                 FileItemId = id,
                 AddedAt = now,
                 AddedByUserId = ownerUserId,
+                SortOrder = next++,
             });
         }
         if (toAdd.Count > 0)
+        {
+            await BumpVersionAsync(albumId, cancellationToken);
             await _db.SaveChangesAsync(cancellationToken);
+        }
 
         return new BulkAlbumItemsResult(requested, toAdd.Count, requested - toAdd.Count);
     }
@@ -397,6 +444,11 @@ public class AlbumService : IAlbumService
         var removed = await _db.AlbumItems
             .Where(ai => ai.AlbumId == albumId && distinct.Contains(ai.FileItemId))
             .ExecuteDeleteAsync(cancellationToken);
+        if (removed > 0)
+        {
+            await BumpVersionAsync(albumId, cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
+        }
 
         return new BulkAlbumItemsResult(requested, removed, requested - removed);
     }

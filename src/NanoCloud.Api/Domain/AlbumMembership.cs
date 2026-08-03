@@ -29,10 +29,9 @@ public class AlbumMembership
     // ck_album_memberships_member_not_inviter for the self-invite case).
     public Guid MemberUserId { get; set; }
 
-    // One of AlbumRoles (viewer | contributor | editor). SHARE-ALBUM-02 makes
-    // `viewer` and `contributor` assignable; `editor` stays declared-but-refused
-    // so SHARE-ALBUM-03 extends behavior without a schema migration, and the
-    // check constraint documents the closed domain.
+    // One of AlbumRoles (viewer | contributor | editor) — all three assignable
+    // as of SHARE-ALBUM-03. The check constraint documents the closed domain;
+    // "owner" is not in it, so ownership can never be granted by a role write.
     public string Role { get; set; } = AlbumRoles.Viewer;
 
     // One of AlbumMembershipStates (pending | accepted | declined | revoked).
@@ -76,16 +75,22 @@ public static class AlbumRoles
     // contribution. Enabled by SHARE-ALBUM-02.
     public const string Contributor = "contributor";
 
-    // Contributor + may curate the album (title / description / cover / order /
-    // remove any item). Reserved for SHARE-ALBUM-03: present in the catalog and
-    // in the DB check constraint, but NOT assignable — nothing implements the
-    // permissions it would imply.
+    // Contributor + may curate the album: title, description, cover, order, and
+    // removing ANY item. Enabled by SHARE-ALBUM-03.
+    //
+    // Curation only. An Editor never governs ACCESS or LIFECYCLE — no invites,
+    // no role changes, no revocation, no allowOriginalDownload, no deleting the
+    // album, no ownership transfer, no public/Party/TV sharing. Those stay with
+    // the single Owner, and the split is enforced by which service a route
+    // reaches, not by a role check sprinkled at each call site.
     public const string Editor = "editor";
 
     public static readonly IReadOnlyList<string> All = [Viewer, Contributor, Editor];
 
-    // Roles a client may currently request. Widened by SHARE-ALBUM-03.
-    public static readonly IReadOnlyList<string> Assignable = [Viewer, Contributor];
+    // Roles a client may request. All three are now assignable; "owner" is
+    // deliberately absent from the catalog entirely, so making somebody an
+    // owner stays unrepresentable as a membership write.
+    public static readonly IReadOnlyList<string> Assignable = [Viewer, Contributor, Editor];
 
     public static bool IsKnown(string? role) => role is not null && All.Contains(role);
 
@@ -100,6 +105,13 @@ public static class AlbumRoles
     // IAlbumSharingService.WithdrawContributionAsync.
     public static bool CanContribute(string? role) =>
         role is Contributor or Editor;
+
+    // May a member holding this role CURATE the album — title, description,
+    // cover, order, and removing any item?
+    //
+    // Curation only: this predicate says nothing about governance, which is the
+    // Owner's alone and is never expressed as a role check.
+    public static bool CanEdit(string? role) => role is Editor;
 }
 
 public static class AlbumMembershipStates

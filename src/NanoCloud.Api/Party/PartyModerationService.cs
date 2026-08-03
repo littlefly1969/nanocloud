@@ -98,11 +98,17 @@ public sealed class PartyModerationService : IPartyModerationService
                 cancellationToken);
             if (!alreadyInAlbum)
             {
+                var nextOrder = (await _db.AlbumItems
+                    .Where(ai => ai.AlbumId == albumId)
+                    .Select(ai => (int?)ai.SortOrder)
+                    .MaxAsync(cancellationToken) ?? 0) + 1;
                 _db.AlbumItems.Add(new AlbumItem
                 {
+                    Id = Guid.NewGuid(),
                     AlbumId = albumId,
                     FileItemId = fileItemId,
                     AddedAt = _clock.GetUtcNow().UtcDateTime,
+                    SortOrder = nextOrder,
                     // Restoring a guest party upload: the file is already
                     // owner-owned by then (checked just above), and it is the
                     // owner's moderation decision that puts it back.

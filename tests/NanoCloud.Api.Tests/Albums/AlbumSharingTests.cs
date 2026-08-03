@@ -236,32 +236,11 @@ public sealed class AlbumSharingTests : IDisposable
 
     // ── Viewer-only feature gate ────────────────────────────────────────────
     //
-    // SHARE-ALBUM-02 enables `viewer` and `contributor`. `editor` stays in the
-    // domain catalog and in the DB check constraint so SHARE-ALBUM-03 needs no
-    // migration — which is precisely why the API must still refuse to ASSIGN
-    // it until the behaviour behind it exists. Without these tests the gate is
-    // one deleted line away from silently handing out a role whose permissions
-    // nothing implements.
-
-    [Theory]
-    [InlineData("editor")]
-    public async Task Roles_Beyond_The_Enabled_Set_Cannot_Be_Assigned_Yet(string role)
-    {
-        var (_, owner) = await _factory.CreateAuthenticatedClientAsync(OwnerEmail);
-        var (_, viewer) = await _factory.CreateAuthenticatedClientAsync(ViewerEmail);
-        var albumId = await CreateAlbumAsync(owner, "Holidays");
-
-        var response = await owner.PostAsJsonAsync(
-            $"/api/albums/{albumId}/members", new { email = ViewerEmail, role });
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-
-        // Nothing was created, and no access leaked out of the refused request.
-        Assert.Equal(0, await CountMembershipsAsync(albumId));
-        Assert.Empty((await viewer.GetFromJsonAsync<JsonElement>("/api/shared-albums/invitations"))
-            .EnumerateArray());
-        Assert.Equal(HttpStatusCode.NotFound,
-            (await viewer.GetAsync($"/api/shared-albums/{albumId}")).StatusCode);
-    }
+    // SHARE-ALBUM-03 enables all three catalog roles. What must STILL be
+    // unassignable is "owner": it is deliberately absent from AlbumRoles
+    // altogether, so granting ownership is unrepresentable as a membership
+    // write rather than merely rejected by a check. The invite and role-change
+    // routes both refuse it, and the tests below prove neither is a way in.
 
     [Fact]
     public async Task An_Unknown_Role_Is_Refused()

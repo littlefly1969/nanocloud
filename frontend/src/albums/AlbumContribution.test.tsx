@@ -61,21 +61,29 @@ function renderSharePanel() {
 // ── Owner: role assignment ─────────────────────────────────────────────────
 
 describe('AlbumSharePanel — roles', () => {
-  it('offers exactly Viewer and Contributor — never Editor', async () => {
+  it('offers exactly the assignable roles — and never "owner"', async () => {
     installFetchMock({ 'GET /api/albums/alb-1/members': () => jsonResponse([member()]) });
     renderSharePanel();
 
     const inviteRole = await screen.findByTestId('album-share-role');
     const values = within(inviteRole).getAllByRole('option')
       .map((o) => (o as HTMLOptionElement).value);
-    expect(values).toEqual(['viewer', 'contributor']);
+    expect(values).toEqual(['viewer', 'contributor', 'editor']);
 
     const memberRole = screen.getByTestId('album-share-member-role');
     expect(within(memberRole).getAllByRole('option').map((o) => (o as HTMLOptionElement).value))
-      .toEqual(['viewer', 'contributor']);
+      .toEqual(['viewer', 'contributor', 'editor']);
 
-    // Not in the markup at all: not as a value, a label, or a hidden option.
-    expect(document.body.innerHTML).not.toMatch(/editor/i);
+    // The LABELS matter too: asserting only the values let `editor` render with
+    // the Contributor label for a whole slice.
+    const labels = within(inviteRole).getAllByRole('option').map((o) => o.textContent ?? '');
+    expect(labels[0]).toMatch(/Visualizzatore/);
+    expect(labels[1]).toMatch(/Collaboratore/);
+    expect(labels[2]).toMatch(/Redattore/);
+
+    // Ownership is not a role and must never be offered as one.
+    expect(values).not.toContain('owner');
+    expect(document.body.innerHTML).not.toMatch(/\bowner\b/i);
   });
 
   it('invites as Viewer by default', async () => {
@@ -161,9 +169,17 @@ describe('AlbumSharePanel — roles', () => {
 
 // ── Owner: shared content moderation ───────────────────────────────────────
 
+// SHARE-ALBUM-03: the endpoint wraps the items with the album's concurrency
+// token, so a curator can reorder or remove without a second read.
+function contentPage(items: unknown[], over: Partial<Record<string, unknown>> = {}) {
+  return { version: 3, coverFileItemId: null, canEdit: true, items, ...over };
+}
+
 function contentItem(over: Partial<Record<string, unknown>> = {}) {
   return {
+    albumItemId: 'ai-1',
     fileItemId: 'f1',
+    isCover: false,
     kind: 'image',
     thumbnailUrl: '/api/files/f1/thumbnail?size=small',
     origin: 'owner',
@@ -176,6 +192,7 @@ function contentItem(over: Partial<Record<string, unknown>> = {}) {
 }
 
 const CONTRIBUTION = contentItem({
+  albumItemId: 'ai-2',
   fileItemId: 'f2',
   origin: 'contribution',
   thumbnailUrl: '/api/shared-albums/alb-1/media/f2/thumbnail',
@@ -194,7 +211,7 @@ function renderContentPanel() {
 describe('AlbumSharedContentPanel — owner moderation', () => {
   it('shows provenance for contributions and no redundant badge for own items', async () => {
     installFetchMock({
-      'GET /api/albums/alb-1/content': () => jsonResponse([contentItem(), CONTRIBUTION]),
+      'GET /api/albums/alb-1/content': () => jsonResponse(contentPage([contentItem(), CONTRIBUTION])),
     });
     renderContentPanel();
 
@@ -212,7 +229,7 @@ describe('AlbumSharedContentPanel — owner moderation', () => {
 
   it('never offers to delete an original — only "Remove from album"', async () => {
     installFetchMock({
-      'GET /api/albums/alb-1/content': () => jsonResponse([contentItem(), CONTRIBUTION]),
+      'GET /api/albums/alb-1/content': () => jsonResponse(contentPage([contentItem(), CONTRIBUTION])),
     });
     renderContentPanel();
 
@@ -229,7 +246,7 @@ describe('AlbumSharedContentPanel — owner moderation', () => {
     const confirmSpy = vi.fn((_message?: string) => false);
     vi.stubGlobal('confirm', confirmSpy);
     installFetchMock({
-      'GET /api/albums/alb-1/content': () => jsonResponse([CONTRIBUTION]),
+      'GET /api/albums/alb-1/content': () => jsonResponse(contentPage([CONTRIBUTION])),
     });
     renderContentPanel();
 
@@ -243,8 +260,8 @@ describe('AlbumSharedContentPanel — owner moderation', () => {
     let removed = false;
     vi.stubGlobal('confirm', vi.fn(() => true));
     const spy = installFetchMock({
-      'GET /api/albums/alb-1/content': () => jsonResponse(removed ? [] : [CONTRIBUTION]),
-      'DELETE /api/albums/alb-1/content/f2': () => { removed = true; return emptyResponse(); },
+      'GET /api/albums/alb-1/content': () => jsonResponse(contentPage(removed ? [] : [CONTRIBUTION])),
+      'DELETE /api/shared-albums/alb-1/items/ai-2': () => { removed = true; return emptyResponse(); },
     });
     renderContentPanel();
 
@@ -256,9 +273,9 @@ describe('AlbumSharedContentPanel — owner moderation', () => {
 
   it('flags an unavailable source without offering to open it', async () => {
     installFetchMock({
-      'GET /api/albums/alb-1/content': () => jsonResponse([
+      'GET /api/albums/alb-1/content': () => jsonResponse(contentPage([
         contentItem({ ...CONTRIBUTION, sourceState: 'unavailable' }),
-      ]),
+      ])),
     });
     renderContentPanel();
 
@@ -271,7 +288,7 @@ describe('AlbumSharedContentPanel — owner moderation', () => {
 
   it('carries no person or face data', async () => {
     installFetchMock({
-      'GET /api/albums/alb-1/content': () => jsonResponse([contentItem(), CONTRIBUTION]),
+      'GET /api/albums/alb-1/content': () => jsonResponse(contentPage([contentItem(), CONTRIBUTION])),
     });
     renderContentPanel();
 
@@ -287,6 +304,7 @@ describe('AlbumSharedContentPanel — owner moderation', () => {
 
 function sharedItem(over: Partial<Record<string, unknown>> = {}) {
   return {
+    albumItemId: 'ai-1',
     fileItemId: 'f1',
     kind: 'image',
     thumbnailUrl: '/api/shared-albums/alb-1/media/f1/thumbnail',

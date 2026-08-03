@@ -158,6 +158,21 @@ export function AlbumSharePanel({ albumId, albumName, onClose, returnFocusRef }:
   // Confirmations and screen-reader labels name the member the way the list
   // does — display name plus the masked hint — so an owner with two identically
   // named members is never asked to confirm an ambiguous action.
+  // One mapping for all three roles. A ternary here silently rendered `editor`
+  // with the Contributor label — the option VALUE was right, so only a label
+  // assertion (or a browser) catches it.
+  function roleLabel(role: AssignableAlbumRole): string {
+    if (role === 'editor') return t('albumRole.editor');
+    if (role === 'contributor') return t('albumRole.contributor');
+    return t('albumRole.viewer');
+  }
+
+  function roleHelp(role: AssignableAlbumRole): string {
+    if (role === 'editor') return t('albumRole.editorHelp');
+    if (role === 'contributor') return t('albumRole.contributorHelp');
+    return t('albumRole.viewerHelp');
+  }
+
   function memberLabel(member: AlbumMember): string {
     return member.maskedEmail
       ? `${member.displayName} (${member.maskedEmail})`
@@ -281,9 +296,7 @@ export function AlbumSharePanel({ albumId, albumName, onClose, returnFocusRef }:
               >
                 {ASSIGNABLE_ALBUM_ROLES.map((role) => (
                   <option key={role} value={role}>
-                    {role === 'viewer' ? t('albumRole.viewer') : t('albumRole.contributor')}
-                    {' — '}
-                    {role === 'viewer' ? t('albumRole.viewerHelp') : t('albumRole.contributorHelp')}
+                    {roleLabel(role)}{' — '}{roleHelp(role)}
                   </option>
                 ))}
               </select>
@@ -383,7 +396,8 @@ export function AlbumSharePanel({ albumId, albumName, onClose, returnFocusRef }:
                         </span>
                         <select
                           data-testid="album-share-member-role"
-                          value={member.role === 'contributor' ? 'contributor' : 'viewer'}
+                          value={ASSIGNABLE_ALBUM_ROLES.includes(member.role)
+                            ? member.role : 'viewer'}
                           disabled={busyMembership === member.membershipId}
                           aria-label={t('albumShare.changeRoleAria', { name: memberLabel(member) })}
                           onChange={(e) =>
@@ -391,7 +405,7 @@ export function AlbumSharePanel({ albumId, albumName, onClose, returnFocusRef }:
                         >
                           {ASSIGNABLE_ALBUM_ROLES.map((role) => (
                             <option key={role} value={role}>
-                              {role === 'viewer' ? t('albumRole.viewer') : t('albumRole.contributor')}
+                              {roleLabel(role)}
                             </option>
                           ))}
                         </select>

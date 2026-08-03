@@ -12,6 +12,8 @@ import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n';
 import { HlsVideoPlayer } from '../video/HlsVideoPlayer';
 import { ContributeToAlbumPanel } from '../albums/ContributeToAlbumPanel';
+import { AlbumDetailsEditor } from '../albums/AlbumDetailsEditor';
+import { AlbumSharedContentPanel } from '../albums/AlbumSharedContentPanel';
 import { computeJustifiedRows, type JustifiedLayoutItem } from '../media/layout/computeJustifiedRows';
 import { MEDIA_WALL_GAP_PX, mediaWallRowParams } from '../media/layout/mediaWallGeometry';
 
@@ -52,6 +54,13 @@ export function SharedAlbumDetailPage() {
   // A transient notice for state that changed under the user (role downgrade,
   // revocation, an item removed by the owner) — shown once, never as a loop.
   const [notice, setNotice] = useState<string | null>(null);
+  // SHARE-ALBUM-03: curation, offered only when the server says this caller may
+  // edit. Absent — not disabled — for a Viewer or Contributor, so the UI never
+  // advertises a capability they do not have.
+  const [editOpen, setEditOpen] = useState(false);
+  const [curateOpen, setCurateOpen] = useState(false);
+  const editButtonRef = useRef<HTMLButtonElement>(null);
+  const curateButtonRef = useRef<HTMLButtonElement>(null);
   // `null` until the real width is known, so tiles never render at an invented
   // size and then reflow — the same rule MediaGrid follows.
   const [wallWidth, setWallWidth] = useState<number | null>(null);
@@ -202,11 +211,37 @@ export function SharedAlbumDetailPage() {
           </div>
           <div className="album-detail-header-actions">
             <span className="album-badge album-badge-shared">
-              {album.role === 'contributor' ? t('albumRole.contributor') : t('albumRole.viewer')}
+              {album.role === 'editor'
+                ? t('albumRole.editor')
+                : album.role === 'contributor'
+                  ? t('albumRole.contributor')
+                  : t('albumRole.viewer')}
             </span>
             {/* Offered only to a Contributor. The server refuses a Viewer
                 regardless — hiding it is UX, not the gate. */}
-            {album.role === 'contributor' && (
+            {album.canEdit && (
+              <>
+                <button
+                  type="button"
+                  ref={editButtonRef}
+                  className="row-action"
+                  data-testid="shared-album-edit"
+                  onClick={() => setEditOpen(true)}
+                >
+                  {t('albumEdit.open')}
+                </button>
+                <button
+                  type="button"
+                  ref={curateButtonRef}
+                  className="row-action"
+                  data-testid="shared-album-curate"
+                  onClick={() => setCurateOpen(true)}
+                >
+                  {t('albumContent.tab')}
+                </button>
+              </>
+            )}
+            {(album.role === 'contributor' || album.role === 'editor') && (
               <button
                 type="button"
                 ref={contributeButtonRef}
@@ -273,6 +308,26 @@ export function SharedAlbumDetailPage() {
             ))}
           </div>
         </>
+      )}
+
+      {editOpen && (
+        <AlbumDetailsEditor
+          albumId={albumId}
+          version={album.version}
+          name={album.name}
+          description={album.description}
+          onSaved={load}
+          onClose={() => setEditOpen(false)}
+          returnFocusRef={editButtonRef}
+        />
+      )}
+
+      {curateOpen && (
+        <AlbumSharedContentPanel
+          albumId={albumId}
+          onClose={() => { setCurateOpen(false); load(); }}
+          returnFocusRef={curateButtonRef}
+        />
       )}
 
       {contributeOpen && (

@@ -984,6 +984,8 @@ const en: Partial<Record<MessageKey, string>> = {
   'albumRole.contributor': 'Contributor',
   'albumRole.viewerHelp': 'Can view',
   'albumRole.contributorHelp': 'Can contribute',
+  'albumRole.editor': 'Editor',
+  'albumRole.editorHelp': 'Can edit',
   'albumShare.roleLabel': 'Role',
   'albumShare.changeRoleAria': 'Role for {name}',
   'albumShare.roleChangeError': 'Could not change the role. Please try again.',
@@ -1007,6 +1009,38 @@ const en: Partial<Record<MessageKey, string>> = {
   'albumContent.confirmRemoveContribution':
     'Remove {name}’s contribution from the album? The file stays in their library — it is not deleted.',
   'albumContent.removeError': 'Could not remove the item. Please try again.',
+
+  'albumContent.reorderHelp':
+    'Use the arrows to move an item. This order is what members see.',
+  'albumContent.moveGroup': 'Move item {position}',
+  'albumContent.moveUp': 'Move item {position} earlier',
+  'albumContent.moveDown': 'Move item {position} later',
+  'albumContent.moveFirst': 'Move item {position} to the start',
+  'albumContent.moveLast': 'Move item {position} to the end',
+  'albumContent.moved': 'Moved to position {position} of {total}.',
+  'albumContent.position': '{position} of {total}',
+  'albumContent.useAsCover': 'Use as cover',
+  'albumContent.clearCover': 'Remove cover',
+  'albumContent.isCover': 'Album cover',
+  'albumContent.coverFallback':
+    'Without a chosen cover, NubArca automatically uses the album’s first items.',
+  'albumContent.confirmRemoveCover':
+    'This is the current cover: the album will fall back to the automatic one.',
+  'albumContent.conflict':
+    'This album was changed by another user. We loaded the latest version — check the changes before trying again.',
+  'albumContent.noLongerAllowed': 'You no longer have permission to edit this album.',
+
+  'albumEdit.open': 'Edit album',
+  'albumEdit.title': 'Edit album',
+  'albumEdit.name': 'Title',
+  'albumEdit.description': 'Description',
+  'albumEdit.save': 'Save',
+  'albumEdit.saving': 'Saving…',
+  'albumEdit.nameRequired': 'A title is required.',
+  'albumEdit.saveError': 'Could not save the changes. Please try again.',
+  'albumEdit.conflict':
+    'This album was changed by another user. We loaded the latest version — check the changes before trying again.',
+  'albumEdit.noLongerAllowed': 'You no longer have permission to edit this album.',
 
   'sharedAlbum.addToAlbum': 'Add to album',
   'sharedAlbum.addHeading': 'Add to album',

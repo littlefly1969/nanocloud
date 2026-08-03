@@ -88,12 +88,16 @@ public interface IAlbumSharingService
         Guid ownerUserId, Guid albumId, Guid fileItemId,
         CancellationToken cancellationToken = default);
 
-    // The OWNER's moderation view: their own items and every contribution, with
-    // provenance and current source state. Null when the album is missing or
-    // not the caller's. Additive — nothing merges into the owner's gallery,
-    // library or album workspace.
-    Task<IReadOnlyList<AlbumContentItem>?> ListAlbumContentAsync(
-        Guid ownerUserId, Guid albumId,
+    // The curator's moderation view: the owner's items and every contribution,
+    // with provenance and current source state. Null when the album is missing
+    // or the caller may not curate it. Additive — nothing merges into the
+    // owner's gallery, library or album workspace.
+    //
+    // SHARE-ALBUM-03: reachable by the Owner AND by an Editor, through the same
+    // grant the editorial mutations use. Carries the album's concurrency token
+    // so a curator can reorder or remove without a second read.
+    Task<AlbumContentResponse?> ListAlbumContentAsync(
+        Guid actorUserId, Guid albumId,
         CancellationToken cancellationToken = default);
 
     // ── Recipient side ──────────────────────────────────────────────────────

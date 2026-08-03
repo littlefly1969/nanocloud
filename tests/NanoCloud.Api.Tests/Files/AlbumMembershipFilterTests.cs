@@ -82,6 +82,9 @@ public sealed class AlbumMembershipFilterTests : IDisposable
         {
             db.AlbumItems.Add(new AlbumItem
             {
+                // SHARE-ALBUM-03: Id is an alternate key, so hand-built rows
+                // need real values or the second one collides.
+                Id = Guid.NewGuid(),
                 AlbumId = albumId,
                 FileItemId = fileId,
                 AddedAt = DateTime.UtcNow,

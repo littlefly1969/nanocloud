@@ -87,6 +87,9 @@ public sealed record ChangeAlbumMemberRoleRequest(string? Role);
 // member list (see RecipientEmailMask): display names are not unique, and the
 // owner must be able to tell two contributors apart before removing one's item.
 public sealed record AlbumContentItem(
+    // SHARE-ALBUM-03: the membership row's stable id. This is what a reorder
+    // names — not the file — so the contract stays unambiguous.
+    Guid AlbumItemId,
     Guid FileItemId,
     string Kind,
     string ThumbnailUrl,
@@ -99,7 +102,18 @@ public sealed record AlbumContentItem(
     // collaborator withdrew it" from "the source is temporarily unavailable".
     // One of AlbumContentSourceStates.
     string SourceState,
-    DateTime AddedAt);
+    DateTime AddedAt,
+    // True when this item is the album's CHOSEN cover. False for every item
+    // when the album falls back to a derived cover.
+    bool IsCover);
+
+// The owner/editor moderation view, wrapped so the album's concurrency token
+// travels with the items a caller is about to reorder or remove from.
+public sealed record AlbumContentResponse(
+    int Version,
+    Guid? CoverFileItemId,
+    bool CanEdit,
+    IReadOnlyList<AlbumContentItem> Items);
 
 public static class AlbumContentOrigins
 {
@@ -177,7 +191,12 @@ public sealed record SharedAlbumDetail(
     string OwnerDisplayName,
     string Role,
     bool AllowOriginalDownload,
-    int ItemCount);
+    int ItemCount,
+    // SHARE-ALBUM-03: the optimistic-concurrency token the caller must echo on
+    // any editorial mutation, and `canEdit` so a client knows whether to render
+    // the controls at all. The server enforces both regardless.
+    int Version,
+    bool CanEdit);
 
 // One media item of a shared album. `Kind` is "image" | "video".
 // `DownloadUrl` is null unless the membership permits originals — and the
@@ -192,6 +211,9 @@ public sealed record SharedAlbumItem(
     string? PosterUrl,
     string? VideoUrl,
     string? DownloadUrl,
+    // SHARE-ALBUM-03: the membership row's stable id, so a client holding this
+    // list can express a reorder without conflating files and memberships.
+    Guid AlbumItemId,
     int? Width,
     int? Height,
     DateTime AddedAt,

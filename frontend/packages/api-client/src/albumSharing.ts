@@ -1,4 +1,4 @@
-import { api } from './client';
+import { api, ApiError } from './client';
 
 // SHARE-ALBUM-01: live album sharing between authenticated NubArca users.
 //
@@ -68,6 +68,11 @@ export interface SharedAlbumDetail {
   role: AlbumRole;
   allowOriginalDownload: boolean;
   itemCount: number;
+  // SHARE-ALBUM-03: the optimistic-concurrency token to echo on any editorial
+  // mutation, and whether this caller may curate at all. The server enforces
+  // both regardless — `canEdit` only decides whether to render the controls.
+  version: number;
+  canEdit: boolean;
 }
 
 // One item of an album as its OWNER sees it for moderation. Additive surface:
@@ -76,6 +81,8 @@ export interface SharedAlbumDetail {
 // the owner's own items and use the same privacy-safe disambiguation as the
 // member list when present.
 export interface AlbumContentItem {
+  // The MEMBERSHIP row's stable id — what a reorder names, never the file.
+  albumItemId: string;
   fileItemId: string;
   kind: 'image' | 'video';
   thumbnailUrl: string;
@@ -87,6 +94,18 @@ export interface AlbumContentItem {
   // it, but nobody can open it.
   sourceState: 'available' | 'unavailable';
   addedAt: string;
+  // True when this item is the album's CHOSEN cover. False for every item when
+  // the album falls back to a derived one.
+  isCover: boolean;
+}
+
+// The curator's moderation view, wrapped so the concurrency token travels with
+// the items the caller is about to reorder or remove.
+export interface AlbumContentResponse {
+  version: number;
+  coverFileItemId: string | null;
+  canEdit: boolean;
+  items: AlbumContentItem[];
 }
 
 // One media item of a shared album. Deliberately carries NO file name: a
@@ -95,6 +114,9 @@ export interface AlbumContentItem {
 // originals — and the endpoint enforces the same rule, so hiding the control is
 // a courtesy, not the control.
 export interface SharedAlbumItem {
+  // The membership row's stable id, so a client holding this list can express a
+  // reorder without conflating files and memberships.
+  albumItemId: string;
   fileItemId: string;
   kind: 'image' | 'video';
   thumbnailUrl: string;
@@ -243,10 +265,13 @@ export async function declineAlbumInvitation(
 // Promote Viewer → Contributor or demote Contributor → Viewer. Owner-only.
 // `editor` exists in the backend catalog for a later slice and is refused here
 // and server-side; AlbumRole's assignable union deliberately excludes it.
-export type AssignableAlbumRole = Extract<AlbumRole, 'viewer' | 'contributor'>;
+// SHARE-ALBUM-03: all three catalog roles are assignable. "owner" is not in
+// AlbumRole at all, so granting ownership is unrepresentable rather than merely
+// rejected.
+export type AssignableAlbumRole = AlbumRole;
 
 export const ASSIGNABLE_ALBUM_ROLES: readonly AssignableAlbumRole[] =
-  ['viewer', 'contributor'] as const;
+  ['viewer', 'contributor', 'editor'] as const;
 
 export async function setAlbumMemberRole(
   albumId: string,
@@ -266,8 +291,8 @@ export async function setAlbumMemberRole(
 export async function listAlbumContent(
   albumId: string,
   signal?: AbortSignal,
-): Promise<AlbumContentItem[]> {
-  return api<AlbumContentItem[]>(`/api/albums/${albumId}/content`, { signal });
+): Promise<AlbumContentResponse> {
+  return api<AlbumContentResponse>(`/api/albums/${albumId}/content`, { signal });
 }
 
 // The owner removing ANY item from their album — their own or a contribution.
@@ -309,4 +334,87 @@ export async function withdrawSharedAlbumContribution(
     method: 'DELETE',
     signal,
   });
+}
+
+// ── SHARE-ALBUM-03: collaborative editing ───────────────────────────────────
+//
+// Owner and Editor use the SAME endpoints and the same concurrency model. Every
+// mutation echoes the `version` last read; a 409 means somebody else changed the
+// album first and carries the CURRENT state so the client can refresh and
+// explain, rather than retry.
+
+export interface AlbumEditResult {
+  albumId: string;
+  version: number;
+  name: string;
+  description: string | null;
+  coverFileItemId: string | null;
+}
+
+// The body of a 409. `ApiError.body` is typed as unknown, so call sites narrow
+// through this shape rather than casting at each one.
+export interface AlbumEditConflict extends AlbumEditResult {
+  error: string;
+}
+
+export function isAlbumEditConflict(err: unknown): err is ApiError {
+  return err instanceof ApiError && err.status === 409;
+}
+
+export async function editSharedAlbumDetails(
+  albumId: string,
+  expectedVersion: number,
+  changes: { name?: string; description?: string },
+  signal?: AbortSignal,
+): Promise<AlbumEditResult> {
+  return api<AlbumEditResult>(`/api/shared-albums/${albumId}`, {
+    method: 'PATCH',
+    json: { expectedVersion, ...changes },
+    signal,
+  });
+}
+
+// `fileItemId: null` clears the chosen cover and returns the album to the
+// derived one. The server refuses any item that is not a currently-servable
+// member, so this can never become a way to name arbitrary media.
+export async function setSharedAlbumCover(
+  albumId: string,
+  expectedVersion: number,
+  fileItemId: string | null,
+  signal?: AbortSignal,
+): Promise<AlbumEditResult> {
+  return api<AlbumEditResult>(`/api/shared-albums/${albumId}/cover`, {
+    method: 'PUT',
+    json: { expectedVersion, fileItemId },
+    signal,
+  });
+}
+
+// The COMPLETE ordered list of AlbumItem ids — the server rejects a partial or
+// duplicated one rather than interpreting it.
+export async function reorderSharedAlbum(
+  albumId: string,
+  expectedVersion: number,
+  albumItemIds: string[],
+  signal?: AbortSignal,
+): Promise<AlbumEditResult> {
+  return api<AlbumEditResult>(`/api/shared-albums/${albumId}/order`, {
+    method: 'PUT',
+    json: { expectedVersion, albumItemIds },
+    signal,
+  });
+}
+
+// Editorial removal of ANY item. Removes the album membership only — the source
+// file is never deleted, and for another user's media it could not be.
+export async function removeSharedAlbumItem(
+  albumId: string,
+  albumItemId: string,
+  expectedVersion: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  await api<void>(
+    `/api/shared-albums/${albumId}/items/${albumItemId}?expectedVersion=${expectedVersion}`,
+    { method: 'DELETE', signal },
+  );
 }

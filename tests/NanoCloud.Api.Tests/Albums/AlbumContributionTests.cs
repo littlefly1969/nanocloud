@@ -53,28 +53,33 @@ public sealed class AlbumContributionTests : IDisposable
     }
 
     [Fact]
-    public async Task Editor_Remains_Unassignable_On_Invite_And_On_Role_Change()
+    public async Task Editor_Is_Assignable_On_Invite_And_On_Role_Change()
     {
+        // SHARE-ALBUM-03 enables the third role. Kept here, next to the
+        // Contributor cases, so the whole assignable set is asserted in one
+        // place and a future slice cannot quietly widen it unnoticed.
         var (_, owner) = await _factory.CreateAuthenticatedClientAsync(OwnerEmail);
         var (_, bob) = await _factory.CreateAuthenticatedClientAsync(ContributorEmail);
         var albumId = await CreateAlbumAsync(owner, "Trip");
 
-        // On invite.
-        Assert.Equal(HttpStatusCode.BadRequest,
-            (await owner.PostAsJsonAsync($"/api/albums/{albumId}/members",
-                new { email = ContributorEmail, role = "editor" })).StatusCode);
-        Assert.Equal(0, await CountMembershipsAsync(albumId));
+        var invited = await owner.PostAsJsonAsync($"/api/albums/{albumId}/members",
+            new { email = ContributorEmail, role = "editor" });
+        invited.EnsureSuccessStatusCode();
+        var member = await invited.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("editor", member.GetProperty("role").GetString());
 
-        // And on the new role-change route, which is the other way in.
-        var membershipId = await InviteAsync(owner, albumId, ContributorEmail, "viewer");
+        var membershipId = member.GetProperty("membershipId").GetGuid();
         await AcceptAsync(bob, membershipId);
-        Assert.Equal(HttpStatusCode.BadRequest,
-            (await owner.PatchAsJsonAsync($"/api/albums/{albumId}/members/{membershipId}/role",
-                new { role = "editor" })).StatusCode);
+
+        // …and the role-change route reaches it too.
+        (await owner.PatchAsJsonAsync($"/api/albums/{albumId}/members/{membershipId}/role",
+            new { role = "viewer" })).EnsureSuccessStatusCode();
+        (await owner.PatchAsJsonAsync($"/api/albums/{albumId}/members/{membershipId}/role",
+            new { role = "editor" })).EnsureSuccessStatusCode();
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.Equal("viewer", (await db.AlbumMemberships.FirstAsync(m => m.Id == membershipId)).Role);
+        Assert.Equal("editor", (await db.AlbumMemberships.FirstAsync(m => m.Id == membershipId)).Role);
     }
 
     [Fact]
@@ -614,7 +619,8 @@ public sealed class AlbumContributionTests : IDisposable
         await MoveIntoVaultAsync(bobId, vaulted);
 
         var content = await owner.GetFromJsonAsync<JsonElement>($"/api/albums/{albumId}/content");
-        var byId = content.EnumerateArray().ToDictionary(x => x.GetProperty("fileItemId").GetGuid());
+        var byId = content.GetProperty("items").EnumerateArray()
+            .ToDictionary(x => x.GetProperty("fileItemId").GetGuid());
         Assert.Equal(3, byId.Count);
 
         Assert.Equal("owner", byId[ownerFile].GetProperty("origin").GetString());

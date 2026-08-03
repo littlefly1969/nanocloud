@@ -33,6 +33,7 @@ public static class AlbumSharingEndpoints
     public static IEndpointRouteBuilder MapAlbumSharingEndpoints(this IEndpointRouteBuilder app)
     {
         MapOwnerMemberManagement(app);
+        MapCollaborativeEditing(app);
         MapContribution(app);
         MapRecipientInvitations(app);
         MapSharedAlbumReads(app);
@@ -239,8 +240,8 @@ public static class AlbumSharingEndpoints
             [FromServices] IAlbumSharingService sharing,
             CancellationToken cancellationToken) =>
         {
-            var ownerUserId = httpContext.GetCurrentUserId()!.Value;
-            var content = await sharing.ListAlbumContentAsync(ownerUserId, id, cancellationToken);
+            var actorUserId = httpContext.GetCurrentUserId()!.Value;
+            var content = await sharing.ListAlbumContentAsync(actorUserId, id, cancellationToken);
             if (content is null)
             {
                 return Results.NotFound();
@@ -369,6 +370,136 @@ public static class AlbumSharingEndpoints
                 cancellationToken);
             return Results.NoContent();
         }).WithName("WithdrawSharedAlbumContribution").RequireAuthorization();
+    }
+
+
+    // ── SHARE-ALBUM-03: collaborative editing ───────────────────────────────
+    //
+    // Title, description, cover, order and editorial removal — all on the
+    // album's COLLABORATIVE surface and all through IAlbumEditingService, so
+    // the Owner and an Editor traverse identical authorization, concurrency and
+    // audit. The existing owner-only routes are untouched.
+    //
+    // Every mutation carries `expectedVersion`. A stale one answers 409 with the
+    // album's CURRENT state so the client refreshes and tells the user what
+    // happened, instead of blindly retrying a destructive command. Nothing is
+    // written and nothing is audited on a conflict.
+    //
+    // The AUDIT is written by the service, inside the mutation's transaction —
+    // not here. Auditing after the service returned would mean a curation
+    // change could commit and the entry explaining it could then fail.
+    private static void MapCollaborativeEditing(IEndpointRouteBuilder app)
+    {
+        app.MapMethods("/api/shared-albums/{albumId:guid}", ["PATCH"], async (
+            Guid albumId,
+            HttpContext httpContext,
+            [FromServices] IAlbumEditingService editing,
+            [FromBody] EditAlbumDetailsRequest? body,
+            CancellationToken cancellationToken) =>
+        {
+            if (body is null) return Results.BadRequest(new { error = "Missing request body." });
+            var actorUserId = httpContext.GetCurrentUserId()!.Value;
+            var result = await editing.UpdateDetailsAsync(
+                actorUserId, albumId, body.ExpectedVersion, body.Name, body.Description,
+                httpContext.Connection.RemoteIpAddress?.ToString(), cancellationToken);
+            return Respond(result, httpContext, albumId);
+        }).WithName("EditSharedAlbumDetails").RequireAuthorization();
+
+        app.MapMethods("/api/shared-albums/{albumId:guid}/cover", ["PUT"], async (
+            Guid albumId,
+            HttpContext httpContext,
+            [FromServices] IAlbumEditingService editing,
+            [FromBody] SetAlbumCoverRequest? body,
+            CancellationToken cancellationToken) =>
+        {
+            if (body is null) return Results.BadRequest(new { error = "Missing request body." });
+            var actorUserId = httpContext.GetCurrentUserId()!.Value;
+            var result = await editing.SetCoverAsync(
+                actorUserId, albumId, body.ExpectedVersion, body.FileItemId,
+                httpContext.Connection.RemoteIpAddress?.ToString(), cancellationToken);
+            return Respond(result, httpContext, albumId);
+        }).WithName("SetSharedAlbumCover").RequireAuthorization();
+
+        app.MapMethods("/api/shared-albums/{albumId:guid}/order", ["PUT"], async (
+            Guid albumId,
+            HttpContext httpContext,
+            [FromServices] IAlbumEditingService editing,
+            [FromBody] ReorderAlbumRequest? body,
+            CancellationToken cancellationToken) =>
+        {
+            if (body?.AlbumItemIds is null)
+                return Results.BadRequest(new { error = "Missing 'albumItemIds'." });
+            var actorUserId = httpContext.GetCurrentUserId()!.Value;
+            var result = await editing.ReorderAsync(
+                actorUserId, albumId, body.ExpectedVersion, body.AlbumItemIds,
+                httpContext.Connection.RemoteIpAddress?.ToString(), cancellationToken);
+            return Respond(result, httpContext, albumId);
+        }).WithName("ReorderSharedAlbum").RequireAuthorization();
+
+        // EDITORIAL removal of any item. Distinct from a contributor withdrawing
+        // their own — which action happened follows the route invoked, not the
+        // actor's identity, so an Editor removing their own contribution is
+        // recorded as an editorial removal because that is what they asked for.
+        app.MapDelete("/api/shared-albums/{albumId:guid}/items/{albumItemId:guid}", async (
+            Guid albumId,
+            Guid albumItemId,
+            [FromQuery] int expectedVersion,
+            HttpContext httpContext,
+            [FromServices] IAlbumEditingService editing,
+            CancellationToken cancellationToken) =>
+        {
+            var actorUserId = httpContext.GetCurrentUserId()!.Value;
+            var result = await editing.RemoveItemAsync(
+                actorUserId, albumId, expectedVersion, albumItemId,
+                httpContext.Connection.RemoteIpAddress?.ToString(), cancellationToken);
+            return Respond(result, httpContext, albumId);
+        }).WithName("RemoveSharedAlbumItem").RequireAuthorization();
+    }
+
+    // One mapping from editorial outcome to HTTP, so every editing route answers
+    // the same way. Pure: the audit already happened inside the service's
+    // transaction, so there is nothing to write here.
+    private static IResult Respond(AlbumEditResult result, HttpContext httpContext, Guid albumId)
+    {
+        switch (result.Outcome)
+        {
+            case AlbumEditOutcome.Ok:
+                SetNoStore(httpContext);
+                return Results.Ok(new
+                {
+                    albumId,
+                    version = result.Version,
+                    name = result.Name,
+                    description = result.Description,
+                    coverFileItemId = result.CoverFileItemId,
+                });
+
+            case AlbumEditOutcome.VersionConflict:
+                // 409 with the CURRENT state: enough for the client to refresh
+                // and explain the collision without a second round-trip.
+                SetNoStore(httpContext);
+                return Results.Json(new
+                {
+                    error = result.Message,
+                    albumId,
+                    version = result.Version,
+                    name = result.Name,
+                    description = result.Description,
+                    coverFileItemId = result.CoverFileItemId,
+                }, statusCode: StatusCodes.Status409Conflict);
+
+            case AlbumEditOutcome.RoleNotPermitted:
+                return Results.Forbid();
+
+            case AlbumEditOutcome.InvalidCommand:
+                return Results.BadRequest(new { error = result.Message });
+
+            case AlbumEditOutcome.ItemNotFound:
+            default:
+                // NotAccessible collapses here too: a non-member must not learn
+                // the album exists.
+                return Results.NotFound();
+        }
     }
 
     // ── Recipient: invitations addressed to me ──────────────────────────────
