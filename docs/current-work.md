@@ -31,97 +31,100 @@ baseline and active work; do not use it as a chronological work log.
 - Read `deploy/FAST_DEPLOY.md` in full immediately before any production
   deployment, rebuild, release-pin change or production migration.
 
-## Active slice — SHARE-ALBUM-01 live album sharing, Viewer role
+## Active slice — album sharing (SHARE-ALBUM-01/02/03) and detached copies (SHARE-COPY-01)
 
-Branch `feat/album-sharing-viewer`, started from `main` (`70815d8`). Not pushed,
-not merged, not deployed. ONE additive migration (`AddAlbumMemberships`, a new
-table only — nothing existing is altered). No backfill, no job, no TV/AI/storage
-change.
+Branch `feat/album-detached-copy`, a linear stack of four commits from `main`
+(`70815d8`): `e91062d` viewer, `a56a3ff` contributor, `a677a15` editor,
+`7bab93d` detached copy. Not pushed, not merged, not deployed. FOUR additive
+migrations; nothing existing is dropped or altered. No TV, AI or storage-
+architecture change.
 
-Introduces authenticated album sharing between NubArca users. An album still has
-exactly one owner; a membership grants a DIFFERENT user bounded, revocable
-access to that one album. Only the **Viewer** role is enabled — `contributor`
-and `editor` exist in the closed role catalog + check constraint so
-SHARE-ALBUM-02/03 extend behaviour without a schema change.
+Two different things, deliberately kept apart:
 
 ```text
-owner invites by exact email → recipient accepts → grant re-resolved on EVERY
-request → owner revokes → dead on the next call
+LIVE SHARE   owner invites → recipient accepts → grant re-resolved on EVERY
+             request → owner revokes → dead on the next call
+DETACHED COPY owner sends a snapshot → recipient accepts → an INDEPENDENT album
+             they own; the sender can never edit, revoke or recall it
 ```
 
 - **One gate**: `IAlbumAccessResolver` is the only place allowed to conclude
   that a non-owner may see an album's media. The owner-only `/api/files/{id}/*`
   endpoints are untouched — shared media is a SEPARATE family
   (`/api/shared-albums/...`) that resolves a grant and then calls the SAME
-  unchanged owner-scoped services with the ALBUM OWNER's id. That is the shape
-  the public Party surface already uses.
-- **Frontend**: an owner Share panel (separate from Settings, where Show-on-TV
-  and Party live), a "Condivisi con me" primary destination, invitation
-  accept/decline, and a purpose-built recipient viewer.
+  unchanged owner-scoped services with the ALBUM OWNER's id, the shape the
+  public Party surface already uses.
+- **Roles** are a closed catalog (`viewer` | `contributor` | `editor`) with a
+  check constraint. "Owner" is deliberately absent, so granting ownership is
+  unrepresentable as a membership write. An Editor curates (title, description,
+  cover, order, removal); governance — invites, roles, revocation, deletion,
+  Party/TV publication — stays with the single Owner, enforced by which service
+  a route reaches rather than by scattered role checks.
+- **Contributions are links, not copies.** `AlbumItem.AddedByUserId` always
+  equals `FileItem.OwnerUserId`; the contributor keeps ownership and may
+  withdraw at any time, including after a downgrade to Viewer.
+- **Concurrency**: `Album.Version` with a conditional bump as the FIRST write;
+  0 rows updated ⇒ 409 carrying current state, never a silent overwrite and
+  never an automatic retry.
+
+### Detached copies (SHARE-COPY-01)
+
+- **Retention is the hard part.** `BlobObject.ReferenceCount` is DERIVED
+  accounting, not the authority — the authority is the enumerated owner tables
+  in `BlobReferenceAuditService`. A pending manifest therefore OWNS one blob
+  reference per row AND is registered in that enumeration; without the
+  registration `repair-references` would zero those references and the janitor
+  would delete bytes a pending copy needs, and that command runs on every
+  production deploy. The `BlobObject` FK is `Restrict` on top, so the database
+  refuses the delete even if the accounting ever drifted.
+- **Acceptance reads NOTHING from the source.** Byte identity and every
+  displayed field come from the snapshot taken at send time, so later renames,
+  reorders, removals or even permanent deletion of the source cannot alter a
+  pending copy. If a future change joins back to `album_items` inside
+  `AcceptAsync`, the detachment guarantee is gone.
+- **A collaborator's linked media can never be copied.** It stays theirs and
+  stays revocable; a detached copy would put it permanently beyond that
+  revocation. Same for Vault, trashed and missing items. These REJECT the whole
+  send with counts and a category — never a filename, never a silent omission.
+- **Quota** is the recipient's normal limit, enforced on logical bytes under the
+  same per-owner advisory lock uploads use. Dedup buys nothing: the copy is
+  their own file. Acceptance is one transaction, so a refusal leaves no partial
+  album, and a repeat accept returns the SAME album id.
+- **A disabled sender freezes what their account can still CAUSE**: a pending
+  transfer becomes unacceptable and is swept, while copies already accepted are
+  untouched — they are the recipient's own albums.
 
 Decisions worth remembering:
 
-- **NubArca has no public account identifier.** `Email` is the only unique
-  human-typeable field and `DisplayName` is the only one already shown as an
-  identity. So invitations are addressed by EXACT email (never a prefix — over a
-  unique identifier that is a directory-enumeration primitive). No endpoint
-  returns another user's email or user id; an owner addresses a member row by
-  its `MembershipId`.
-- **`DisplayName` is not unique, so the owner's member list carries a MASKED
-  account hint** (`RecipientEmailMask`: `m•••i@nubarca.local`). Without it an
-  owner with two members called "Mario Rossi" cannot tell which one to revoke —
-  a correctness problem for the owner, and a sharper one in SHARE-ALBUM-02 where
-  a contributor's items appear in someone else's album. The hint is served ONLY
-  by the owner-only member list, only ever masked, and is absent from every
-  recipient-facing shape. Confirmations and the download aria-label use the same
-  disambiguated label, so no destructive action is ever confirmed ambiguously.
-- **`DeleteAsync` now clears `album_memberships` too.** They carry the same FK
-  Restrict as `album_items`, so deleting an album that had EVER been shared —
-  including one whose shares were all revoked, since a revoke keeps the row for
-  the audit trail — failed on the constraint with a 500. Found in the browser,
-  not by the unit suite; now pinned by two regression tests.
-- **Shared media is `no-store`, the owner's own stays `private, max-age=86400`.**
-  Revocation must be effective on the next request, and a 200 already sitting in
-  the recipient's HTTP cache would outlive it. Verified in the browser: a
-  thumbnail URL the page already holds returns 404 the moment access is revoked.
-- **One row per (album, member), reused on re-invite.** A plain unique index
-  behaves identically on PostgreSQL and the SQLite the endpoint tests use;
-  a partial one would not. History lives in the audit log, which is where a
-  security question about it should be answered from.
-- **The owner is authoritative from the `Album` row alone.** No synthetic owner
-  membership row exists, so the owner's access cannot be broken by inconsistent
-  membership data — and "owner" is deliberately absent from `AlbumRoles`, making
-  it unrepresentable as a membership write.
-- **A disabled OWNER stops serving their shares**, not just a disabled member.
-  The listing applies the same predicate as the media routes, so it can never
-  advertise an album whose media would 404.
-- Private Vault needed no new predicate: the global `PrivateVaultId == null`
-  filter on `FileItems` already removes vaulted rows from every share query. A
-  file moved into the vault AFTER joining an album keeps a stale `album_items`
-  row — pre-existing behaviour, visible on the owner's own listing too — but it
-  is unreachable through the share. Reported, not changed.
-- **The shared wall reuses `computeJustifiedRows`.** A plain CSS grid was built
-  first and the browser pass showed it was wrong: mixed portrait/landscape media
-  left ragged rows and holes. `mediaWallRowParams` / `MEDIA_WALL_GAP_PX` were
-  extracted from `MediaGrid` so both walls lay out with one set of numbers.
-- **The lightbox does NOT reuse `.ws-sheet-backdrop`.** That is a side-sheet
-  backdrop (32% dim, `justify-content: flex-end`); reusing it left the app shell
-  fully readable behind the photo and the viewer chrome colliding with the top
-  bar. It now matches `.face-viewer` / `.party-lightbox`.
-- `HlsVideoPlayer` gained optional `videoUrl`/`posterUrl` props (defaulting to
-  the owner routes) so the shared viewer reuses the real player instead of a
-  second HLS implementation.
-- Two verification traps worth remembering: Playwright's `goBack()` on an SPA
-  returns `null` (History API, no document load), so a non-waiting `isVisible()`
-  races the re-render; and two identically-generated fixture images dedupe to
-  ONE blob, so a test that turns one into a video silently turns the other into
-  one too.
+- Audit must run INSIDE the mutation's transaction (`IAuditLogger.WriteAsync`,
+  non-swallowing). Written from the endpoint after the service committed, it
+  silently loses the record whenever the request fails late.
+- This codebase configures no `JsonStringEnumConverter` anywhere, so a C# enum
+  in a DTO serialises as a NUMBER and every client-side string switch falls
+  through. Catalogs are `const string` for exactly this reason.
+- Names must be unique among ACTIVE siblings
+  (`ux_file_items_active_sibling_name`). Anything that writes several
+  `FileItem` rows into one folder has to de-duplicate, as the vault already
+  does.
+- React state cannot guard a double submit: `setState` is asynchronous, so fast
+  clicks all pass the check and `disabled` only applies after the re-render. Use
+  a ref.
+- Two verification traps: Playwright's `goBack()` on an SPA returns `null`
+  (History API, no document load), so a non-waiting `isVisible()` races the
+  re-render; and two identically-generated fixture images dedupe to ONE blob, so
+  a test that turns one into a video silently turns the other into one too.
+- The SQLite endpoint fixture runs every request over ONE connection, so true
+  wall-clock concurrency cannot be reproduced there ("cannot start a transaction
+  within a transaction"). Conditional-claim correctness is tested; simultaneity
+  is a PostgreSQL follow-up.
 
-## Superseded slice — UX-02 + VIDEO-HLS-05 wider workspaces, Laboratory, Faces, HLS
+## Released slice — UX-02 + VIDEO-HLS-05 wider workspaces, Laboratory, Faces, HLS
 
 Branch `feat/ux-lab-faces-hls`, started from `main` (`13a5a3a`, the merged
-TV-ID-01 tip). Not pushed, not merged, not deployed. No migration, no backfill,
-no TV package/APK/signing change.
+TV-ID-01 tip), merged without history rewriting and released from merge
+`70815d811ae64eeee45b30492ba63d481b29263d` on 2 August 2026. Production pins
+API, worker and frontend to `release-70815d811ae6`; no migration, backfill or
+janitor was run, and the approved TV APK was not rebuilt.
 
 - **Compact brand mark**: the approved flat-mark master draws the symbol on a
   canvas far larger than itself — 528×476 of 1024×1024, so only 51.6% of the
@@ -173,12 +176,12 @@ Decisions worth remembering:
   480p after 3 s of playback. Small viewports are unchanged (52 → 49 ms, 480p
   both).
 
-## Superseded slice — TV-ID-01 NubArca TV application identity
+## Released slice — TV-ID-01 NubArca TV application identity
 
 Branch `feat/nubarca-tv-identity`, started from `main` (`ee489a6`, which is also
-the currently deployed SHA). Not pushed, not merged, not deployed. No database,
-Docker volume, media storage or backend API identity changed; no GitHub
-repository rename.
+the pre-release production SHA), merged at `13a5a3a` and deployed as part of
+the `70815d8` release on 2 August 2026. No database, Docker volume, media storage
+or backend API identity changed; no GitHub repository rename.
 
 **NubArca and NubArca TV are separate applications sharing one backend and one
 account ecosystem.** No universal mobile/TV binary. The mobile app will sync and
@@ -196,8 +199,16 @@ Retired with no upgrade path (an applicationId cannot be renamed):
 `it.littlefly.nanocloudtv`, slug `nanocloud-tv`, runtime `tv-native-3`, storage
 key `nanocloud.tv.session.cookie`, artifact `nanocloud-tv.apk`.
 
-**BLOCKED before publication and device install.** Two operator inputs are
-missing; everything else in the slice is complete and validated.
+**Publication and device install are closed.** The definitive release-signed
+APK is live at both `/tv.apk` and `/download/tv/nubarca-tv.apk`; both URLs serve
+75,983,942 byte-identical bytes with SHA-256
+`9e20e12212733d27e0f1c836b87af88b0dc2157a5ebd221f3cc7859c8afe5622`.
+Package `it.littlefly.nubarca.tv` version `1.0.0` (`versionCode` 1) verifies with
+APK Signature Scheme v2 and v3 and the definitive NubArca TV certificate. The
+private Fire Stick passed fresh install, pairing and functional testing.
+The protected local recovery material and the server-side password record are
+present; copying the keystore and recovery credentials to an encrypted
+off-machine location remains an explicit disaster-recovery follow-up.
 
 Decisions worth remembering:
 
