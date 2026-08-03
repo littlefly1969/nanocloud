@@ -28,6 +28,14 @@ public class AppDbContext : DbContext
     // (album, invited user); the album OWNER never has a row here and stays
     // authoritative from the Album table alone. See AlbumMembership.
     public DbSet<AlbumMembership> AlbumMemberships => Set<AlbumMembership>();
+
+    // SHARE-COPY-01: one-time DETACHED album copies. Unrelated to memberships —
+    // an accepted transfer produces an independent album owned by the recipient,
+    // with no live link back to the sender. While pending, album_transfer_items
+    // OWNS a blob reference per distinct blob, which is why it is registered in
+    // BlobReferenceAuditService. See AlbumTransfer.
+    public DbSet<AlbumTransfer> AlbumTransfers => Set<AlbumTransfer>();
+    public DbSet<AlbumTransferItem> AlbumTransferItems => Set<AlbumTransferItem>();
     public DbSet<BackgroundJob> BackgroundJobs => Set<BackgroundJob>();
     public DbSet<AdminImportRun> AdminImportRuns => Set<AdminImportRun>();
     public DbSet<AdminImportItem> AdminImportItems => Set<AdminImportItem>();

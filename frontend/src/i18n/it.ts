@@ -1052,6 +1052,111 @@ const it = {
     'L’album è stato modificato da un altro utente. Abbiamo caricato la versione più recente; controlla le modifiche prima di riprovare.',
   'albumEdit.noLongerAllowed': 'Non hai più i permessi per modificare questo album.',
 
+  // ── SHARE-COPY-01: copia scollegata ───────────────────────────────────────
+  // Il vocabolario è deliberatamente diverso da quello di «Condividi»: qui si
+  // REGALA una copia indipendente, non si concede un accesso revocabile.
+  'albumCopy.openButton': 'Invia una copia',
+  'albumCopy.title': 'Invia una copia di «{name}»',
+  'albumCopy.intro':
+    'Il destinatario riceverà una copia indipendente. Le modifiche successive ai due album non verranno sincronizzate.',
+  'albumCopy.permanentWarning':
+    'Dopo l’accettazione non potrai più revocare la copia né modificarla.',
+  'albumCopy.summaryHeading': 'Cosa verrà inviato',
+  'albumCopy.summaryItems': '{count} elementi',
+  'albumCopy.summaryItemsOne': '1 elemento',
+  'albumCopy.summarySize': 'Dimensione logica totale: {size}',
+  'albumCopy.snapshotDate': 'Istantanea del {date}',
+  'albumCopy.snapshotExplain':
+    'Il contenuto viene fissato ora: le modifiche successive a questo album non cambieranno la copia in sospeso.',
+  'albumCopy.emailLabel': 'Email dell’account destinatario',
+  'albumCopy.emailPlaceholder': 'nome@esempio.it',
+  'albumCopy.emailRequired': 'Inserisci un indirizzo email.',
+  'albumCopy.send': 'Invia la copia',
+  'albumCopy.sending': 'Invio…',
+  'albumCopy.sent': 'Copia inviata a {name}.',
+  'albumCopy.recipientNotFound': 'Nessun account attivo con questo indirizzo.',
+  'albumCopy.recipientIsSender': 'Non puoi inviare una copia a te stesso.',
+  'albumCopy.alreadyPending':
+    'Hai già una copia in sospeso per questa persona. Annullala prima di inviarne un’altra.',
+  'albumCopy.emptyAlbum': 'Questo album non contiene elementi da inviare.',
+  'albumCopy.sendError': 'Impossibile inviare la copia. Riprova.',
+
+  // Blocchi: conteggi e categoria, mai nomi file o identificatori.
+  'albumCopy.blockedHeading': 'Questo album non può essere inviato come copia',
+  'albumCopy.blockedContributed':
+    'Contiene {count} contributi collegati di altri utenti. Rimuovili dall’album oppure crea un nuovo album con soli contenuti di tua proprietà.',
+  'albumCopy.blockedContributedOne':
+    'Contiene 1 contributo collegato di un altro utente. Rimuovilo dall’album oppure crea un nuovo album con soli contenuti di tua proprietà.',
+  'albumCopy.blockedVault':
+    'Contiene {count} elementi nel Vault privato. Spostali fuori dal Vault oppure rimuovili dall’album.',
+  'albumCopy.blockedVaultOne':
+    'Contiene 1 elemento nel Vault privato. Spostalo fuori dal Vault oppure rimuovilo dall’album.',
+  'albumCopy.blockedTrashed':
+    'Contiene {count} elementi nel cestino. Ripristinali oppure rimuovili dall’album.',
+  'albumCopy.blockedTrashedOne':
+    'Contiene 1 elemento nel cestino. Ripristinalo oppure rimuovilo dall’album.',
+  'albumCopy.blockedUnavailable':
+    'Contiene {count} elementi non più disponibili. Rimuovili dall’album.',
+  'albumCopy.blockedUnavailableOne':
+    'Contiene 1 elemento non più disponibile. Rimuovilo dall’album.',
+
+  // Lato mittente: copie inviate.
+  'albumCopy.sentHeading': 'Copie inviate',
+  'albumCopy.sentEmpty': 'Non hai inviato copie di questo album.',
+  'albumCopy.sentTo': 'A {name}',
+  'albumCopy.expiresOn': 'Scade il {date}',
+  'albumCopy.cancel': 'Annulla invio',
+  'albumCopy.cancelling': 'Annullamento…',
+  'albumCopy.cancelled': 'Invio annullato.',
+  'albumCopy.cancelTooLate':
+    'Il destinatario ha già accettato: la copia è sua e non può essere richiamata.',
+  'albumCopy.cancelError': 'Impossibile annullare l’invio. Riprova.',
+
+  'albumCopy.state.pending': 'In attesa di risposta',
+  'albumCopy.state.accepted': 'Accettata',
+  'albumCopy.state.declined': 'Rifiutata',
+  'albumCopy.state.cancelled': 'Annullata',
+  'albumCopy.state.expired': 'Scaduta',
+  'albumCopy.state.failed': 'Non riuscita',
+
+  // ── Lato destinatario: album ricevuti ─────────────────────────────────────
+  'receivedCopies.heading': 'Album ricevuti',
+  'receivedCopies.empty': 'Non hai album ricevuti.',
+  'receivedCopies.from': 'Da {name}',
+  'receivedCopies.sentOn': 'Inviato il {date}',
+  'receivedCopies.expiresOn': 'Scade il {date}',
+  'receivedCopies.details': '{count} elementi · {size}',
+  'receivedCopies.detailsOne': '1 elemento · {size}',
+  'receivedCopies.whatHappens': 'Se accetti',
+  'receivedCopies.explainIndependent':
+    'Verrà creato un album indipendente di tua proprietà.',
+  'receivedCopies.explainQuota':
+    'I file incideranno sulla tua quota logica anche se fisicamente deduplicati.',
+  'receivedCopies.explainIrrevocable':
+    'Il mittente non potrà più revocare la copia dopo l’accettazione.',
+  'receivedCopies.explainNoPeople':
+    'I nomi delle Persone e le assegnazioni volto non verranno copiati.',
+  'receivedCopies.accept': 'Accetta',
+  'receivedCopies.accepting': 'Accettazione…',
+  'receivedCopies.decline': 'Rifiuta',
+  'receivedCopies.declining': 'Rifiuto…',
+  'receivedCopies.openAlbum': 'Apri l’album',
+  'receivedCopies.accepted': 'Album ricevuto. Ora è tuo.',
+  'receivedCopies.declined': 'Copia rifiutata.',
+
+  // Stati concorrenti: cosa è successo mentre la scheda era aperta.
+  'receivedCopies.gone': 'Questa copia non è più disponibile.',
+  'receivedCopies.cancelledBySender': 'Il mittente ha annullato l’invio.',
+  'receivedCopies.expired': 'Questa copia è scaduta.',
+  'receivedCopies.senderUnavailable':
+    'Questa copia non è più disponibile. Chiedi al mittente di inviarla di nuovo.',
+  'receivedCopies.alreadyResolved': 'Questa copia è già stata gestita.',
+  'receivedCopies.quotaExceeded':
+    'Spazio insufficiente: servono {required} ma ne restano {remaining}. Libera spazio e riprova.',
+  'receivedCopies.acceptError':
+    'Impossibile accettare la copia. Nessun album parziale è stato creato.',
+  'receivedCopies.declineError': 'Impossibile rifiutare la copia. Riprova.',
+
   'sharedAlbum.addToAlbum': 'Aggiungi all’album',
   'sharedAlbum.addHeading': 'Aggiungi all’album',
   'sharedAlbum.addIntro':

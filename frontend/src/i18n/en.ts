@@ -1042,6 +1042,111 @@ const en: Partial<Record<MessageKey, string>> = {
     'This album was changed by another user. We loaded the latest version — check the changes before trying again.',
   'albumEdit.noLongerAllowed': 'You no longer have permission to edit this album.',
 
+  // ── SHARE-COPY-01: detached copy ──────────────────────────────────────────
+  // Deliberately different vocabulary from "Share": this GIVES AWAY an
+  // independent copy rather than granting revocable access.
+  'albumCopy.openButton': 'Send a copy',
+  'albumCopy.title': 'Send a copy of “{name}”',
+  'albumCopy.intro':
+    'The recipient will receive an independent copy. Later changes to either album will not be synchronised.',
+  'albumCopy.permanentWarning':
+    'Once accepted you can no longer revoke or change the copy.',
+  'albumCopy.summaryHeading': 'What will be sent',
+  'albumCopy.summaryItems': '{count} items',
+  'albumCopy.summaryItemsOne': '1 item',
+  'albumCopy.summarySize': 'Total logical size: {size}',
+  'albumCopy.snapshotDate': 'Snapshot of {date}',
+  'albumCopy.snapshotExplain':
+    'The contents are fixed now: later changes to this album will not alter the pending copy.',
+  'albumCopy.emailLabel': 'Recipient account email',
+  'albumCopy.emailPlaceholder': 'name@example.com',
+  'albumCopy.emailRequired': 'Enter an email address.',
+  'albumCopy.send': 'Send the copy',
+  'albumCopy.sending': 'Sending…',
+  'albumCopy.sent': 'Copy sent to {name}.',
+  'albumCopy.recipientNotFound': 'No active account with that address.',
+  'albumCopy.recipientIsSender': 'You cannot send a copy to yourself.',
+  'albumCopy.alreadyPending':
+    'You already have a pending copy for this person. Cancel it before sending another.',
+  'albumCopy.emptyAlbum': 'This album has no items to send.',
+  'albumCopy.sendError': 'Could not send the copy. Please try again.',
+
+  // Blockers: counts and a category, never file names or identifiers.
+  'albumCopy.blockedHeading': 'This album cannot be sent as a copy',
+  'albumCopy.blockedContributed':
+    'It contains {count} linked contributions from other users. Remove them from the album, or create a new album with only content you own.',
+  'albumCopy.blockedContributedOne':
+    'It contains 1 linked contribution from another user. Remove it from the album, or create a new album with only content you own.',
+  'albumCopy.blockedVault':
+    'It contains {count} items in your Private Vault. Move them out of the Vault, or remove them from the album.',
+  'albumCopy.blockedVaultOne':
+    'It contains 1 item in your Private Vault. Move it out of the Vault, or remove it from the album.',
+  'albumCopy.blockedTrashed':
+    'It contains {count} items in the trash. Restore them, or remove them from the album.',
+  'albumCopy.blockedTrashedOne':
+    'It contains 1 item in the trash. Restore it, or remove it from the album.',
+  'albumCopy.blockedUnavailable':
+    'It contains {count} items that are no longer available. Remove them from the album.',
+  'albumCopy.blockedUnavailableOne':
+    'It contains 1 item that is no longer available. Remove it from the album.',
+
+  // Sender side: copies sent.
+  'albumCopy.sentHeading': 'Copies sent',
+  'albumCopy.sentEmpty': 'You have not sent any copies of this album.',
+  'albumCopy.sentTo': 'To {name}',
+  'albumCopy.expiresOn': 'Expires on {date}',
+  'albumCopy.cancel': 'Cancel send',
+  'albumCopy.cancelling': 'Cancelling…',
+  'albumCopy.cancelled': 'Send cancelled.',
+  'albumCopy.cancelTooLate':
+    'The recipient has already accepted: the copy is theirs and cannot be recalled.',
+  'albumCopy.cancelError': 'Could not cancel the send. Please try again.',
+
+  'albumCopy.state.pending': 'Awaiting a reply',
+  'albumCopy.state.accepted': 'Accepted',
+  'albumCopy.state.declined': 'Declined',
+  'albumCopy.state.cancelled': 'Cancelled',
+  'albumCopy.state.expired': 'Expired',
+  'albumCopy.state.failed': 'Failed',
+
+  // ── Recipient side: albums received ───────────────────────────────────────
+  'receivedCopies.heading': 'Albums received',
+  'receivedCopies.empty': 'You have no received albums.',
+  'receivedCopies.from': 'From {name}',
+  'receivedCopies.sentOn': 'Sent on {date}',
+  'receivedCopies.expiresOn': 'Expires on {date}',
+  'receivedCopies.details': '{count} items · {size}',
+  'receivedCopies.detailsOne': '1 item · {size}',
+  'receivedCopies.whatHappens': 'If you accept',
+  'receivedCopies.explainIndependent':
+    'An independent album will be created, owned by you.',
+  'receivedCopies.explainQuota':
+    'The files count against your logical quota even though they are physically deduplicated.',
+  'receivedCopies.explainIrrevocable':
+    'The sender will no longer be able to revoke the copy once accepted.',
+  'receivedCopies.explainNoPeople':
+    'People names and face assignments will not be copied.',
+  'receivedCopies.accept': 'Accept',
+  'receivedCopies.accepting': 'Accepting…',
+  'receivedCopies.decline': 'Decline',
+  'receivedCopies.declining': 'Declining…',
+  'receivedCopies.openAlbum': 'Open the album',
+  'receivedCopies.accepted': 'Album received. It is yours now.',
+  'receivedCopies.declined': 'Copy declined.',
+
+  // Concurrent states: what happened while the tab was open.
+  'receivedCopies.gone': 'This copy is no longer available.',
+  'receivedCopies.cancelledBySender': 'The sender cancelled the send.',
+  'receivedCopies.expired': 'This copy has expired.',
+  'receivedCopies.senderUnavailable':
+    'This copy is no longer available. Ask the sender to send it again.',
+  'receivedCopies.alreadyResolved': 'This copy has already been handled.',
+  'receivedCopies.quotaExceeded':
+    'Not enough space: {required} needed but only {remaining} left. Free up space and try again.',
+  'receivedCopies.acceptError':
+    'Could not accept the copy. No partial album was created.',
+  'receivedCopies.declineError': 'Could not decline the copy. Please try again.',
+
   'sharedAlbum.addToAlbum': 'Add to album',
   'sharedAlbum.addHeading': 'Add to album',
   'sharedAlbum.addIntro':

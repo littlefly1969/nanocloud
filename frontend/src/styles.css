@@ -7034,3 +7034,50 @@ video.lightbox-image {
   .album-content-row > .row-action { width: 100%; }
   .contribute-grid { grid-template-columns: repeat(auto-fill, minmax(min(4.5rem, 100%), 1fr)); }
 }
+
+/* ── SHARE-COPY-01: detached album copies ──────────────────────────────────
+   Deliberately close to .shared-invitation but NOT the same class. A live
+   invitation and a copy offer sit on the same page and must not read as the
+   same control: accepting an invitation shows you somebody else's album,
+   accepting a copy gives you one of your own that they can never revoke. The
+   accent tint below is warmer to mark that difference without relying on
+   colour alone — the heading, the wording and the consequences list all say it
+   too. */
+.received-copies { list-style: none; margin: 0 0 1.5rem; padding: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+.received-copies > li {
+  display: flex; flex-direction: column; gap: 0.3rem;
+  padding: 0.9rem 1rem; border: 1px solid var(--border); border-radius: 10px;
+  background: color-mix(in srgb, var(--warn, #e2a03f) 6%, transparent);
+}
+.received-copies > li > h4 { margin: 0 0 0.15rem; font-size: 1rem; }
+.received-copies > li > p { margin: 0; }
+.received-copy-from { font-weight: 600; }
+.received-copies details { margin: 0.35rem 0; }
+.received-copies details > summary { cursor: pointer; }
+.received-copies details ul { margin: 0.4rem 0 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.2rem; }
+/* An explicit actions row: without it the buttons are flex children of the
+   column card and stretch to its full width. `flex-wrap` is what keeps them
+   readable at 200% zoom and on a 390px phone instead of overflowing. */
+.received-copy-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+
+.album-copy-panel .album-copy-blocked {
+  border: 1px solid color-mix(in srgb, var(--danger, #d9534f) 45%, var(--border));
+  border-radius: 10px; padding: 0.85rem 1rem;
+  background: color-mix(in srgb, var(--danger, #d9534f) 8%, transparent);
+}
+.album-copy-panel .album-copy-blocked h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+.album-copy-panel .album-copy-blocked ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.album-copy-panel section { margin-bottom: 1.1rem; }
+.album-copy-panel section > h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+.album-copy-panel section > p { margin: 0 0 0.25rem; }
+.album-copy-panel label { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.6rem; }
+.album-copy-sent { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.album-copy-sent > li {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem;
+  padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 10px;
+}
+.album-copy-sent-who { font-weight: 600; flex: 1 1 12rem; }
+.album-copy-sent-state {
+  font-size: 0.85rem; padding: 0.1rem 0.5rem; border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}

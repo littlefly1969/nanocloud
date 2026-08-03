@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NanoCloud.Api.Data;
+using NanoCloud.Api.Domain;
 
 namespace NanoCloud.Api.Storage;
 
@@ -20,6 +21,9 @@ namespace NanoCloud.Api.Storage;
 //                                   reference)
 //   * aesthetic_lab_derivatives.BlobObjectId (Aesthetics Lab derived renditions;
 //                                   derived artifact, one ref per row)
+//   * album_transfer_items.BlobObjectId (SHARE-COPY-01 detached-copy manifests;
+//                                   ONLY while the parent transfer is pending —
+//                                   accept/decline/cancel/expire release)
 //
 // A hard interruption between the (auto-committed) refcount increment and the
 // owner-row commit — worker kill, OOM, crash — leaks one reference by design
@@ -232,6 +236,22 @@ public sealed class BlobReferenceAuditService
             .GroupBy(d => d.BlobObjectId)
             .Select(g => new { g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken);
+        // SHARE-COPY-01 pending detached copies: while a transfer is PENDING its
+        // manifest owns one reference per item, which is precisely what keeps a
+        // pending copy alive when the sender permanently deletes the source
+        // files. References are released when the transfer leaves pending
+        // (accept hands them to the recipient's new FileItems; cancel, decline
+        // and expiry release them outright), so only pending rows own one.
+        //
+        // Omitting this would make RepairAsync zero the reference behind every
+        // pending transfer and let the janitor delete bytes those copies need —
+        // and `storage blobs audit-references` runs on every production deploy.
+        var pendingTransferRefs = await _db.AlbumTransferItems.AsNoTracking()
+            .Where(i => _db.AlbumTransfers.Any(t =>
+                t.Id == i.AlbumTransferId && t.State == AlbumTransferStates.Pending))
+            .GroupBy(i => i.BlobObjectId)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
 
         var computed = new Dictionary<Guid, int>(rows.Count);
         foreach (var r in fileRefs)
@@ -263,6 +283,10 @@ public sealed class BlobReferenceAuditService
             computed[r.Key] = computed.TryGetValue(r.Key, out var v) ? v + r.Count : r.Count;
         }
         foreach (var r in labDerivativeRefs)
+        {
+            computed[r.Key] = computed.TryGetValue(r.Key, out var v) ? v + r.Count : r.Count;
+        }
+        foreach (var r in pendingTransferRefs)
         {
             computed[r.Key] = computed.TryGetValue(r.Key, out var v) ? v + r.Count : r.Count;
         }

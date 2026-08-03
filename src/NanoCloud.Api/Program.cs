@@ -567,6 +567,12 @@ if (!string.IsNullOrWhiteSpace(connectionString))
     builder.Services.AddScoped<
         NanoCloud.Api.Albums.Sharing.IAlbumEditingService,
         NanoCloud.Api.Albums.Sharing.AlbumEditingService>();
+    // SHARE-COPY-01: one-time DETACHED album copies. Deliberately separate from
+    // the membership services above and sharing no state with them — a copy is
+    // not a share, and an accepted copy is the recipient's outright.
+    builder.Services.AddScoped<
+        NanoCloud.Api.Albums.Sharing.IAlbumTransferService,
+        NanoCloud.Api.Albums.Sharing.AlbumTransferService>();
     // Public read-only party album links (owner lifecycle + public validation)
     // and party-scoped media surfacing.
     builder.Services.AddScoped<NanoCloud.Api.Party.IPartyLinkService, NanoCloud.Api.Party.PartyLinkService>();
@@ -681,6 +687,14 @@ if (!string.IsNullOrWhiteSpace(connectionString))
     builder.Services.AddSingleton<FileItemSweeper>();
     builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<FileItemSweeper>());
 
+    // SHARE-COPY-01: releases the blob references held by pending transfers
+    // that can never be accepted (window elapsed, or sender disabled). Without
+    // it those bytes would stay pinned forever — the janitor only reclaims
+    // zero-reference blobs and would never see them.
+    builder.Services.AddSingleton<NanoCloud.Api.Albums.Sharing.AlbumTransferCleanupService>();
+    builder.Services.AddSingleton<IHostedService>(sp =>
+        sp.GetRequiredService<NanoCloud.Api.Albums.Sharing.AlbumTransferCleanupService>());
+
     // In-process job worker is OFF by default. Only registered as a hosted
     // service when Jobs:WorkerEnabled = true — NubArca never processes jobs
     // automatically otherwise. The `jobs run-once` / `jobs worker` CLI
@@ -695,6 +709,9 @@ builder.Services.Configure<BlobJanitorOptions>(
     builder.Configuration.GetSection(BlobJanitorOptions.SectionName));
 builder.Services.Configure<FileItemSweeperOptions>(
     builder.Configuration.GetSection(FileItemSweeperOptions.SectionName));
+builder.Services.Configure<NanoCloud.Api.Albums.Sharing.AlbumTransferCleanupOptions>(
+    builder.Configuration.GetSection(
+        NanoCloud.Api.Albums.Sharing.AlbumTransferCleanupOptions.SectionName));
 builder.Services.Configure<JobsOptions>(
     builder.Configuration.GetSection(JobsOptions.SectionName));
 // Slice 81: admin server-side import config (opt-in; OFF by default). Bound
@@ -1093,6 +1110,7 @@ app.MapAlbumEndpoints();
 // overlaps "/api/albums/{id}/members...", and /api/shared-albums is a distinct
 // prefix.
 app.MapAlbumSharingEndpoints();
+app.MapAlbumTransferEndpoints();
 
 // Album-nested Party settings/moderation endpoints and album item/membership
 // + bulk endpoints are also mapped by Endpoints/PartyEndpoints.cs and

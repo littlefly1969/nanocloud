@@ -88,6 +88,28 @@ public static class AuditActions
     // ACTIONS: which one is recorded follows the endpoint invoked, not the
     // actor's identity.
     public const string AlbumEditRemoveItem = "album.edit_remove_item";
+
+    // SHARE-COPY-01: one-time DETACHED album copy. Deliberately a separate
+    // action family from album.share_* — a transfer is not a membership, and
+    // conflating the two would make "who was ever given a copy of this album"
+    // unanswerable from the audit log. Metadata carries counts, the transfer id
+    // and the two user ids only: never a storage key, blob id, SHA, file name
+    // or path.
+    //
+    // Recorded against the SENDER's action. The snapshot itself is immutable, so
+    // there is no "transfer update".
+    public const string AlbumTransferSend = "album.transfer_send";
+    // The sender withdrew a pending offer before the recipient answered.
+    public const string AlbumTransferCancel = "album.transfer_cancel";
+    // The recipient accepted. Metadata records the destination album id, which
+    // is the recipient's own from that moment on.
+    public const string AlbumTransferAccept = "album.transfer_accept";
+    public const string AlbumTransferDecline = "album.transfer_decline";
+    // The pending window elapsed. Written by the cleanup path with no actor,
+    // distinct from a decline so an unanswered offer is never recorded as a
+    // decision the recipient made.
+    public const string AlbumTransferExpire = "album.transfer_expire";
+
     // Slice 81: admin server-side import started (metadata: target user + run id).
     public const string AdminImportStart = "admin.import_start";
     // Slice 82: admin requested cancellation of an import run.
@@ -249,6 +271,12 @@ public static class AuditEntityTypes
     // the media is what moved in or out of the album; the album id travels in
     // the metadata.
     public const string AlbumContribution = "album_contribution";
+
+    // SHARE-COPY-01: a one-time detached copy offer. Separate from
+    // album_membership because it grants no ongoing access to anything — it
+    // either becomes the recipient's own independent album or it becomes
+    // nothing.
+    public const string AlbumTransfer = "album_transfer";
     public const string AdminImport = "admin_import";
     public const string BackgroundJob = "background_job";
     public const string StagingSession = "staging_session";

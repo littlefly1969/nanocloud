@@ -201,6 +201,14 @@ public sealed class SqliteWebApplicationFactory : WebApplicationFactory<Program>
                 NanoCloud.Api.Albums.Sharing.AlbumSharingService>();
             services.AddScoped<NanoCloud.Api.Albums.Sharing.IAlbumEditingService,
                 NanoCloud.Api.Albums.Sharing.AlbumEditingService>();
+            // SHARE-COPY-01: detached album copies. Mirrors Program.cs
+            // (Postgres-only block).
+            services.AddScoped<NanoCloud.Api.Albums.Sharing.IAlbumTransferService,
+                NanoCloud.Api.Albums.Sharing.AlbumTransferService>();
+            // Registered as a plain singleton, NOT as a hosted service: the
+            // tests drive RunOnceAsync explicitly so the sweep is deterministic
+            // rather than racing the test on a timer.
+            services.AddSingleton<NanoCloud.Api.Albums.Sharing.AlbumTransferCleanupService>();
             // Slice 5: unified media-workspace query service (/api/media,
             // /api/albums/{id}/media). Mirrors Program.cs (Postgres-only block).
             services.AddScoped<NanoCloud.Api.Media.IMediaCollectionQueryService,

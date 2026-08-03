@@ -228,6 +228,22 @@ describe('SharedAlbumDetailPage', () => {
     expect(await screen.findByTestId('shared-album-empty')).toBeInTheDocument();
   });
 
+  // SHARE-COPY-01: giving an album away is an OWNER-only act. An Editor may
+  // curate the album, but curation is not redistribution — no role reaches this
+  // affordance, and it must not exist even as a disabled control.
+  it.each(['viewer', 'contributor', 'editor'])(
+    'never offers "send a copy" to a %s',
+    async (role) => {
+      mockAlbum([item()], { ...ALBUM, role });
+      renderPage();
+
+      await screen.findByTestId('shared-album-page');
+      expect(screen.queryByTestId('album-open-copy')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('album-copy-panel')).not.toBeInTheDocument();
+      expect(document.body.innerHTML).not.toContain('Invia una copia');
+    },
+  );
+
   it('exposes no owner-library affordance anywhere on the page', async () => {
     mockAlbum([item()]);
     renderPage();

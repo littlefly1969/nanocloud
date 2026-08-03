@@ -12,6 +12,7 @@ import {
 } from '@nubarca/api-client';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n';
+import { ReceivedCopiesPanel } from '../albums/ReceivedCopiesPanel';
 
 // SHARE-ALBUM-01: "Shared with me" — live albums other people own and have
 // shared with this user, plus the invitations they have not answered yet.
@@ -161,6 +162,13 @@ export function SharedAlbumsPage() {
               </ul>
             </section>
           )}
+
+          {/* SHARE-COPY-01. Kept as its own section, deliberately not merged
+              into the invitation list above: accepting an invitation gives you a
+              view of somebody else's album, accepting a copy gives you an album
+              of your own that they can never revoke. Different decisions, so
+              different surfaces. */}
+          <ReceivedCopiesPanel />
 
           {status.albums.length === 0 ? (
             status.invitations.length === 0 && (

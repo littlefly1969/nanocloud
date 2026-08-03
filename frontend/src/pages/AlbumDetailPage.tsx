@@ -13,6 +13,7 @@ import { useI18n } from '../i18n';
 import { AlbumSettingsPanel } from '../albums/AlbumSettingsPanel';
 import { AlbumSharePanel } from '../albums/AlbumSharePanel';
 import { AlbumSharedContentPanel } from '../albums/AlbumSharedContentPanel';
+import { AlbumCopyPanel } from '../albums/AlbumCopyPanel';
 import { MediaWorkspace } from '../media/workspace/MediaWorkspace';
 import {
   filtersToUrlParams,
@@ -53,6 +54,17 @@ export function AlbumDetailPage() {
   const [contentOpen, setContentOpen] = useState(false);
   const contentButtonRef = useRef<HTMLButtonElement>(null);
   const [hasMembers, setHasMembers] = useState(false);
+  // SHARE-COPY-01: "Send a copy" is its OWN entry point, next to but distinct
+  // from "Share". Sharing grants revocable access to media that stays yours;
+  // sending a copy gives away an independent album you can never take back.
+  // Presenting them as two settings of one control is how somebody gives away
+  // an album they only meant to show.
+  //
+  // This page is the OWNER's album view — a collaborator is routed to
+  // SharedAlbumDetailPage instead — so the button is owner-only by construction,
+  // and the backend answers any other caller with a 404 regardless.
+  const [copyOpen, setCopyOpen] = useState(false);
+  const copyButtonRef = useRef<HTMLButtonElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const source = useMemo<MediaWorkspaceSource>(
@@ -148,6 +160,15 @@ export function AlbumDetailPage() {
             </button>
             <button
               type="button"
+              ref={copyButtonRef}
+              className="row-action"
+              data-testid="album-open-copy"
+              onClick={() => setCopyOpen(true)}
+            >
+              {t('albumCopy.openButton')}
+            </button>
+            <button
+              type="button"
               ref={settingsButtonRef}
               className="row-action"
               data-testid="album-open-settings"
@@ -172,6 +193,15 @@ export function AlbumDetailPage() {
           albumName={album.name}
           onClose={() => { setShareOpen(false); refreshMembership(); }}
           returnFocusRef={shareButtonRef}
+        />
+      )}
+
+      {copyOpen && (
+        <AlbumCopyPanel
+          albumId={albumId}
+          albumName={album.name}
+          onClose={() => setCopyOpen(false)}
+          returnFocusRef={copyButtonRef}
         />
       )}
 
