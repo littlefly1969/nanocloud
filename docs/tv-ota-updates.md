@@ -8,7 +8,10 @@ OTA can replace the JavaScript/Hermes bundle and Metro-bundled assets. It cannot
 
 `NANOCLOUD_TV_RUNTIME_VERSION` is a manually managed native contract. This explicit value is intentionally not derived from the application version: operators must increment it for every native/configuration change listed above, including changing native environment values embedded while building. TypeScript, React UI/layout, business logic, and bundled asset changes keep the existing runtime.
 
-The current NubArca TV package (`it.littlefly.nubarca.tv`) uses the `nubarca-tv-native-*` series, starting at **`nubarca-tv-native-1`**.
+The current NubArca TV package (`it.littlefly.nubarca.tv`) uses the
+`nubarca-tv-native-*` series. Release 1.0.1 uses exactly
+**`nubarca-tv-native-2`**; runtime 1 belongs to the 1.0.0 APK, which did not
+embed an OTA verification certificate and must always receive `204 No Content`.
 
 The `tv-native-*` series is **retired**. It belongs to the previous TV package, which used `tv-native-1` for the legacy APK, `tv-native-2` for the first `expo-video` build and `tv-native-3` for the last Expo 56 build. The two series must never be mixed: an update is addressed by runtime version alone, so publishing a NubArca TV bundle under `tv-native-3` would offer it to an install of a different application. Because the publication tree and the channel pointer are both keyed by runtime (`publications/android/<runtime>/`, `channels/<channel>/android/<runtime>.json`), the new series is isolated by construction — a device asking for `tv-native-3` gets `204 No Content` once nothing is published there.
 
@@ -16,7 +19,10 @@ The APK always embeds a bundle. `fallbackToCacheTimeout` is zero and the native 
 
 SDK 56's manual Updates API does not expose a configurable per-check HTTP timeout. NubArca therefore does not add a JavaScript timeout that would only abandon the promise while leaving the native request running. There is no retry loop.
 
-Diagnostics are logged once per launch as `[OTA]` and include runtime version, current/embedded update ID when available, embedded/OTA state, pending state, result, and sanitized error text. No secret is logged.
+Diagnostics are logged once per launch as `[TV_BOOT]` and `[OTA]`. The boot
+record contains app version, versionCode, runtime, channel, update ID and
+embedded/OTA state; the lifecycle record adds pending state, result and
+sanitized error text. No secret is logged.
 
 ## Configuration
 
@@ -25,14 +31,21 @@ Build/export and server publication must use matching values:
 ```sh
 export EXPO_PUBLIC_NANOCLOUD_API_BASE_URL=https://nanocloud.littlefly.it
 export NANOCLOUD_TV_OTA_UPDATE_URL=https://nanocloud.littlefly.it/api/tv-app/updates
-export NANOCLOUD_TV_RUNTIME_VERSION=nubarca-tv-native-1
+export NANOCLOUD_TV_RUNTIME_VERSION=nubarca-tv-native-2
 export NANOCLOUD_TV_OTA_CHANNEL=production
 export TV_OTA_STORAGE_ROOT=/srv/nanocloud/tv-updates
-export TV_OTA_PRIVATE_KEY_PATH=/srv/nanocloud/tv-ota-signing/nubarca-tv-native-1/private-key.pem
+export NANOCLOUD_TV_OTA_CERTIFICATE=/secure/nanocloud-tv-ota/cert/certificate.pem
+export TV_OTA_PRIVATE_KEY_PATH=/secure/nanocloud-tv-ota/keys/private-key.pem
+export TV_OTA_RELEASE_GIT_SHA="$(git rev-parse HEAD)"
 export TV_OTA_RETENTION_COUNT=5
 ```
 
-The API reads `TvUpdates__RootPath` (default `/var/lib/nanocloud/tv-updates` in production Compose). Keep the host directory outside a public web root. In the required local production override, map the publication directory read-only into the API:
+The API reads `TvUpdates__RootPath` and
+`TvUpdates__CodeSigningCertificatePath`. It returns no update when the trust
+certificate is absent or invalid, and cryptographically verifies the exact
+manifest before serving either the manifest or an asset. Keep both locations
+outside a public web root. In the required local production override, map the
+publication directory and public trust certificate read-only into the API:
 
 ```yaml
 # docker-compose.prod.local.yml
@@ -40,6 +53,7 @@ services:
   api:
     volumes:
       - /srv/nanocloud/tv-updates:/var/lib/nanocloud/tv-updates:ro
+      - /secure/nanocloud-tv-ota/cert/certificate.pem:/var/lib/nanocloud/tv-ota-trust/certificate.pem:ro
 ```
 
 Continue using the repository's overlay pattern:
@@ -72,7 +86,16 @@ openssl verify -purpose codesign \
   /secure/nanocloud-tv-ota/cert/certificate.pem
 ```
 
-For the bootstrap APK set `NANOCLOUD_TV_OTA_CERTIFICATE=/secure/nanocloud-tv-ota/cert/certificate.pem`. Only that public certificate is embedded. Publication uses `TV_OTA_PRIVATE_KEY_PATH=/secure/nanocloud-tv-ota/keys/private-key.pem`; the private key is read locally and never served. `TV_OTA_SIGNING_REQUIRED` defaults to `true`, so publication fails before export if the key is absent. An unsigned publication is never returned to a client that sends `expo-expect-signature`.
+For the bootstrap APK set
+`NANOCLOUD_TV_OTA_CERTIFICATE=/secure/nanocloud-tv-ota/cert/certificate.pem`.
+Only
+that public certificate is embedded. Publication uses
+`TV_OTA_PRIVATE_KEY_PATH=/secure/nanocloud-tv-ota/keys/private-key.pem`; the private
+key is read locally and never served. Unsigned publication cannot be enabled:
+`TV_OTA_SIGNING_REQUIRED=false` is rejected. Publication fails before export if
+either key or certificate is absent or they do not match. The API independently
+rejects missing, malformed or invalid signatures even when the client omits
+`expo-expect-signature`.
 
 The certificate must be currently valid, self-signed, and contain both `Key Usage: Digital Signature` and `Extended Key Usage: Code Signing`. The app configuration and publisher validate both X.509 extensions before use; this mirrors the validation performed by `expo-updates` on Android.
 
@@ -80,13 +103,22 @@ Back up the private key and certificate separately with restricted permissions. 
 
 ## Publish, activate, rollback, and clean up
 
-From `tv/`, with the variables above and the private key configured:
+From `tv/`, with the variables above and the private key configured, on a clean
+`main` whose `HEAD` and `origin/main` both equal `TV_OTA_RELEASE_GIT_SHA`:
 
 ```sh
 npm run publish:ota
 ```
 
-The command runs `expo export --platform android` (never Gradle/EAS/APK build), validates Expo metadata, copies all referenced files into staging on the storage filesystem, computes base64url SHA-256 hashes, creates a UUID update ID and creation timestamp, writes and signs the exact manifest bytes, verifies every reference/hash, atomically renames the immutable publication, and only then atomically replaces the channel pointer. A failed export, verification, or signature leaves the active pointer and previous publication untouched.
+The command accepts only runtime `nubarca-tv-native-2` and channel
+`production`, runs `expo export --platform android` (never Gradle/EAS/APK
+build), rejects symlinks, validates Expo metadata, copies all referenced files
+into staging on the storage filesystem, computes base64url SHA-256 hashes,
+records the merged Git SHA, creates a UUID update ID and creation timestamp,
+writes and signs the exact manifest bytes, verifies the signature and every
+reference/hash, atomically renames the immutable publication, and only then
+atomically replaces the channel pointer. A failed export, verification or
+signature leaves the active pointer and previous publication untouched.
 
 Layout:
 

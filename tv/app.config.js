@@ -27,8 +27,39 @@
 
 const DEV_DEFAULT_BASE_URL = 'http://192.168.1.100:5177';
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { validateCodeSigningCertificate } = require('./scripts/code-signing-certificate.cjs');
+
+const RELEASE_VERSION = '1.0.1';
+const RELEASE_VERSION_CODE = 2;
+const RELEASE_RUNTIME = 'nubarca-tv-native-2';
+const RELEASE_CHANNEL = 'production';
+const RELEASE_API_BASE_URL = 'https://nanocloud.littlefly.it';
+const RELEASE_UPDATE_URL = `${RELEASE_API_BASE_URL}/api/tv-app/updates`;
+const RELEASE_SIGNING_INPUTS = [
+  'NUBARCA_TV_RELEASE_STORE_FILE',
+  'NUBARCA_TV_RELEASE_STORE_PASSWORD',
+  'NUBARCA_TV_RELEASE_KEY_ALIAS',
+  'NUBARCA_TV_RELEASE_KEY_PASSWORD',
+];
+
+function readGradleProperties() {
+  const gradleHome = process.env.GRADLE_USER_HOME || path.join(os.homedir(), '.gradle');
+  const propertiesPath = path.join(gradleHome, 'gradle.properties');
+  if (!fs.existsSync(propertiesPath)) return {};
+  return Object.fromEntries(
+    fs.readFileSync(propertiesPath, 'utf8').split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('#') && !line.startsWith('!'))
+      .map((line) => {
+        const separator = line.search(/[=:]/);
+        return separator < 0
+          ? [line, '']
+          : [line.slice(0, separator).trim(), line.slice(separator + 1).trim()];
+      }),
+  );
+}
 
 const explicitBaseUrl =
   process.env.EXPO_PUBLIC_NANOCLOUD_API_BASE_URL || process.env.NANOCLOUD_TV_API_BASE_URL;
@@ -57,10 +88,8 @@ const apiBaseUrl = (explicitBaseUrl || DEV_DEFAULT_BASE_URL).replace(/\/$/, '');
 // Only permit cleartext http on non-https (LAN dev) targets. A production
 // https:// base URL does not need — and does not get — cleartext traffic.
 const usesCleartextTraffic = apiBaseUrl.startsWith('http://');
-const updateUrl = (
-  process.env.NANOCLOUD_TV_OTA_UPDATE_URL ||
-  `${apiBaseUrl}/api/tv-app/updates`
-).replace(/\/$/, '');
+const explicitUpdateUrl = process.env.NANOCLOUD_TV_OTA_UPDATE_URL;
+const updateUrl = (explicitUpdateUrl || `${apiBaseUrl}/api/tv-app/updates`).replace(/\/$/, '');
 // This value identifies one exact native ABI/configuration contract. Increment
 // it before every build containing native or build-time environment changes.
 //
@@ -70,8 +99,8 @@ const updateUrl = (
 // package: a device still running that package asks for `tv-native-3` and must
 // never be served a bundle built for this one. See tv/README.md for the
 // retired identity.
-const runtimeVersion = process.env.NANOCLOUD_TV_RUNTIME_VERSION || 'nubarca-tv-native-1';
-const updateChannel = process.env.NANOCLOUD_TV_OTA_CHANNEL || 'production';
+const runtimeVersion = process.env.NANOCLOUD_TV_RUNTIME_VERSION || RELEASE_RUNTIME;
+const updateChannel = process.env.NANOCLOUD_TV_OTA_CHANNEL || RELEASE_CHANNEL;
 const codeSigningCertificate = process.env.NANOCLOUD_TV_OTA_CERTIFICATE;
 const codeSigningCertificateConfigPath = codeSigningCertificate
   ? path.relative(__dirname, path.resolve(codeSigningCertificate))
@@ -84,12 +113,44 @@ if (codeSigningCertificate) {
   validateCodeSigningCertificate(path.resolve(codeSigningCertificate));
 }
 
+if (process.env.NODE_ENV === 'production') {
+  if (apiBaseUrl !== RELEASE_API_BASE_URL) {
+    throw new Error(`Production API base URL must be exactly ${RELEASE_API_BASE_URL}.`);
+  }
+  if (!explicitUpdateUrl || updateUrl !== RELEASE_UPDATE_URL) {
+    throw new Error(`NANOCLOUD_TV_OTA_UPDATE_URL is required and must be exactly ${RELEASE_UPDATE_URL}.`);
+  }
+  if (runtimeVersion !== RELEASE_RUNTIME) {
+    throw new Error(`Production runtime must be exactly ${RELEASE_RUNTIME}.`);
+  }
+  if (updateChannel !== RELEASE_CHANNEL) {
+    throw new Error(`Production OTA channel must be exactly ${RELEASE_CHANNEL}.`);
+  }
+  if (!codeSigningCertificate) {
+    throw new Error('NANOCLOUD_TV_OTA_CERTIFICATE is required for a production build.');
+  }
+
+  const gradleProperties = readGradleProperties();
+  const missingSigningInputs = RELEASE_SIGNING_INPUTS.filter(
+    (name) => !(process.env[name]?.trim() || gradleProperties[name]?.trim()),
+  );
+  if (missingSigningInputs.length > 0) {
+    throw new Error(
+      `Production release signing is incomplete; missing: ${missingSigningInputs.join(', ')}.`,
+    );
+  }
+  const storeFile = process.env.NUBARCA_TV_RELEASE_STORE_FILE || gradleProperties.NUBARCA_TV_RELEASE_STORE_FILE;
+  if (!fs.existsSync(path.resolve(storeFile))) {
+    throw new Error('NUBARCA_TV_RELEASE_STORE_FILE does not exist.');
+  }
+}
+
 module.exports = () => ({
   expo: {
     name: 'NubArca TV',
     slug: 'nubarca-tv',
     scheme: 'nubarca-tv',
-    version: '1.0.0',
+    version: RELEASE_VERSION,
     runtimeVersion,
     orientation: 'landscape',
     platforms: ['android', 'ios'],
@@ -150,6 +211,8 @@ module.exports = () => ({
       // EXPO_PUBLIC_* runtime env var is absent.
       apiBaseUrl,
       otaChannel: updateChannel,
+      releaseVersion: RELEASE_VERSION,
+      releaseVersionCode: RELEASE_VERSION_CODE,
     },
     android: {
       // The final NubArca TV application id. It also becomes the Gradle
@@ -164,7 +227,7 @@ module.exports = () => ({
       // single device holding it was uninstalled and re-paired deliberately.
       // tv/README.md names the retired package for the uninstall step.
       package: 'it.littlefly.nubarca.tv',
-      versionCode: 1,
+      versionCode: RELEASE_VERSION_CODE,
       usesCleartextTraffic,
       icon: './assets/brand/nubarca-fire-tv-icon-512.png',
       adaptiveIcon: {

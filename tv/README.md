@@ -25,7 +25,7 @@ only the limited TV pairing and `/api/tv/*` contracts.
 | iOS bundle identifier | — | `it.littlefly.nubarca` |
 | Expo slug | `nubarca-tv` | `nubarca` |
 | Deep-link scheme | `nubarca-tv` | `nubarca` |
-| Version / versionCode | `1.0.0` / `1` | — |
+| Version / versionCode | `1.0.1` / `2` | — |
 | OTA runtime series | `nubarca-tv-native-*` | — |
 | AsyncStorage session key | `nubarca.tv.session.cookie` | — |
 | Published artifact | `nubarca-tv.apk` | — |
@@ -403,9 +403,9 @@ dev default, cleartext enabled).
 
 The limited TV session cookie is persisted with
 `@react-native-async-storage/async-storage` under the key
-`nanocloud.tv.session.cookie` (`src/api/client.ts`) — a *retained legacy
-identifier*: the key is already written on every paired TV, so it was **not**
-rebranded to NubArca (renaming it would sign every device out):
+`nubarca.tv.session.cookie` (`src/api/client.ts`). This is the key already
+written by the 1.0.0 NubArca TV package; it remains byte-identical so the 1.0.1
+in-place upgrade does not sign the device out:
 
 - **Only** the `NanoCloud.TvSession` cookie string is stored — by construction
   `_cookieJar` can hold nothing else (owner auth is never received on `/api/tv`,
@@ -668,9 +668,8 @@ Or via EAS Build with a TV profile (`EXPO_TV=1`) for reproducible cloud builds.
 
 ## Remaining follow-ups (unvalidated / out of scope)
 
-- Fire Stick **device runtime** + Gradle APK build (needs **JDK 17** + an Android
-  SDK host; JDK 26 fails on the foojay toolchain resolver).
-- Native video player (`expo-video`) for actual video playback.
+- NubArca TV 1.0.1 still requires its definitive merged-main APK build and the
+  physical Fire Stick in-place/OTA cold-launch gate before public replacement.
 - Automatic full-screen viewer takeover on an active party face-search (native
   currently filters the grid + banner; browser supersedes full-screen).
 - Exact-tile focus restore when returning from the slideshow (currently re-lands
@@ -682,8 +681,8 @@ Or via EAS Build with a TV profile (`EXPO_TV=1`) for reproducible cloud builds.
   fallback is a **long-press SELECT** (`longSelect`) — NOT implemented, since
   KEYCODE_MENU → `'menu'` is verified in the native source; confirm on hardware
   with `TV_DEBUG_MEDIA`.
-- Optional `TVFocusGuideView` for explicit focus routing on complex grids;
-  encrypted TV session storage; release signing. (The Fire TV / Android TV banner
+- Optional `TVFocusGuideView` for explicit focus routing on complex grids and
+  encrypted TV session storage. (The Fire TV / Android TV banner
   asset is now shipped — see *Brand assets*; it has not yet been verified on
   hardware.)
 - Splash screen: needs the `expo-splash-screen` dependency before
@@ -691,4 +690,4 @@ Or via EAS Build with a TV profile (`EXPO_TV=1`) for reproducible cloud builds.
 
 Party mode (public read-only view), QR upload/download, live party refresh, and
 face-search filtered slideshow are implemented. Out of scope (future TV-only
-slices): moderation/approval of guest uploads, native video playback, offline sync.
+slices): moderation/approval of guest uploads and offline sync.

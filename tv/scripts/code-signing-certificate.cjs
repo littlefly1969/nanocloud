@@ -34,7 +34,11 @@ function hasDigitalSignatureKeyUsage(rawCertificate) {
 function validateCodeSigningCertificate(certificatePath) {
   let certificate;
   try {
-    certificate = new X509Certificate(readFileSync(certificatePath));
+    const contents = readFileSync(certificatePath);
+    if (/-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/.test(contents.toString('utf8'))) {
+      throw new Error('the public OTA certificate file must not contain a private key');
+    }
+    certificate = new X509Certificate(contents);
   } catch (error) {
     throw new Error(`Invalid OTA code-signing certificate: ${error.message}`);
   }
@@ -42,6 +46,9 @@ function validateCodeSigningCertificate(certificatePath) {
   const now = Date.now();
   if (now < Date.parse(certificate.validFrom) || now > Date.parse(certificate.validTo)) {
     throw new Error('OTA code-signing certificate is not currently valid');
+  }
+  if (certificate.publicKey.asymmetricKeyType !== 'rsa') {
+    throw new Error('OTA code-signing certificate must use an RSA public key');
   }
   if (!certificate.keyUsage?.includes(CODE_SIGNING_OID)) {
     throw new Error('OTA certificate must have Extended Key Usage: Code Signing');

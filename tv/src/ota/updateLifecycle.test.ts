@@ -39,6 +39,26 @@ test('downloads without reloading and records a pending update', async () => {
   assert.equal(result.lastResult, 'downloaded');
 });
 
+test('boot diagnostics expose only non-secret release and update identity', async () => {
+  const lines: unknown[][] = [];
+  const original = console.info;
+  console.info = (...args: unknown[]) => { lines.push(args); };
+  try {
+    const result = await startBackgroundUpdateCheck(api(), {
+      applicationVersion: '1.0.1', versionCode: 2, channel: 'production',
+    });
+    assert.equal(result.applicationVersion, '1.0.1');
+    assert.equal(result.versionCode, 2);
+    assert.equal(result.channel, 'production');
+    assert.deepEqual(lines[0], ['[TV_BOOT]', {
+      applicationVersion: '1.0.1', versionCode: 2, runtimeVersion: 'tv-native-1',
+      channel: 'production', updateId: 'embedded', embeddedLaunch: true,
+    }]);
+  } finally {
+    console.info = original;
+  }
+});
+
 test('swallows and records update errors', async () => {
   const result = await startBackgroundUpdateCheck(api({
     checkForUpdateAsync: async () => { throw new Error('offline'); },

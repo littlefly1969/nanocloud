@@ -75,8 +75,9 @@ where the key is held. Never record the passwords or the private key.
 ## Build
 
 Native dependency or configuration changes require a new APK and runtime. The
-current release is application version `1.0.0`, Android `versionCode` 1, runtime
-`nubarca-tv-native-1`.
+1.0.1 release contract is Android `versionCode` 2 and runtime
+`nubarca-tv-native-2`. The public artifact remains 1.0.0 until the encrypted
+off-machine backup and physical in-place Fire Stick validation gates pass.
 
 Before `expo prebuild --clean`, preserve the public Expo Updates certificate
 outside `tv/android/`, because that directory is regenerated. The release
@@ -89,7 +90,7 @@ export ANDROID_HOME="$HOME/Android/Sdk"
 export PATH="$JAVA_HOME/bin:$PATH"
 export NODE_ENV=production
 export EXPO_PUBLIC_NANOCLOUD_API_BASE_URL=https://nanocloud.littlefly.it
-export NANOCLOUD_TV_RUNTIME_VERSION=nubarca-tv-native-1
+export NANOCLOUD_TV_RUNTIME_VERSION=nubarca-tv-native-2
 export NANOCLOUD_TV_OTA_CHANNEL=production
 export NANOCLOUD_TV_OTA_UPDATE_URL=https://nanocloud.littlefly.it/api/tv-app/updates
 export NANOCLOUD_TV_OTA_CERTIFICATE=/absolute/path/to/expo-root.pem
@@ -108,7 +109,7 @@ APK=app/build/outputs/apk/release/app-release.apk
 sha256sum "$APK"
 ```
 
-Expected: package `it.littlefly.nubarca.tv`, versionCode 1, versionName 1.0.0,
+Expected: package `it.littlefly.nubarca.tv`, versionCode 2, versionName 1.0.1,
 label `NubArca TV`, a `leanback-launchable-activity`, `android.software.leanback`
 required, touchscreen not required, v2 (and v3) verified true, and a signer DN
 that is **not** `CN=Android Debug`.
@@ -122,9 +123,13 @@ From the repository root:
   tv/android/app/build/outputs/apk/release/app-release.apk
 ```
 
-The default production target is `stefano@192.168.1.180`; override
+Publication is permitted only after `adb install -r` over 1.0.0 proves the
+package data and pairing survive. The default production target is
+`stefano@192.168.1.180`; override
 `NANOCLOUD_PRODUCTION_SSH` for a different server. The script re-verifies the
-signature, uploads to a temporary name, atomically replaces the public APK and
+package/version/runtime/channel/endpoint, definitive signer fingerprint,
+embedded OTA certificate and signatures; it then uploads to a temporary name,
+atomically replaces the public APK and
 checksum, and confirms the SHA-256 of the bytes that landed on the server.
 
 Then verify headers and bytes over HTTPS:

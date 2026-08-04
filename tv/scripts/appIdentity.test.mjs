@@ -7,7 +7,10 @@
 
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -32,9 +35,9 @@ test('the application identity is the final NubArca TV identity', () => {
   assert.equal(expo.name, 'NubArca TV');
   assert.equal(expo.slug, 'nubarca-tv');
   assert.equal(expo.scheme, 'nubarca-tv');
-  assert.equal(expo.version, '1.0.0');
+  assert.equal(expo.version, '1.0.1');
   assert.equal(expo.android.package, 'it.littlefly.nubarca.tv');
-  assert.equal(expo.android.versionCode, 1);
+  assert.equal(expo.android.versionCode, 2);
 });
 
 test('the reserved mobile applicationId is not taken by the TV app', () => {
@@ -60,15 +63,15 @@ test('no user-visible identifier carries the former product name', () => {
 
 test('the default OTA runtime belongs to the new native series', () => {
   const expo = loadConfig();
-  assert.equal(expo.runtimeVersion, 'nubarca-tv-native-1');
+  assert.equal(expo.runtimeVersion, 'nubarca-tv-native-2');
   // The retired TV package asks for tv-native-3. Serving it a bundle built for
   // this package would be a cross-application update.
   assert.notEqual(expo.runtimeVersion, 'tv-native-3');
 });
 
-test('the runtime version stays operator-overridable', () => {
-  const expo = loadConfig({ NANOCLOUD_TV_RUNTIME_VERSION: 'nubarca-tv-native-2' });
-  assert.equal(expo.runtimeVersion, 'nubarca-tv-native-2');
+test('the runtime version stays operator-overridable for development only', () => {
+  const expo = loadConfig({ NANOCLOUD_TV_RUNTIME_VERSION: 'development-runtime' });
+  assert.equal(expo.runtimeVersion, 'development-runtime');
 });
 
 test('a production https base URL builds with cleartext traffic disabled', () => {
@@ -76,6 +79,72 @@ test('a production https base URL builds with cleartext traffic disabled', () =>
   assert.equal(expo.android.usesCleartextTraffic, false);
   assert.equal(expo.extra.apiBaseUrl, 'https://nanocloud.littlefly.it');
   assert.equal(expo.updates.url, 'https://nanocloud.littlefly.it/api/tv-app/updates');
+});
+
+test('development configuration remains usable without signing material', () => {
+  assert.doesNotThrow(() => loadConfig({ NODE_ENV: 'development' }));
+});
+
+test('production configuration fails closed without every release input', () => {
+  assert.throws(() => loadConfig({ NODE_ENV: 'production' }), /API_BASE_URL is required/i);
+  assert.throws(() => loadConfig({
+    NODE_ENV: 'production',
+    EXPO_PUBLIC_NANOCLOUD_API_BASE_URL: 'https://nanocloud.littlefly.it',
+  }), /OTA_UPDATE_URL is required/i);
+});
+
+test('production rejects the wrong runtime and channel before native generation', () => {
+  const common = {
+    NODE_ENV: 'production',
+    EXPO_PUBLIC_NANOCLOUD_API_BASE_URL: 'https://nanocloud.littlefly.it',
+    NANOCLOUD_TV_OTA_UPDATE_URL: 'https://nanocloud.littlefly.it/api/tv-app/updates',
+  };
+  assert.throws(() => loadConfig({ ...common, NANOCLOUD_TV_RUNTIME_VERSION: 'nubarca-tv-native-1' }), /runtime.*exactly/i);
+  assert.throws(() => loadConfig({ ...common, NANOCLOUD_TV_OTA_CHANNEL: 'staging' }), /channel.*exactly/i);
+});
+
+test('production requires the OTA public certificate', () => {
+  assert.throws(() => loadConfig({
+    NODE_ENV: 'production',
+    EXPO_PUBLIC_NANOCLOUD_API_BASE_URL: 'https://nanocloud.littlefly.it',
+    NANOCLOUD_TV_OTA_UPDATE_URL: 'https://nanocloud.littlefly.it/api/tv-app/updates',
+  }), /OTA_CERTIFICATE is required/i);
+});
+
+test('the OTA certificate path is normalized relative to the TV project', () => {
+  const certificateRoot = mkdtempSync(join(tmpdir(), 'nubarca-tv-config-cert-'));
+  try {
+    const key = join(certificateRoot, 'key.pem');
+    const certificate = join(certificateRoot, 'certificate.pem');
+    assert.equal(spawnSync('openssl', ['genpkey', '-quiet', '-algorithm', 'RSA', '-pkeyopt', 'rsa_keygen_bits:2048', '-out', key]).status, 0);
+    assert.equal(spawnSync('openssl', ['req', '-x509', '-new', '-key', key, '-out', certificate, '-days', '1',
+      '-subj', '/CN=NubArca TV OTA Test', '-addext', 'keyUsage=critical,digitalSignature',
+      '-addext', 'extendedKeyUsage=critical,codeSigning']).status, 0);
+    const expo = loadConfig({ NANOCLOUD_TV_OTA_CERTIFICATE: certificate });
+    assert.equal(expo.updates.codeSigningCertificate, relative(tvRoot, resolve(certificate)));
+    assert.deepEqual(expo.updates.codeSigningMetadata, { keyid: 'main', alg: 'rsa-v1_5-sha256' });
+    const storeFile = join(certificateRoot, 'release.jks');
+    writeFileSync(storeFile, 'test-only-placeholder');
+    const production = loadConfig({
+      NODE_ENV: 'production',
+      EXPO_PUBLIC_NANOCLOUD_API_BASE_URL: 'https://nanocloud.littlefly.it',
+      NANOCLOUD_TV_OTA_UPDATE_URL: 'https://nanocloud.littlefly.it/api/tv-app/updates',
+      NANOCLOUD_TV_OTA_CERTIFICATE: certificate,
+      NUBARCA_TV_RELEASE_STORE_FILE: storeFile,
+      NUBARCA_TV_RELEASE_STORE_PASSWORD: 'test',
+      NUBARCA_TV_RELEASE_KEY_ALIAS: 'test',
+      NUBARCA_TV_RELEASE_KEY_PASSWORD: 'test',
+    });
+    assert.equal(production.runtimeVersion, 'nubarca-tv-native-2');
+    assert.equal(production.updates.requestHeaders['expo-channel-name'], 'production');
+  } finally {
+    rmSync(certificateRoot, { recursive: true, force: true });
+  }
+});
+
+test('the installed session storage identity remains unchanged', () => {
+  const client = readFileSync(resolve(tvRoot, 'src/api/client.ts'), 'utf8');
+  assert.match(client, /const SESSION_STORAGE_KEY = 'nubarca\.tv\.session\.cookie'/);
 });
 
 test('the TV app stays a leanback app that does not require a touchscreen', () => {
@@ -171,7 +240,9 @@ test('a release build without a configured key fails instead of falling back', a
   assert.match(result, /gradle\.taskGraph\.whenReady/);
   assert.match(result, /it\.name ==~ \/\(assemble\|bundle\|package\)Release\//);
   assert.match(result, /throw new GradleException/);
-  assert.match(result, /buildsRelease && android\.signingConfigs\.release\.storeFile == null/);
+  assert.match(result, /buildsRelease && missingReleaseSigning/);
+  assert.match(result, /signing\.storeFile == null \|\| !signing\.storeFile\.exists\(\)/);
+  assert.match(result, /!signing\.storePassword \|\| !signing\.keyAlias \|\| !signing\.keyPassword/);
 });
 
 test('applying the plugin twice does not duplicate the signing config', async () => {

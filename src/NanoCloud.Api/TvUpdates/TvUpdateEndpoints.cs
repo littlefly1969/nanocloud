@@ -15,10 +15,9 @@ public static class TvUpdateEndpoints
             if (platform != "android" || !TvUpdateStore.IsSafe(runtime)) return Results.BadRequest();
             if (string.IsNullOrEmpty(channel)) channel = "production";
             if (!TvUpdateStore.IsSafe(channel)) return Results.BadRequest();
-            var signatureRequired = !string.IsNullOrWhiteSpace(context.Request.Headers["expo-expect-signature"]);
-            var publication = store.FindManifest(platform, runtime, channel, signatureRequired);
+            var publication = store.FindManifest(platform, runtime, channel);
             if (publication is null) return Results.NoContent();
-            if (publication.Signature is not null) context.Response.Headers["Expo-Signature"] = publication.Signature;
+            context.Response.Headers["Expo-Signature"] = publication.Signature;
             return Results.Text(publication.Body, "application/expo+json", System.Text.Encoding.UTF8);
         }).WithName("GetNativeTvUpdate").AllowAnonymous();
 

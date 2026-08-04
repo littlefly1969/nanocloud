@@ -71,6 +71,9 @@ services:
       # roots and bind the volume in docker-compose.prod.local.yml when the host
       # publication script needs direct access.
       TvUpdates__RootPath: ${TvUpdates__RootPath:-/var/lib/nanocloud/tv-updates}
+      # Public trust root used to verify every manifest before it is served.
+      # Mount this read-only through the production-local override.
+      TvUpdates__CodeSigningCertificatePath: ${TvUpdates__CodeSigningCertificatePath:-/var/lib/nanocloud/tv-ota-trust/certificate.pem}
       # Slice 72: optional separate root for DERIVED media (thumbnails /
       # previews / posters). Empty => derived artifacts use Storage__RootPath
       # (single-root default, unchanged). Set to a path under a faster/cache

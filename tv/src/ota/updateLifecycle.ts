@@ -1,4 +1,7 @@
 export type OtaDiagnostics = {
+  applicationVersion: string | null;
+  versionCode: number | null;
+  channel: string | null;
   runtimeVersion: string | null;
   runningUpdateId: string | null;
   embeddedUpdateId: string | null;
@@ -6,6 +9,12 @@ export type OtaDiagnostics = {
   pending: boolean;
   lastResult: 'idle' | 'disabled' | 'checking' | 'no-update' | 'downloaded' | 'already-downloaded' | 'error';
   lastError: string | null;
+};
+
+export type ReleaseMetadata = {
+  applicationVersion: string | null;
+  versionCode: number | null;
+  channel: string | null;
 };
 
 export type UpdatesApi = {
@@ -20,6 +29,9 @@ export type UpdatesApi = {
 let started = false;
 let inFlight: Promise<OtaDiagnostics> | null = null;
 let diagnostics: OtaDiagnostics = {
+  applicationVersion: null,
+  versionCode: null,
+  channel: null,
   runtimeVersion: null,
   runningUpdateId: null,
   embeddedUpdateId: null,
@@ -34,13 +46,17 @@ export function getOtaDiagnostics(): OtaDiagnostics {
 }
 
 /** Starts at most one check for this JS process and never reloads the app. */
-export function startBackgroundUpdateCheck(api: UpdatesApi): Promise<OtaDiagnostics> {
+export function startBackgroundUpdateCheck(
+  api: UpdatesApi,
+  release: ReleaseMetadata = { applicationVersion: null, versionCode: null, channel: null },
+): Promise<OtaDiagnostics> {
   if (inFlight) return inFlight;
   if (started) return Promise.resolve(getOtaDiagnostics());
   started = true;
 
   diagnostics = {
     ...diagnostics,
+    ...release,
     runtimeVersion: api.runtimeVersion,
     runningUpdateId: api.updateId,
     embeddedUpdateId: api.isEmbeddedLaunch ? api.updateId : null,
@@ -48,6 +64,15 @@ export function startBackgroundUpdateCheck(api: UpdatesApi): Promise<OtaDiagnost
     lastResult: api.isEnabled ? 'checking' : 'disabled',
     lastError: null,
   };
+
+  console.info('[TV_BOOT]', {
+    applicationVersion: diagnostics.applicationVersion,
+    versionCode: diagnostics.versionCode,
+    runtimeVersion: diagnostics.runtimeVersion,
+    channel: diagnostics.channel,
+    updateId: diagnostics.runningUpdateId,
+    embeddedLaunch: diagnostics.isEmbedded,
+  });
 
   if (!api.isEnabled) {
     console.info('[OTA]', diagnostics);
@@ -90,6 +115,7 @@ export function resetUpdateLifecycleForTests(): void {
   started = false;
   inFlight = null;
   diagnostics = {
+    applicationVersion: null, versionCode: null, channel: null,
     runtimeVersion: null, runningUpdateId: null, embeddedUpdateId: null,
     isEmbedded: false, pending: false, lastResult: 'idle', lastError: null,
   };

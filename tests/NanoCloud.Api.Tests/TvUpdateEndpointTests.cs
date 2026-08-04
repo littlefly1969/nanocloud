@@ -1,5 +1,6 @@
 using System.Net;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -11,8 +12,23 @@ namespace NanoCloud.Api.Tests;
 public sealed class TvUpdateEndpointTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"nanocloud-tv-ota-{Guid.NewGuid():N}");
-    private const string Runtime = "tv-native-1";
+    private readonly RSA _signingKey = RSA.Create(2048);
+    private readonly string _certificatePath;
+    private const string Runtime = "nubarca-tv-native-2";
     private const string UpdateId = "11111111-1111-4111-8111-111111111111";
+    private const string GitSha = "1234567890abcdef1234567890abcdef12345678";
+
+    public TvUpdateEndpointTests()
+    {
+        Directory.CreateDirectory(_root);
+        _certificatePath = Path.Combine(_root, "ota-certificate.pem");
+        var request = new CertificateRequest("CN=NubArca TV OTA Test", _signingKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        request.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, critical: true));
+        request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(
+            new OidCollection { new("1.3.6.1.5.5.7.3.3") }, critical: true));
+        using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddDays(1));
+        File.WriteAllText(_certificatePath, certificate.ExportCertificatePem());
+    }
 
     [Fact]
     public async Task CompatibleAndroidRuntimeReturnsProtocolV1ManifestAndImmutableAsset()
@@ -70,24 +86,54 @@ public sealed class TvUpdateEndpointTests : IDisposable
     }
 
     [Fact]
-    public async Task MalformedOrUnsignedRequiredPublicationIsIgnored()
+    public async Task MalformedUnsignedTamperedOrWrongCertificatePublicationIsIgnored()
     {
         WritePublication(signed: false);
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
-        using var signedRequest = ManifestRequest(Runtime);
-        signedRequest.Headers.TryAddWithoutValidation("expo-expect-signature", "sig");
-        Assert.Equal(HttpStatusCode.NoContent, (await client.SendAsync(signedRequest)).StatusCode);
-
-        File.WriteAllText(Path.Combine(PublicationDirectory(), "manifest.json"), "{malformed");
         Assert.Equal(HttpStatusCode.NoContent, (await client.SendAsync(ManifestRequest(Runtime))).StatusCode);
+
+        WritePublication(signed: true);
+        File.AppendAllText(Path.Combine(PublicationDirectory(), "manifest.json"), " ");
+        Assert.Equal(HttpStatusCode.NoContent, (await client.SendAsync(ManifestRequest(Runtime))).StatusCode);
+
+        WritePublication(signed: true);
+        var wrongCertificate = Path.Combine(_root, "wrong-certificate.pem");
+        using var wrongKey = RSA.Create(2048);
+        var request = new CertificateRequest("CN=Wrong OTA", wrongKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        request.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, true));
+        request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(new OidCollection { new("1.3.6.1.5.5.7.3.3") }, true));
+        using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddDays(1));
+        File.WriteAllText(wrongCertificate, certificate.ExportCertificatePem());
+        using var wrongFactory = CreateFactory(wrongCertificate);
+        using var wrongClient = wrongFactory.CreateClient();
+        Assert.Equal(HttpStatusCode.NoContent, (await wrongClient.SendAsync(ManifestRequest(Runtime))).StatusCode);
     }
 
-    private WebApplicationFactory<Program> CreateFactory() => new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+    [Fact]
+    public async Task MissingVerificationCertificateWrongChannelAndCrossRuntimeFailClosed()
+    {
+        WritePublication(signed: true);
+        using var noCertificateFactory = CreateFactory("");
+        using var noCertificateClient = noCertificateFactory.CreateClient();
+        Assert.Equal(HttpStatusCode.NoContent, (await noCertificateClient.SendAsync(ManifestRequest(Runtime))).StatusCode);
+
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        using var wrongChannel = ManifestRequest(Runtime);
+        wrongChannel.Headers.Remove("expo-channel-name");
+        wrongChannel.Headers.TryAddWithoutValidation("expo-channel-name", "staging");
+        Assert.Equal(HttpStatusCode.NoContent, (await client.SendAsync(wrongChannel)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.SendAsync(ManifestRequest("nubarca-tv-native-1"))).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.SendAsync(ManifestRequest("tv-native-3"))).StatusCode);
+    }
+
+    private WebApplicationFactory<Program> CreateFactory(string? certificatePath = null) => new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["ConnectionStrings:Postgres"] = "",
             ["TvUpdates:RootPath"] = _root,
+            ["TvUpdates:CodeSigningCertificatePath"] = certificatePath ?? _certificatePath,
         })));
 
     private static HttpRequestMessage ManifestRequest(string runtime, string platform = "android")
@@ -116,13 +162,15 @@ public sealed class TvUpdateEndpointTests : IDisposable
         {
             id = UpdateId, createdAt = "2026-07-10T12:00:00.000Z", runtimeVersion = Runtime,
             launchAsset = new { hash, key = hash, contentType = "application/octet-stream", url },
-            assets = Array.Empty<object>(), metadata = new { channel = "production", platform = "android" }, extra = new { }
+            assets = Array.Empty<object>(), metadata = new { channel = "production", platform = "android", gitSha = GitSha },
+            extra = new { release = new { gitSha = GitSha } }
         });
+        var signature = Convert.ToBase64String(_signingKey.SignData(Encoding.UTF8.GetBytes(manifest), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1));
         File.WriteAllText(Path.Combine(publication, "manifest.json"), manifest);
         File.WriteAllText(Path.Combine(publication, "publication.json"), JsonSerializer.Serialize(new
         {
-            id = UpdateId, runtimeVersion = Runtime, platform = "android",
-            signature = signed ? "sig=\"ZmFrZQ==\", keyid=\"main\", alg=\"rsa-v1_5-sha256\"" : null
+            id = UpdateId, runtimeVersion = Runtime, platform = "android", channel = "production", gitSha = GitSha,
+            signature = signed ? $"sig=\"{signature}\", keyid=\"main\", alg=\"rsa-v1_5-sha256\"" : null
         }));
         var channel = Path.Combine(_root, "channels", "production", "android");
         Directory.CreateDirectory(channel);
@@ -131,6 +179,7 @@ public sealed class TvUpdateEndpointTests : IDisposable
 
     public void Dispose()
     {
+        _signingKey.Dispose();
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
     }
 }

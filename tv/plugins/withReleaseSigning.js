@@ -90,12 +90,16 @@ gradle.taskGraph.whenReady { graph ->
     def buildsRelease = graph.allTasks.any {
         it.project == project && it.name ==~ /(assemble|bundle|package)Release/
     }
-    if (buildsRelease && android.signingConfigs.release.storeFile == null) {
+    def signing = android.signingConfigs.release
+    def missingReleaseSigning = signing.storeFile == null || !signing.storeFile.exists() ||
+        !signing.storePassword || !signing.keyAlias || !signing.keyPassword
+    if (buildsRelease && missingReleaseSigning) {
         throw new GradleException(
             "No NubArca TV release signing key is configured.\\n" +
             "Set NUBARCA_TV_RELEASE_STORE_FILE, NUBARCA_TV_RELEASE_STORE_PASSWORD,\\n" +
             "NUBARCA_TV_RELEASE_KEY_ALIAS and NUBARCA_TV_RELEASE_KEY_PASSWORD as Gradle\\n" +
             "properties or environment variables. See docs/tv-apk-distribution.md.\\n" +
+            "All four values and an existing keystore are required.\\n" +
             "Refusing to fall back to the template debug keystore."
         )
     }
