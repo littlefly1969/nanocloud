@@ -1,4 +1,5 @@
 using NanoCloud.Api.Ai.Backends;
+using NanoCloud.Api.Domain.Ai;
 
 namespace NanoCloud.Api.Ai.Resolution;
 
@@ -26,4 +27,44 @@ public interface IAiBackendResolver
     // dimension, distance metric.
     Task<AiResolution> GetCapabilityAvailabilityAsync(
         string capability, CancellationToken cancellationToken = default);
+
+    // SEARCH-SEM-01: availability-only query for a SPECIFIC profile key under a
+    // known capability. Needed because several runtime paths deliberately do
+    // NOT use the capability default — photo similarity honours
+    // Ai:PhotoSimilarityProfileKey and faces honour Ai:FaceProfileKey — so
+    // reporting the capability default described a profile the product was not
+    // actually using. Reporting-only; resolution semantics are unchanged.
+    //
+    // A DEFAULT implementation, expressed purely in terms of the two members
+    // above: an empty key means "no pin", which is exactly the capability
+    // default. Implementers therefore need no change, and the fallback is the
+    // previous behaviour rather than a hole.
+    async Task<AiResolution> GetProfileAvailabilityAsync(
+        string capability, string profileKey, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(profileKey))
+        {
+            return await GetCapabilityAvailabilityAsync(capability, cancellationToken);
+        }
+
+        var key = profileKey.Trim();
+        return capability switch
+        {
+            AiCapabilities.ImageEmbedding =>
+                (await ResolveForProfileKeyAsync<IImageEmbedder>(key, cancellationToken)).Resolution,
+            AiCapabilities.DocumentEmbedding =>
+                (await ResolveForProfileKeyAsync<ITextEmbedder>(key, cancellationToken)).Resolution,
+            AiCapabilities.DocumentExtraction =>
+                (await ResolveForProfileKeyAsync<ITextExtractor>(key, cancellationToken)).Resolution,
+            AiCapabilities.FaceDetection =>
+                (await ResolveForProfileKeyAsync<IFaceDetector>(key, cancellationToken)).Resolution,
+            AiCapabilities.FaceEmbedding =>
+                (await ResolveForProfileKeyAsync<IFaceEmbedder>(key, cancellationToken)).Resolution,
+            AiCapabilities.Tagging =>
+                (await ResolveForProfileKeyAsync<IAiTagger>(key, cancellationToken)).Resolution,
+            AiCapabilities.Captioning =>
+                (await ResolveForProfileKeyAsync<IImageCaptioner>(key, cancellationToken)).Resolution,
+            _ => await GetCapabilityAvailabilityAsync(capability, cancellationToken),
+        };
+    }
 }

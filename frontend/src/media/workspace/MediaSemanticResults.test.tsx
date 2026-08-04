@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -73,6 +73,33 @@ function videoResult(
       representativeMilliseconds,
     },
     additionalMatches: [],
+  };
+}
+
+// SEARCH-SEM-01: a video with several separated matching moments.
+function multiMatchVideoResult(media: MediaItem = videoItem): SemanticMediaResultItem {
+  return {
+    media,
+    bestMatch: {
+      evidenceType: 'visual',
+      startMilliseconds: 238_000,
+      endMilliseconds: 242_000,
+      representativeMilliseconds: 240_000,
+    },
+    additionalMatches: [
+      {
+        evidenceType: 'visual',
+        startMilliseconds: 58_000,
+        endMilliseconds: 62_000,
+        representativeMilliseconds: 60_000,
+      },
+      {
+        evidenceType: 'visual',
+        startMilliseconds: 418_000,
+        endMilliseconds: 422_000,
+        representativeMilliseconds: 420_000,
+      },
+    ],
   };
 }
 
@@ -393,4 +420,49 @@ describe('semantic playback handoff', () => {
 
     expect(seekedTo).toBeNull();   // untouched: normal playback
   });
+
+  // ── SEARCH-SEM-01: markers and the timestamp handoff ─────────────────────
+
+  it('renders one tile per video carrying every matching moment', async () => {
+    installFetchMock({
+      'GET /api/media/semantic': () => jsonResponse(semanticPage([multiMatchVideoResult()])),
+    });
+    renderWorkspace(withVisualQuery(emptyIdentity(LIBRARY), 'mare'));
+
+    const strip = await screen.findByTestId('semantic-marker-strip');
+    // One tile, three reachable moments — not three tiles.
+    expect(screen.getAllByTestId('semantic-marker-strip')).toHaveLength(1);
+    expect(within(strip).getAllByRole('button')).toHaveLength(3);
+  });
+
+  it('opens the viewer at the marker timestamp that was activated', async () => {
+    installFetchMock({
+      'GET /api/media/semantic': () => jsonResponse(semanticPage([multiMatchVideoResult()])),
+      '* /api/files/v1/video': () => new Response(null, { status: 200 }),
+    });
+    renderWorkspace(withVisualQuery(emptyIdentity(LIBRARY), 'mare'));
+
+    const strip = await screen.findByTestId('semantic-marker-strip');
+    // The last marker chronologically is 7:00 (420_000 ms).
+    const last = within(strip).getAllByRole('button').at(-1)!;
+    await userEvent.click(last);
+
+    // The existing viewer opened for that marker. The timestamp itself is
+    // asserted where it is observable rather than by reaching into viewer
+    // internals: SemanticMarkers.test.tsx pins onOpen(420_000) from the tile,
+    // and useMediaWorkspace.seek.test.tsx pins the controller carrying it
+    // through to the viewer item.
+    expect(await screen.findByTestId('media-viewer-title')).toBeInTheDocument();
+  });
+
+  it('leaves photo results without a marker strip', async () => {
+    installFetchMock({
+      'GET /api/media/semantic': () => jsonResponse(semanticPage([photoResult()])),
+    });
+    renderWorkspace(withVisualQuery(emptyIdentity(LIBRARY), 'mare'));
+
+    await screen.findByTestId('media-grid');
+    expect(screen.queryByTestId('semantic-marker-strip')).not.toBeInTheDocument();
+  });
+
 });

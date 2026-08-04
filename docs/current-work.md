@@ -31,92 +31,218 @@ baseline and active work; do not use it as a chronological work log.
 - Read `deploy/FAST_DEPLOY.md` in full immediately before any production
   deployment, rebuild, release-pin change or production migration.
 
-## Active slice — album sharing (SHARE-ALBUM-01/02/03) and detached copies (SHARE-COPY-01)
+## Active slice — SEARCH-SEM-01 semantic coverage, video markers and library organization
 
-Branch `feat/album-detached-copy`, a linear stack of four commits from `main`
-(`70815d8`): `e91062d` viewer, `a56a3ff` contributor, `a677a15` editor,
-`7bab93d` detached copy. Not pushed, not merged, not deployed. FOUR additive
-migrations; nothing existing is dropped or altered. No TV, AI or storage-
-architecture change.
+Branch `feat/semantic-search-coverage`, from `main` (`d06605e`). Uncommitted.
+No migration, no backfill, no new embeddings, no model change. The sharing
+stack that preceded it is merged and released — see the sections below.
 
-Two different things, deliberately kept apart:
+### The defect: truncation in GUID order
+
+`MediaSemanticSearchService` took the first `MaxCandidates = 20_000` candidates
+ordered by FileItem id, and the video sample scope took the first 20,000 samples
+ordered by `BlobObjectId`. GUID order has no relationship to relevance, so this
+was never a sample of the library — it was the SAME arbitrary prefix on every
+query, and anything after it was unrankable no matter how well it matched.
+
+Measured against production on 2026-08-03:
 
 ```text
-LIVE SHARE   owner invites → recipient accepts → grant re-resolved on EVERY
-             request → owner revokes → dead on the next call
-DETACHED COPY owner sends a snapshot → recipient accepts → an INDEPENDENT album
-             they own; the sender can never edit, revoke or recall it
+video_semantic_sample_embedding_vectors_1152  161,827 rows  ≈12% covered
+blob_embedding_vectors_1152                    38,845 rows  ≈51% covered
 ```
 
-- **One gate**: `IAlbumAccessResolver` is the only place allowed to conclude
-  that a non-owner may see an album's media. The owner-only `/api/files/{id}/*`
-  endpoints are untouched — shared media is a SEPARATE family
-  (`/api/shared-albums/...`) that resolves a grant and then calls the SAME
-  unchanged owner-scoped services with the ALBUM OWNER's id, the shape the
-  public Party surface already uses.
-- **Roles** are a closed catalog (`viewer` | `contributor` | `editor`) with a
-  check constraint. "Owner" is deliberately absent, so granting ownership is
-  unrepresentable as a membership write. An Editor curates (title, description,
-  cover, order, removal); governance — invites, roles, revocation, deletion,
-  Party/TV publication — stays with the single Owner, enforced by which service
-  a route reaches rather than by scattered role checks.
-- **Contributions are links, not copies.** `AlbumItem.AddedByUserId` always
-  equals `FileItem.OwnerUserId`; the contributor keeps ownership and may
-  withdraw at any time, including after a downgrade to Viewer.
-- **Concurrency**: `Album.Version` with a conditional bump as the FIRST write;
-  0 rows updated ⇒ 409 carrying current state, never a silent overwrite and
-  never an automatic retry.
+### Complete bounded coverage
 
-### Detached copies (SHARE-COPY-01)
+The candidate projections gained additive `afterId` keyset paging (they were
+already ordered by id). Ranking now walks the whole eligible set in batches —
+2,000 photos, 25 videos — feeding a fixed-capacity `BoundedTopResults`
+accumulator whose size comes from the result policy's safety bound, NOT from the
+old candidate cap. Peak memory is a function of the result limit, not library
+size. A per-batch video sample ceiling exists only as a guard: reaching it
+triggers a per-video re-fetch rather than a silent cut.
 
-- **Retention is the hard part.** `BlobObject.ReferenceCount` is DERIVED
-  accounting, not the authority — the authority is the enumerated owner tables
-  in `BlobReferenceAuditService`. A pending manifest therefore OWNS one blob
-  reference per row AND is registered in that enumeration; without the
-  registration `repair-references` would zero those references and the janitor
-  would delete bytes a pending copy needs, and that command runs on every
-  production deploy. The `BlobObject` FK is `Restrict` on top, so the database
-  refuses the delete even if the accounting ever drifted.
-- **Acceptance reads NOTHING from the source.** Byte identity and every
-  displayed field come from the snapshot taken at send time, so later renames,
-  reorders, removals or even permanent deletion of the source cannot alter a
-  pending copy. If a future change joins back to `album_items` inside
-  `AcceptAsync`, the detachment guarantee is gone.
-- **A collaborator's linked media can never be copied.** It stays theirs and
-  stays revocable; a detached copy would put it permanently beyond that
-  revocation. Same for Vault, trashed and missing items. These REJECT the whole
-  send with counts and a category — never a filename, never a silent omission.
-- **Quota** is the recipient's normal limit, enforced on logical bytes under the
-  same per-owner advisory lock uploads use. Dedup buys nothing: the copy is
-  their own file. Acceptance is one transaction, so a refusal leaves no partial
-  album, and a repeat accept returns the SAME album id.
-- **A disabled sender freezes what their account can still CAUSE**: a pending
-  transfer becomes unacceptable and is swept, while copies already accepted are
-  untouched — they are the recipient's own albums.
+### Owner-bound ranking cache
+
+Complete coverage makes the first page genuinely expensive, so the finished
+ranking is cached and every later page is a keyset slice of that SAME immutable
+list — never an offset over a recomputed ranking. The key is
+`(ownerUserId, fingerprint)`: owner is part of the key, not a check afterwards,
+so a replayed cursor cannot address another account's ranking. 60-second TTL,
+bounded entries, per-key builder lock so concurrent identical first pages build
+once, and nothing published on cancellation or failure. `SemanticMediaCursor`
+went `msv1` → `msv2` and now folds the result-policy version, so a cursor issued
+against the old partial ranking is rejected rather than honoured.
+
+### Result policy — UNCALIBRATED COMPATIBILITY MODE
+
+`SemanticResultPolicy` implements `minimumScore` / `softResultLimit=300` /
+`strongResultScore` / `absoluteSafetyLimit=1000`, structurally shared by both
+modalities with per-modality overrides available.
+
+Thresholds are DISABLED and effective behaviour is a plain top-300 cut, exactly
+as before. Cosine similarity in a SigLIP2 space has no universal "good" value,
+and the automated fixtures run the deterministic 32-dimension backend, whose
+scores cannot calibrate the real 1152-dimension profile. A fabricated default
+would silently hide real matches from a live library. Disabled means disabled —
+never an implicit zero, which would look calibrated while being arbitrary.
+`IsCalibrated` reports the mode. **Turning this on is the one remaining
+product-operational task and needs a measured distribution against the real
+profile.**
+
+### Profile resolution and `ai status`
+
+Semantic search resolves `Ai:PhotoSimilarityProfileKey`
+(`photo-siglip2-so400m-patch14-384-v2`, 1152) via
+`PhotoEmbeddingProfileService.ResolveActiveProfileAsync`, deliberately without
+requiring backend readiness — reading stored embeddings needs no live model.
+
+`ai status` used a DIFFERENT resolver (`GetCapabilityAvailabilityAsync`, the
+capability default) and therefore reported the deterministic `det-*` dimension-32
+profiles, which reads as "AI is running on the dev backend" to an operator. It
+now reports the configured profile for the capabilities that pin one
+(image-embedding, face-detection, face-embedding) and the capability default for
+the rest. `GetProfileAvailabilityAsync` is a default interface method so every
+existing implementer keeps prior behaviour.
+
+### Video markers
+
+The API already returned `BestMatch` and `AdditionalMatches` (bounded,
+non-overlapping segments with start/end/representative milliseconds) and the
+TypeScript client already deserialized them; only the grid was discarding
+everything but the best one. So this is entirely frontend — **no DTO, contract
+or backend change**.
+
+`MediaGrid` now takes the complete match set instead of a lone timestamp, and
+`SemanticMarkerStrip` renders it as a timeline over the poster:
+
+- one tile per video, every returned moment reachable — matches are never
+  dropped for looking crowded;
+- chronological display order (the backend sends best-first, which is the wrong
+  order to *look* at), de-duplicated by representative timestamp;
+- position is `clamp(representative / duration, 0, 1)`. A missing, zero or
+  non-finite duration falls back to even spacing with a dashed track rather than
+  piling every dot at 0% or emitting `NaN%`;
+- clamping is DISPLAY ONLY — the timestamp handed to the player is always the
+  backend's own value;
+- markers are real `<button>`s: pointer, Enter and Space all activate, focus is
+  visible, and the hit target is ~18x18 px around a 7 px dot;
+- activation stops propagation so the tile's own open/select never also fires;
+- the best match is distinguished by a larger ringed dot AND `aria-pressed` AND
+  its accessible name — never by colour alone;
+- accessible names carry a duration offset ("Corrispondenza migliore a 1:24"),
+  never a similarity score and never a date;
+- photos and ordinary non-semantic video tiles render no strip at all.
+
+The timestamp reaches the EXISTING viewer: `MediaViewerController.open` gained
+an optional `atMs`, which overrides `initialPositionMilliseconds` for the item
+being opened and feeds the existing one-shot semantic seek. No second player, no
+duplicated HLS logic. `close()` and `setIndex()` clear it, so an unrelated video
+can never inherit a previous marker's position — the failure mode that would be
+invisible in a screenshot and irritating in use.
+
+### "Solo da organizzare" (library organization filter)
+
+A compact toggle in the media command bar, beside the Libreria/Esclusi scope
+tabs, hiding media that is already filed into an album so the library shows only
+what still needs sorting.
+
+Most of this already existed and was simply unreachable: `AlbumMembershipFilter`
+(`Any | Assigned | Unassigned`), its `NOT EXISTS` predicate in the shared
+`BuildGalleryQuery`, the `albumMembership` query parameter on `/api/media`, the
+workspace filter model and the URL round-trip were all in place. What this slice
+added is the control, plus three gaps that only became reachable with it:
+
+- **Semantic route.** `/api/media/semantic` did not accept `albumMembership` at
+  all. It does now, parsed by the SAME `GalleryQueryParser`, so membership is a
+  PHYSICAL filter applied to the candidate scope BEFORE ranking — never to an
+  already-ranked page. Because it lives in the `ImageFilters` fingerprint it
+  also binds the `msv2` cursor and the ranking-cache key for free: a ranking
+  built with the filter off can never be served with it on.
+- **Cache staleness.** The 60-second ranking cache correctly returned its
+  snapshot while album membership changed underneath it, so filing a photo left
+  it sitting in the filtered grid looking unfiled. `SemanticRankingCache` gained
+  owner-scoped `InvalidateOwner`, called from every `AlbumService` mutation that
+  changes membership. Disabling the cache whenever the filter is active was the
+  alternative and was rejected: it would re-rank the whole library on every
+  page, which is the exact cost the cache exists to pay once.
+- **Chip label.** The `album-membership` chip returned the People label — a
+  placeholder that was invisible while the filter had no UI and plainly wrong
+  once it did.
+
+Semantics: assigned means the owner's `FileItem` has at least one `album_items`
+row. Album deletion `ExecuteDelete`s its items, so a deleted album never keeps
+media hidden; removing a membership restores it immediately. A contribution
+into another owner's album counts as assigned — the file is still this owner's
+and they know about the contribution. Favourites, People, share links, Party,
+TV, folders and semantic matches are all explicitly NOT album assignment.
+
+The control is library-only: album detail, shared albums and People grids pass
+no props and render nothing. State lives in the URL (`?albumMembership=`), so
+reload, Back/Forward and deep links all reproduce it. Filing an item while the
+filter is active triggers the existing `refresh()` rather than a second
+client-side notion of membership.
+
+### Verification
+
+Backend 3161 passed / 0 failed (+28 over the pre-slice 3133). The proofs that
+matter, both green:
+
+```text
+Photo_After_The_Former_20k_Cutoff_Can_Rank_First      20,050 candidates
+Video_Sample_Beyond_20k_Temporal_Embeddings_Ranks_First  21,000 samples / 42 videos
+```
+
+Each puts the strongest match at the id/blob that sorts LAST, so it could only
+be returned if the walk reached the final keyset batch.
+
+Test-environment latency (SQLite fixture, exact-cosine fallback path — not
+production pgvector): ~10 s to rank 20,050 photo candidates cold, ~14 s for
+21,000 temporal samples cold, and 47–83 ms for a cache-hit later page.
+
+Backend 3,171 passed / 0 failed. Frontend 1,209 passed (up from 1,161: +48),
+typecheck clean, production build succeeds. Browser matrix green across
+Chromium, Firefox and WebKit x desktop, mobile and 200% zoom — 252/252 checks,
+36 screenshots — covering both the markers and the organization toggle
+(hide/restore, deep link, reload, Back/Forward, scope composition, and absence
+on album pages). The matrix drives the
+production bundle against the real API through the filter sheet (the visual
+query is deliberately session state, never a URL parameter) and verifies marker
+count and order, duration-proportional placement, hit-target size, focus,
+Enter/Space, that a marker click reaches the existing player, that tightly
+grouped markers each keep their own hit box, that ordinary galleries stay
+marker-free, and Back/Forward/reload recovery.
+
+The browser harness supplies a fixed semantic ENVELOPE over real uploaded media:
+producing genuine 1152-dimension rankings locally would need the production
+model, and the ranking is already proven by the backend tests. What the browser
+run verifies is the frontend — rendering, interaction and the seek handoff.
 
 Decisions worth remembering:
 
-- Audit must run INSIDE the mutation's transaction (`IAuditLogger.WriteAsync`,
-  non-swallowing). Written from the endpoint after the service committed, it
-  silently loses the record whenever the request fails late.
-- This codebase configures no `JsonStringEnumConverter` anywhere, so a C# enum
-  in a DTO serialises as a NUMBER and every client-side string switch falls
-  through. Catalogs are `const string` for exactly this reason.
-- Names must be unique among ACTIVE siblings
-  (`ux_file_items_active_sibling_name`). Anything that writes several
-  `FileItem` rows into one folder has to de-duplicate, as the vault already
-  does.
-- React state cannot guard a double submit: `setState` is asynchronous, so fast
-  clicks all pass the check and `disabled` only applies after the re-render. Use
-  a ref.
-- Two verification traps: Playwright's `goBack()` on an SPA returns `null`
-  (History API, no document load), so a non-waiting `isVisible()` races the
-  re-render; and two identically-generated fixture images dedupe to ONE blob, so
-  a test that turns one into a video silently turns the other into one too.
-- The SQLite endpoint fixture runs every request over ONE connection, so true
-  wall-clock concurrency cannot be reproduced there ("cannot start a transaction
-  within a transaction"). Conditional-claim correctness is tested; simultaneity
-  is a PostgreSQL follow-up.
+- The blind spot was the ORDER of truncation, not its size. Raising the cap
+  would have moved the boundary, not removed it.
+- A test asserting `total > 300` after full coverage is wrong: the policy caps
+  RESULTS at 300 while COVERAGE is unbounded. Coverage is proven by which 300
+  come back, never by how many.
+- The semantic test host must use `MediaSemanticTestHarness.Factory()`, which
+  sets `Ai:PhotoSimilarityProfileKey`. A bare factory resolves no active profile
+  (`no-default-profile`) and the tests silently measure nothing.
+- Ordinary tile opens must not pass an explicit `undefined` second argument:
+  widening `onOpen(index)` to `onOpen(index, atMs?)` changed the observed call
+  shape for every non-semantic caller and broke an existing grid test. The
+  caller omits the argument instead, so prior behaviour is byte-identical.
+- Video duration comes from `blob_metadata.DurationSeconds`, populated by a
+  background job. With the worker off, uploads have no duration and the marker
+  strip silently exercises only its even-spacing fallback — worth setting
+  explicitly when verifying the proportional path in a browser.
+- A result cache and a filter over MUTABLE state need an invalidation story.
+  Album membership is edited from inside the very grid the cached ranking
+  describes, so the cache had to learn `InvalidateOwner` — a TTL alone made the
+  product feel broken for up to a minute.
+- A UI-less filter can carry a wrong label indefinitely. The album-membership
+  chip had said "Persone" since it was written; nothing caught it because
+  nothing could switch the filter on.
 
 ## Released slice — UX-02 + VIDEO-HLS-05 wider workspaces, Laboratory, Faces, HLS
 

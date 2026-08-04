@@ -36,6 +36,11 @@ interface Props {
 
   scope: MediaLibraryScope;
   onChangeScope(scope: MediaLibraryScope): void;
+  // Library organization: hide media already filed into an album. Only the
+  // standard library passes these — album detail, shared albums and People
+  // grids leave them undefined and render no control at all.
+  unassignedOnly?: boolean;
+  onToggleUnassignedOnly?(next: boolean): void;
 }
 
 export function MediaCommandBar({
@@ -52,6 +57,8 @@ export function MediaCommandBar({
   onChangeSort,
   scope,
   onChangeScope,
+  unassignedOnly,
+  onToggleUnassignedOnly,
 }: Props) {
   const { t } = useI18n();
 
@@ -123,6 +130,25 @@ export function MediaCommandBar({
         {/* Library scope: compact and subordinate to the kind switcher, not a
             second competing tab row. */}
         <MediaLibraryScopeTabs value={scope} onChange={onChangeScope} />
+
+        {/* "Solo da organizzare" — sits beside the scope tabs rather than in a
+            new row, because it answers the same question ("which slice of the
+            library am I looking at?"). A pressed toggle, not a checkbox: the
+            state IS the control, and aria-pressed carries it to assistive tech
+            without relying on the accent colour. */}
+        {onToggleUnassignedOnly && (
+          <button
+            type="button"
+            className={`ws-chip-toggle${unassignedOnly ? ' ws-chip-toggle--on' : ''}`}
+            data-testid="ws-unassigned-only"
+            aria-pressed={unassignedOnly ? 'true' : 'false'}
+            title={t('mediaWs.unassignedOnlyHelp')}
+            onClick={() => onToggleUnassignedOnly(!unassignedOnly)}
+          >
+            <Icon name="albums" aria-hidden="true" />
+            <span className="ws-chip-toggle-label">{t('mediaWs.unassignedOnly')}</span>
+          </button>
+        )}
       </div>
     </div>
   );

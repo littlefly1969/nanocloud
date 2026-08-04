@@ -37,7 +37,7 @@ import { MediaKindTabs } from './MediaKindTabs';
 import { MediaCommandBar } from './MediaCommandBar';
 import { MediaFilterChips } from './MediaFilterChips';
 import { MediaFilterSheet } from './MediaFilterSheet';
-import { MediaGrid } from './MediaGrid';
+import { MediaGrid, type SemanticTileMatches } from './MediaGrid';
 import { MediaWorkspaceSelectionBar } from './MediaWorkspaceSelectionBar';
 import { getMediaSelectionCapabilities } from './mediaSelectionCapabilities';
 import {
@@ -290,11 +290,17 @@ export function MediaWorkspace({
       // The original blob size, already on the loaded item: the viewer's summary
       // needs no request for it.
       sizeBytes: it.sizeBytes,
+      // SEARCH-SEM-01: an explicitly requested marker timestamp wins for the
+      // item actually being opened; everything else keeps the best match. The
+      // controller clears the request on close and on in-viewer navigation, so
+      // a later item can never inherit it.
       initialPositionMilliseconds: it.kind === 'video'
-        ? ws.semanticEvidence.get(it.id)?.bestMatch.representativeMilliseconds ?? null
+        ? (viewer.seekMs != null && viewer.index != null && ws.items[viewer.index]?.id === it.id
+            ? viewer.seekMs
+            : ws.semanticEvidence.get(it.id)?.bestMatch.representativeMilliseconds ?? null)
         : null,
     })),
-    [ws.items, ws.semanticEvidence],
+    [ws.items, ws.semanticEvidence, viewer.seekMs, viewer.index],
   );
 
   // Representative timestamps for the grid badge (videos only).
@@ -302,6 +308,20 @@ export function MediaWorkspace({
     const map = new Map<string, number | null>();
     for (const [id, evidence] of ws.semanticEvidence) {
       map.set(id, evidence.bestMatch.representativeMilliseconds);
+    }
+    return map;
+  }, [ws.semanticEvidence]);
+
+  // SEARCH-SEM-01: the COMPLETE evidence for the marker strip. Same source as
+  // the badge above — the backend has always returned the additional matches;
+  // only the grid was discarding them.
+  const semanticMatches = useMemo(() => {
+    const map = new Map<string, SemanticTileMatches>();
+    for (const [id, evidence] of ws.semanticEvidence) {
+      map.set(id, {
+        bestMatch: evidence.bestMatch,
+        additionalMatches: evidence.additionalMatches,
+      });
     }
     return map;
   }, [ws.semanticEvidence]);
@@ -322,11 +342,21 @@ export function MediaWorkspace({
         if (ids.length === 0) return;
         void (async () => {
           const msg = await d.run(ids);
-          if (typeof msg === 'string') { setNotice(msg); announce(msg); selection.clear(); }
+          if (typeof msg === 'string') {
+            setNotice(msg); announce(msg); selection.clear();
+            // "Solo da organizzare" shows media with NO album. Filing an item
+            // into one makes it no longer belong here, so invalidate through
+            // the existing refetch rather than keeping a second client-side
+            // notion of album membership. Only when the filter is on: an
+            // unfiltered library has no reason to re-page itself.
+            if (identity.filters.common.albumMembership === 'unassigned') {
+              ws.refresh();
+            }
+          }
         })();
       },
     })),
-    [photoDestinations, selection, announce],
+    [photoDestinations, selection, announce, identity.filters.common.albumMembership, ws],
   );
   const capabilities = getMediaSelectionCapabilities({
     items: selectedItems,
@@ -373,6 +403,23 @@ export function MediaWorkspace({
         onChangeSort={changeSort}
         scope={identity.libraryScope}
         onChangeScope={changeScope}
+        // Library only: album detail, shared albums and People grids pass
+        // nothing, so the control does not exist there at all.
+        unassignedOnly={source.kind === 'library'
+          ? identity.filters.common.albumMembership === 'unassigned'
+          : undefined}
+        onToggleUnassignedOnly={source.kind === 'library'
+          ? (next) => onIdentityChange({
+              ...identity,
+              filters: {
+                ...identity.filters,
+                common: {
+                  ...identity.filters.common,
+                  albumMembership: next ? 'unassigned' : 'any',
+                },
+              },
+            })
+          : undefined}
       />
 
       <MediaFilterChips identity={identity} people={people} items={ws.items} onRemove={removeChip} onClearAll={clearAll} />
@@ -402,8 +449,9 @@ export function MediaWorkspace({
             items={ws.items}
             orderedIds={ws.orderedIds}
             selection={selection}
-            onOpen={(index) => viewer.open(index)}
+            onOpen={(index, atMs) => viewer.open(index, atMs)}
             semanticTimestamps={semanticTimestamps}
+            semanticMatches={semanticMatches}
           />
         )}
 

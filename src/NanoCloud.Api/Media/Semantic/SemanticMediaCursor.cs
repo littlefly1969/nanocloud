@@ -23,19 +23,27 @@ namespace NanoCloud.Api.Media.Semantic;
 public static class SemanticMediaCursor
 {
     // Bumped whenever the ordering/merge contract changes so old cursors 400.
-    public const string RankingVersion = "msv1";
+    // msv2: SEARCH-SEM-01 replaced GUID-prefix truncation with full-library
+    // coverage, so a cursor issued against the old partial ranking must not be
+    // honoured over the new complete one.
+    public const string RankingVersion = "msv2";
 
+    // SEARCH-SEM-01: the fingerprint doubles as the RANKING CACHE identity, so
+    // it must fold everything that changes the ranked list — including the
+    // result policy, whose thresholds decide which results exist at all.
     public static string Fingerprint(
         string normalizedQuery,
         string profileKey,
         MediaKindScope kind,
         ImageFilters filters,
-        int segmentationVersion)
+        int segmentationVersion,
+        int policyVersion = SemanticResultPolicyOptions.PolicyVersion)
     {
         var queryHash = Convert.ToHexString(
             SHA256.HashData(Encoding.UTF8.GetBytes(normalizedQuery.ToLowerInvariant())), 0, 8);
         var raw = $"q={queryHash}|prof={profileKey}|kind={kind.ToWire()}"
-            + $"|f={filters.Fingerprint() ?? string.Empty}|rv={RankingVersion}|sv={segmentationVersion}";
+            + $"|f={filters.Fingerprint() ?? string.Empty}|rv={RankingVersion}|sv={segmentationVersion}"
+            + $"|pv={policyVersion}";
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(raw));
         return Convert.ToHexString(bytes, 0, 12).ToLowerInvariant();
     }

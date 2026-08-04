@@ -39,6 +39,17 @@ public sealed record SemanticMediaResultItem(
     SemanticBestMatch BestMatch,
     IReadOnlyList<SemanticBestMatch> AdditionalMatches);
 
+// SEARCH-SEM-01: one ranked hit inside the cached ranking snapshot. INTERNAL to
+// the search pipeline — it is never serialized, which is what lets it carry the
+// raw cosine score that the public DTO deliberately withholds. Promoted out of
+// MediaSemanticSearchService only so the ranking cache and the bounded
+// accumulator can be typed over it.
+public sealed record SemanticRankedHit(
+    Guid FileItemId,
+    double Score,
+    SemanticBestMatch BestMatch,
+    IReadOnlyList<SemanticBestMatch> AdditionalMatches);
+
 // HTTP response envelope for GET /api/media/semantic. `SemanticStatus` is the
 // same closed vocabulary the photo semantic path surfaces: "ok" | "indexing"
 // (many eligible candidates are not embedded yet) — "unavailable" is a 503

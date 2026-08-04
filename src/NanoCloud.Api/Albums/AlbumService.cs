@@ -8,9 +8,18 @@ public class AlbumService : IAlbumService
 {
     private readonly AppDbContext _db;
     private readonly TimeProvider _time;
+    // SEARCH-SEM-01: album membership decides what the "Solo da organizzare"
+    // filter shows, so changing it must drop this owner's cached semantic
+    // rankings. Optional: legacy direct-construction test sites pass null and
+    // simply get the previous (uncached-invalidating) behaviour.
+    private readonly Media.Semantic.SemanticRankingCache? _semanticRankings;
 
-    public AlbumService(AppDbContext db, TimeProvider time)
+    public AlbumService(
+        AppDbContext db,
+        TimeProvider time,
+        Media.Semantic.SemanticRankingCache? semanticRankings = null)
     {
+        _semanticRankings = semanticRankings;
         _db = db;
         _time = time;
     }
@@ -235,6 +244,12 @@ public class AlbumService : IAlbumService
                       .SetProperty(a => a.UpdatedAt, _ => _time.GetUtcNow().UtcDateTime),
                 cancellationToken);
 
+    // Called whenever this owner's album membership changes, so a filtered
+    // semantic view cannot keep showing media that has just been filed (or keep
+    // hiding media that has just been unfiled).
+    private void InvalidateSemanticRankings(Guid ownerUserId)
+        => _semanticRankings?.InvalidateOwner(ownerUserId);
+
     public async Task<bool> DeleteAsync(
         Guid albumId, Guid ownerUserId,
         CancellationToken cancellationToken = default)
@@ -264,6 +279,7 @@ public class AlbumService : IAlbumService
 
         _db.Albums.Remove(album);
         await _db.SaveChangesAsync(cancellationToken);
+        InvalidateSemanticRankings(ownerUserId);
         return true;
     }
 
@@ -341,6 +357,7 @@ public class AlbumService : IAlbumService
         // version moves — a collaborator holding the old one must re-read.
         await BumpVersionAsync(albumId, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
+        InvalidateSemanticRankings(ownerUserId);
         return true;
     }
 
@@ -360,6 +377,7 @@ public class AlbumService : IAlbumService
         {
             await BumpVersionAsync(albumId, cancellationToken);
             await _db.SaveChangesAsync(cancellationToken);
+            InvalidateSemanticRankings(ownerUserId);
         }
         return true;
     }
@@ -418,6 +436,7 @@ public class AlbumService : IAlbumService
         {
             await BumpVersionAsync(albumId, cancellationToken);
             await _db.SaveChangesAsync(cancellationToken);
+            InvalidateSemanticRankings(ownerUserId);
         }
 
         return new BulkAlbumItemsResult(requested, toAdd.Count, requested - toAdd.Count);
@@ -448,6 +467,7 @@ public class AlbumService : IAlbumService
         {
             await BumpVersionAsync(albumId, cancellationToken);
             await _db.SaveChangesAsync(cancellationToken);
+            InvalidateSemanticRankings(ownerUserId);
         }
 
         return new BulkAlbumItemsResult(requested, removed, requested - removed);

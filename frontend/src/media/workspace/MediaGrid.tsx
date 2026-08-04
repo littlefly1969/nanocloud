@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
-import type { MediaItem } from '@nubarca/api-client';
+import type { MediaItem, SemanticBestMatch } from '@nubarca/api-client';
 import { formatSize } from '../../components/format';
 import { useI18n } from '../../i18n';
+import { SemanticMarkerStrip, toMarkers } from './SemanticMarkerStrip';
 import { VideoPreview } from '../../video/VideoPreview';
 import { getMediaAspectRatio } from './mediaAspectRatio';
 import { computeJustifiedRows, type JustifiedLayoutItem } from '../layout/computeJustifiedRows';
@@ -35,6 +36,17 @@ function formatDuration(totalSeconds: number): string {
 // match, by media id. Absent unless a unified semantic search is active.
 export type SemanticTimestamps = ReadonlyMap<string, number | null>;
 
+// SEARCH-SEM-01: the COMPLETE temporal evidence of one semantic video result.
+// Supersedes passing a lone best timestamp — the backend always returned the
+// additional matches and the grid was discarding them. Present only for videos
+// returned by a semantic search: the library, albums, shared albums and People
+// walls pass nothing and are byte-identical to before.
+export interface SemanticTileMatches {
+  bestMatch: SemanticBestMatch;
+  additionalMatches: SemanticBestMatch[];
+}
+export type SemanticMatches = ReadonlyMap<string, SemanticTileMatches>;
+
 // Optional short overlay label per media id — the Similar Photos Explorer uses
 // it for the similarity percentage. Ids with no entry render no badge, so the
 // library and album walls are byte-identical to before.
@@ -44,12 +56,16 @@ interface GridProps {
   items: MediaItem[];
   orderedIds: string[];
   selection: MediaSelection;
-  onOpen(index: number): void;
+  // `atMs` is supplied only when a semantic marker was activated.
+  onOpen(index: number, atMs?: number): void;
   semanticTimestamps?: SemanticTimestamps;
+  semanticMatches?: SemanticMatches;
   badges?: MediaTileBadges;
 }
 
-export function MediaGrid({ items, orderedIds, selection, onOpen, semanticTimestamps, badges }: GridProps) {
+export function MediaGrid({
+  items, orderedIds, selection, onOpen, semanticTimestamps, semanticMatches, badges,
+}: GridProps) {
   const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   // `null` until the real width is known. Rows are NOT laid out against an
@@ -162,8 +178,14 @@ export function MediaGrid({ items, orderedIds, selection, onOpen, semanticTimest
                 height={tile.height}
                 orderedIds={orderedIds}
                 selection={selection}
-                onOpen={() => onOpen(tile.originalIndex)}
+                onOpen={(atMs) => (atMs === undefined
+                  // Ordinary opens must be indistinguishable from before —
+                  // passing an explicit `undefined` would change the observed
+                  // call shape for every non-semantic caller.
+                  ? onOpen(tile.originalIndex)
+                  : onOpen(tile.originalIndex, atMs))}
                 semanticMs={semanticTimestamps?.get(tile.id) ?? null}
+                semanticMatches={semanticMatches?.get(tile.id) ?? null}
                 badge={badges?.get(tile.id) ?? null}
               />
             ))}
@@ -181,21 +203,32 @@ interface TileProps {
   height: number;
   orderedIds: string[];
   selection: MediaSelection;
-  onOpen(): void;
+  onOpen(atMs?: number): void;
   // VSEM-03: representative timestamp of this video's best semantic match.
   semanticMs?: number | null;
+  // SEARCH-SEM-01: every matching moment of this video, for the marker strip.
+  semanticMatches?: SemanticTileMatches | null;
   // Short overlay label (e.g. "92%"). Null renders nothing.
   badge?: string | null;
 }
 
 export function MediaTile({
-  item, index, width, height, orderedIds, selection, onOpen, semanticMs = null, badge = null,
+  item, index, width, height, orderedIds, selection, onOpen, semanticMs = null,
+  semanticMatches = null, badge = null,
 }: TileProps) {
   const { t } = useI18n();
   const [thumbFailed, setThumbFailed] = useState(false);
   const [hovered, setHovered] = useState(false);
   const selected = selection.isSelected(item.id);
   const isVideo = item.kind === 'video';
+  // Chronological, de-duplicated. Empty for photos and for any tile the caller
+  // passed no semantic evidence for, which is what keeps ordinary walls clean.
+  const markers = useMemo(
+    () => (isVideo && semanticMatches
+      ? toMarkers(semanticMatches.bestMatch, semanticMatches.additionalMatches)
+      : []),
+    [isVideo, semanticMatches],
+  );
 
   function onOpenClick(e: ReactMouseEvent<HTMLButtonElement>) {
     const result = selection.handleTileClick(item.id, index, orderedIds, {
@@ -286,6 +319,16 @@ export function MediaTile({
             )}
             {/* VSEM-03: where in the video the match is. Unobtrusive, and it
                 shows a TIME, never a score or any model detail. */}
+            {/* SEARCH-SEM-01: every matching moment, not just the badge's
+                best one. Videos returned by a semantic search only. */}
+            {isVideo && markers.length > 0 && (
+              <SemanticMarkerStrip
+                markers={markers}
+                durationSeconds={item.durationSeconds}
+                formatOffset={formatDuration}
+                onSeek={(ms) => onOpen(ms)}
+              />
+            )}
             {semanticMs != null && (
               <span
                 className="media-tile__semantic-time"

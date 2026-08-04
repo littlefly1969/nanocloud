@@ -571,6 +571,13 @@ public static class GalleryMediaEndpoints
             [FromQuery] int? minRating,
             [FromQuery] DateTime? dateTakenFrom,
             [FromQuery] DateTime? dateTakenTo,
+            // SEARCH-SEM-01: album membership is a PHYSICAL filter, so it must
+            // reach the candidate scope and shrink the set BEFORE ranking —
+            // never be applied to an already-ranked page. It is part of the
+            // ImageFilters fingerprint, so it also binds the msv2 cursor and
+            // the ranking-cache key automatically: a ranking built with the
+            // filter off can never be served with it on.
+            [FromQuery] string? albumMembership,
             HttpContext httpContext,
             [FromServices] NanoCloud.Api.Media.Semantic.MediaSemanticSearchService semantic,
             CancellationToken cancellationToken) =>
@@ -607,12 +614,19 @@ public static class GalleryMediaEndpoints
             var pageSize = Math.Clamp(
                 limit ?? NanoCloud.Api.Media.Semantic.MediaSemanticSearchService.DefaultPageSize,
                 1, NanoCloud.Api.Media.Semantic.MediaSemanticSearchService.MaxPageSize);
+            if (!GalleryQueryParser.TryParseAlbumMembership(
+                albumMembership, out var semanticMembership, out var semanticMembershipError))
+            {
+                return Results.BadRequest(new { error = semanticMembershipError });
+            }
+
             var filters = new ImageFilters
             {
                 Favorite = favorite,
                 MinRating = minRating,
                 DateTakenFrom = dateTakenFrom,
                 DateTakenTo = dateTakenTo,
+                AlbumMembership = semanticMembership,
             };
 
             NanoCloud.Api.Media.Semantic.SemanticMediaPage page;

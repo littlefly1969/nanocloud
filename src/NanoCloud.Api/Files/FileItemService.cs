@@ -909,11 +909,17 @@ public sealed class FileItemService : IFileItemService
     // when the cap truncates). The caller discloses truncation via a warning; the
     // cap is never applied silently. Returns the FileItem id (the collapse-aware
     // representative when collapsing is on) and its blob id (for vector lookup).
+    // SEARCH-SEM-01: `afterId` makes this KEYSET-pageable. The projection was
+    // always ordered by Id, so `Id > afterId` walks the eligible set in bounded
+    // batches with no offset drift and no unbounded materialisation. Omitting
+    // it reproduces the original single-batch behaviour exactly, so every
+    // pre-existing caller is unaffected.
     public async Task<IReadOnlyList<GalleryCandidateRef>> ListPhysicalGalleryCandidatesAsync(
         Guid ownerUserId,
         ImageFilters filters,
         int cap,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Guid? afterId = null)
     {
         ArgumentNullException.ThrowIfNull(filters);
         var physical = filters.WithoutSemantic();
@@ -921,6 +927,10 @@ public sealed class FileItemService : IFileItemService
 
         var semanticCandidates = SemanticPhotoCandidatePolicy.Apply(
             BuildGalleryQuery(ownerUserId, physical, MediaKindScope.Image), _db);
+        if (afterId is Guid photoAfter)
+        {
+            semanticCandidates = semanticCandidates.Where(f => f.Id.CompareTo(photoAfter) > 0);
+        }
         var rows = await semanticCandidates
             .OrderBy(f => f.Id)
             .Select(f => new { f.Id, f.BlobObjectId })
@@ -1259,17 +1269,25 @@ public sealed class FileItemService : IFileItemService
     // global filter, media-library-visible, server-detected video). No photo
     // quality gate applies. Returns up to `cap` (Id, BlobObjectId) pairs
     // ordered by Id.
+    // SEARCH-SEM-01: keyset-pageable via `afterId`, same contract as the photo
+    // candidate projection above.
     public async Task<IReadOnlyList<GalleryCandidateRef>> ListPhysicalVideoCandidatesAsync(
         Guid ownerUserId,
         ImageFilters filters,
         int cap,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Guid? afterId = null)
     {
         ArgumentNullException.ThrowIfNull(filters);
         var physical = filters.WithoutSemantic();
         var boundedCap = Math.Max(1, cap);
 
-        var rows = await BuildGalleryQuery(ownerUserId, physical, MediaKindScope.Video)
+        var videoCandidates = BuildGalleryQuery(ownerUserId, physical, MediaKindScope.Video);
+        if (afterId is Guid videoAfter)
+        {
+            videoCandidates = videoCandidates.Where(f => f.Id.CompareTo(videoAfter) > 0);
+        }
+        var rows = await videoCandidates
             .OrderBy(f => f.Id)
             .Select(f => new { f.Id, f.BlobObjectId })
             .Take(boundedCap + 1)

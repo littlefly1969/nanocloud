@@ -206,6 +206,13 @@ public static class AiServiceRegistration
         services.AddScoped<NanoCloud.Api.Media.Semantic.SemanticMediaCandidateService>();
         services.AddScoped<NanoCloud.Api.Media.Semantic.MediaSemanticSearchService>();
 
+        // SEARCH-SEM-01: the shared result policy is scoped (it only reads
+        // options), but the ranking cache is a SINGLETON — a per-request cache
+        // would never be hit and page 2 would re-rank the whole library, which
+        // is the entire cost this slice exists to pay once.
+        services.AddScoped<NanoCloud.Api.Media.Semantic.SemanticResultPolicy>();
+        services.AddSingleton<NanoCloud.Api.Media.Semantic.SemanticRankingCache>();
+
         return services;
     }
 }

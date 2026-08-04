@@ -118,20 +118,28 @@ public interface IFileItemService
     // (Id, BlobObjectId) pairs matching the PHYSICAL projection of the filters
     // (semantic residual removed), through the same shared gallery query, with
     // the text-search-only small-image quality gate applied afterwards.
+    // SEARCH-SEM-01: `afterId` keyset-pages the eligible set so semantic
+    // ranking can cover the whole library in bounded batches instead of a
+    // GUID-ordered prefix. Omitting it preserves the original behaviour.
     Task<IReadOnlyList<GalleryCandidateRef>> ListPhysicalGalleryCandidatesAsync(
         Guid ownerUserId,
         ImageFilters filters,
         int cap,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Guid? afterId = null);
 
     // VSEM-03: video counterpart of ListPhysicalGalleryCandidatesAsync — the
     // physically filtered, owner-visible video candidate set for unified
     // semantic ranking. Same shared gallery query; no photo quality gate.
+    // SEARCH-SEM-01: `afterId` keyset-pages the eligible set so semantic
+    // ranking can cover the whole library in bounded batches instead of a
+    // GUID-ordered prefix. Omitting it preserves the original behaviour.
     Task<IReadOnlyList<GalleryCandidateRef>> ListPhysicalVideoCandidatesAsync(
         Guid ownerUserId,
         ImageFilters filters,
         int cap,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Guid? afterId = null);
 
     // VSEM-03: hydrates an already-ranked owner-private MIXED media set into
     // unified MediaItem DTOs preserving the supplied relevance order (the

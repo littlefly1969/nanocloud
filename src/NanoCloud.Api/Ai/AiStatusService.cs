@@ -42,7 +42,20 @@ public sealed class AiStatusService : IAiStatusService
         var capabilities = new List<AiCapabilityStatus>(BackendCapabilities.Length);
         foreach (var capability in BackendCapabilities)
         {
-            var resolution = await _resolver.GetCapabilityAvailabilityAsync(capability, cancellationToken);
+            // SEARCH-SEM-01: report the profile the RUNTIME actually uses.
+            //
+            // Photo similarity resolves Ai:PhotoSimilarityProfileKey and faces
+            // resolve Ai:FaceProfileKey; only capabilities without such a
+            // setting fall back to the capability default. Reporting the
+            // capability default unconditionally was actively misleading in
+            // production: it named the deterministic dev/test profile
+            // (dimension 32) while semantic search was in fact running on the
+            // configured 1152-dimension SigLIP2 profile, which reads as "AI is
+            // running on the dev backend" to an operator checking `ai status`.
+            var configuredKey = ConfiguredProfileKeyFor(capability, options);
+            var resolution = configuredKey is null
+                ? await _resolver.GetCapabilityAvailabilityAsync(capability, cancellationToken)
+                : await _resolver.GetProfileAvailabilityAsync(capability, configuredKey, cancellationToken);
             capabilities.Add(new AiCapabilityStatus(
                 capability,
                 resolution.IsAvailable,
@@ -58,5 +71,20 @@ public sealed class AiStatusService : IAiStatusService
             models.Count,
             profiles.Count,
             capabilities);
+    }
+
+    // The capabilities whose runtime profile is pinned by configuration rather
+    // than by the capability default. Anything not listed here genuinely does
+    // use the capability default, so it keeps reporting that.
+    private static string? ConfiguredProfileKeyFor(string capability, AiOptions options)
+    {
+        var key = capability switch
+        {
+            AiCapabilities.ImageEmbedding => options.PhotoSimilarityProfileKey,
+            AiCapabilities.FaceDetection => options.FaceProfileKey,
+            AiCapabilities.FaceEmbedding => options.FaceProfileKey,
+            _ => null,
+        };
+        return string.IsNullOrWhiteSpace(key) ? null : key.Trim();
     }
 }

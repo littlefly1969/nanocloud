@@ -39,9 +39,16 @@ export type LoadPhase =
 export interface MediaViewerController {
   index: number | null;
   isOpen: boolean;
-  open(index: number): void;
+  // SEARCH-SEM-01: `atMs` opens the item at an explicit position — a semantic
+  // marker's own representative timestamp. Omitting it opens normally, which is
+  // what every non-semantic caller does and why their behaviour is unchanged.
+  open(index: number, atMs?: number): void;
   close(): void;
   setIndex(index: number): void;
+  // The explicitly requested position for the CURRENTLY open item, or null.
+  // Deliberately cleared by close() and setIndex() so navigating to the next
+  // item in the viewer can never inherit the previous item's seek.
+  seekMs: number | null;
 }
 
 // VSEM-03: the temporal evidence of one semantic result, keyed by media id.
@@ -212,6 +219,11 @@ async function fetchPage(
         minRating: common.minRating ?? undefined,
         dateTakenFrom: common.dateTakenFrom.length > 0 ? common.dateTakenFrom : undefined,
         dateTakenTo: common.dateTakenTo.length > 0 ? common.dateTakenTo : undefined,
+        // Library only, and only when set: a physical filter the server must
+        // apply to the candidate scope before ranking.
+        albumMembership: source.kind === 'library' && common.albumMembership !== 'any'
+          ? common.albumMembership
+          : undefined,
       }, signal);
     } catch (err) {
       // The AI profile / text tower is unavailable: an expected operational
@@ -288,6 +300,9 @@ export function useMediaWorkspace(
   const [videoCount, setVideoCount] = useState<number | null>(null);
   const [phase, setPhase] = useState<LoadPhase>({ kind: 'loadingInitial' });
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  // SEARCH-SEM-01: an explicit one-shot seek for the open item (a semantic
+  // marker). Null means "use whatever default the item carries".
+  const [viewerSeekMs, setViewerSeekMs] = useState<number | null>(null);
   const [semanticNotice, setSemanticNotice] = useState<string | null>(null);
   const [semanticEvidence, setSemanticEvidence] = useState<Map<string, SemanticEvidence>>(NO_EVIDENCE);
 
@@ -464,10 +479,25 @@ export function useMediaWorkspace(
   const viewer = useMemo<MediaViewerController>(() => ({
     index: viewerIndex,
     isOpen: viewerIndex !== null,
-    open: (index: number) => setViewerIndex(index),
-    close: () => setViewerIndex(null),
-    setIndex: (index: number) => setViewerIndex(index),
-  }), [viewerIndex]);
+    open: (index: number, atMs?: number) => {
+      // Set the seek BEFORE the index so the first render of the newly opened
+      // item already carries its position; opening without `atMs` clears any
+      // previous one rather than letting it leak onto an unrelated item.
+      setViewerSeekMs(atMs ?? null);
+      setViewerIndex(index);
+    },
+    close: () => {
+      setViewerSeekMs(null);
+      setViewerIndex(null);
+    },
+    setIndex: (index: number) => {
+      // In-viewer navigation to a different item: the previous item's semantic
+      // position must not follow it.
+      setViewerSeekMs(null);
+      setViewerIndex(index);
+    },
+    seekMs: viewerSeekMs,
+  }), [viewerIndex, viewerSeekMs]);
 
   return {
     items,

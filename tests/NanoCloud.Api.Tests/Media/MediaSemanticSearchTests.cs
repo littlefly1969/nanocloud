@@ -119,6 +119,8 @@ public sealed class MediaSemanticSearchTests
             scope.ServiceProvider.GetRequiredService<VideoSemanticSampleVectorIndexService>(),
             scope.ServiceProvider.GetRequiredService<IAiVectorSerializer>(),
             scope.ServiceProvider.GetRequiredService<IOptions<VideoSemanticSegmentationOptions>>(),
+            scope.ServiceProvider.GetRequiredService<SemanticResultPolicy>(),
+            scope.ServiceProvider.GetRequiredService<SemanticRankingCache>(),
             NullLogger<MediaSemanticSearchService>.Instance);
 
         var page = await service.SearchAsync(

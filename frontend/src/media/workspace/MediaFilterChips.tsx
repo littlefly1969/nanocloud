@@ -46,7 +46,13 @@ export function MediaFilterChips({ identity, people, items, onRemove, onClearAll
       case 'min-rating': return t('mediaChip.minRating', { value: String(chip.minRating ?? '') });
       case 'gps': return t('mediaChip.gps');
       case 'collapse': return t('mediaChip.collapse');
-      case 'album-membership': return t('mediaChip.people'); // library-only; generic
+      // Was a placeholder returning the People label, which was invisible while
+      // this filter had no UI. The command-bar toggle makes it reachable, so it
+      // now says what it actually is.
+      case 'album-membership':
+        return identity.filters.common.albumMembership === 'unassigned'
+          ? t('mediaChip.unassigned')
+          : t('mediaChip.assigned');
       case 'similar': {
         const anchorId = identity.filters.photo.similarTo;
         const anchor = items?.find((it) => it.id === anchorId);

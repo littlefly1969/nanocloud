@@ -754,6 +754,15 @@ builder.Services.Configure<AiOptions>(
 // VSEM-01: canonical video temporal substrate (scene segments + sample
 // timestamps). Bound alongside AiOptions; disabled by default. The CLI/worker
 // host binds the same section (parity — see CliEntryPoint).
+// SEARCH-SEM-01: result-selection policy and the short-lived ranking cache.
+// Both ship with safe defaults; thresholds stay DISABLED until calibrated
+// against the real profile, so behaviour is unchanged out of the box.
+builder.Services.Configure<NanoCloud.Api.Media.Semantic.SemanticResultPolicyOptions>(
+    builder.Configuration.GetSection(
+        NanoCloud.Api.Media.Semantic.SemanticResultPolicyOptions.SectionName));
+builder.Services.Configure<NanoCloud.Api.Media.Semantic.SemanticRankingCacheOptions>(
+    builder.Configuration.GetSection(
+        NanoCloud.Api.Media.Semantic.SemanticRankingCacheOptions.SectionName));
 builder.Services.Configure<NanoCloud.Api.Ai.Video.VideoSemanticSegmentationOptions>(
     builder.Configuration.GetSection(
         NanoCloud.Api.Ai.Video.VideoSemanticSegmentationOptions.SectionName));

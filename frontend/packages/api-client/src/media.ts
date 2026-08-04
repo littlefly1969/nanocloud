@@ -170,8 +170,8 @@ export interface SemanticMediaSearchResponse {
   total: number;
 }
 
-// Supported filters on the semantic route (this slice): favorite, minRating
-// and the DateTaken range. Other gallery filters are not semantic-aware yet.
+// Supported filters on the semantic route: favorite, minRating, the DateTaken
+// range and album membership. Other gallery filters are not semantic-aware yet.
 export interface SearchSemanticMediaQuery {
   q: string;
   kind: 'all' | 'image' | 'video';
@@ -181,6 +181,9 @@ export interface SearchSemanticMediaQuery {
   minRating?: number;
   dateTakenFrom?: string;
   dateTakenTo?: string;
+  // SEARCH-SEM-01: a PHYSICAL filter — the server applies it to the candidate
+  // scope before ranking, and it binds the cursor and ranking cache.
+  albumMembership?: AlbumMembership;
 }
 
 export function searchSemanticMedia(
@@ -196,5 +199,8 @@ export function searchSemanticMedia(
   if (query.minRating !== undefined) p.set('minRating', String(query.minRating));
   if (query.dateTakenFrom) p.set('dateTakenFrom', query.dateTakenFrom);
   if (query.dateTakenTo) p.set('dateTakenTo', query.dateTakenTo);
+  if (query.albumMembership && query.albumMembership !== 'any') {
+    p.set('albumMembership', query.albumMembership);
+  }
   return api<SemanticMediaSearchResponse>(`/api/media/semantic?${p.toString()}`, { signal });
 }
