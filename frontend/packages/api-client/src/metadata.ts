@@ -1,6 +1,6 @@
 import { api } from './client';
 
-// Mirrors NanoCloud.Api.Metadata.FileMetadataResponse and its nested records.
+// Mirrors NubArca.Api.Metadata.FileMetadataResponse and its nested records.
 // Curated, safe fields only — the backend never returns raw embedded metadata,
 // GPS coordinates, serial numbers, StorageKey, physical paths, SHA-256, or
 // BlobObjectId. `hasGps` is a boolean presence flag with no coordinates.
@@ -80,7 +80,7 @@ export interface FileMetadata {
 }
 
 // Editable user-metadata fields (slice 56). Mirrors
-// NanoCloud.Api.Metadata.UpdateFileMetadataRequest. Full-replace semantics:
+// NubArca.Api.Metadata.UpdateFileMetadataRequest. Full-replace semantics:
 // every field listed here is set to the value provided, and omitting one is
 // equivalent to clearing it. The frontend always loads the current document
 // first and sends every field on save, so an edit never silently clears

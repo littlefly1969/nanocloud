@@ -49,7 +49,7 @@ done
 
 cd "$(git rev-parse --show-toplevel)"
 GIT_SHA="$(git rev-parse HEAD)"
-IMAGE_TAG="${IMAGE_TAG_OVERRIDE:-nanocloud-api:siglipeq-${GIT_SHA:0:12}}"
+IMAGE_TAG="${IMAGE_TAG_OVERRIDE:-nubarca-api:siglipeq-${GIT_SHA:0:12}}"
 [[ -e /dev/dri/renderD128 ]] && RENDER_GID="$(stat -c '%g' /dev/dri/renderD128)" || true
 OUT="$(mktemp -d)"
 OVCACHE="siglipeq-ovcache-$$"
@@ -60,22 +60,22 @@ cleanup() {
 trap cleanup EXIT
 
 if [[ -z "$IMAGE_TAG_OVERRIDE" ]]; then
-  docker build -f src/NanoCloud.Api/Dockerfile --target runtime-openvino \
+  docker build -f src/NubArca.Api/Dockerfile --target runtime-openvino \
     --build-arg "GIT_SHA=${GIT_SHA}" -t "$IMAGE_TAG" . 1>&2
 fi
 docker volume create "$OVCACHE" >/dev/null
 
-# Shared flags. NOTE: entrypoint already runs `dotnet NanoCloud.Api.dll`, so the
+# Shared flags. NOTE: entrypoint already runs `dotnet NubArca.Api.dll`, so the
 # container command is ONLY the CLI verb + args.
 IMG_CMD=(ai onnx image-embed --dir /fixtures --timeout-seconds 3600)
 TXT_CMD=(ai onnx text-embed --queries-file /queries.txt --timeout-seconds 3600)
 common=(--rm --read-only --tmpfs /tmp:size=512m,mode=1777
   --cap-drop ALL --security-opt no-new-privileges --memory 8g --cpus 6
   -v "${MODELS}:/models/ai:ro" -v "${FIXTURES}:/fixtures:ro" -v "${QUERIES}:/queries.txt:ro"
-  -v "${OVCACHE}:/var/cache/nanocloud/openvino"
+  -v "${OVCACHE}:/var/cache/nubarca/openvino"
   -e Ai__Enabled=true -e Ai__ImageEmbeddingsEnabled=true -e Ai__Onnx__ModelDir=/models/ai
   -e Ai__TimeoutSeconds=600
-  -e "NANOCLOUD_GIT_SHA=${GIT_SHA}"
+  -e "NUBARCA_GIT_SHA=${GIT_SHA}"
   # Unused connection string: registers AddAiSubstrate; the harness never connects.
   -e "ConnectionStrings__Postgres=Host=127.0.0.1;Port=1;Database=x;Username=x;Password=x")
 
@@ -94,17 +94,17 @@ run_mode ortcpu --network none \
 
 run_mode ovcpu --network none \
   -e Ai__Onnx__ExecutionProvider=openvino-direct \
-  -e Ai__Onnx__OpenVino__NativeDir=/opt/nanocloud/ort-openvino \
+  -e Ai__Onnx__OpenVino__NativeDir=/opt/nubarca/ort-openvino \
   -e Ai__Onnx__OpenVino__PhotoImageDevice=CPU -e Ai__Onnx__OpenVino__PhotoTextDevice=CPU \
-  -e Ai__Onnx__OpenVino__CacheDir=/var/cache/nanocloud/openvino
+  -e Ai__Onnx__OpenVino__CacheDir=/var/cache/nubarca/openvino
 
 if [[ -n "$RENDER_GID" ]]; then
   run_mode ovgpu --network none --device /dev/dri:/dev/dri --group-add "$RENDER_GID" \
     -e Ai__Onnx__ExecutionProvider=openvino-direct \
-    -e Ai__Onnx__OpenVino__NativeDir=/opt/nanocloud/ort-openvino \
+    -e Ai__Onnx__OpenVino__NativeDir=/opt/nubarca/ort-openvino \
     -e Ai__Onnx__OpenVino__PhotoImageDevice=GPU -e Ai__Onnx__OpenVino__PhotoTextDevice=GPU \
     -e Ai__Onnx__OpenVino__GpuPrecision=FP32 \
-    -e Ai__Onnx__OpenVino__CacheDir=/var/cache/nanocloud/openvino
+    -e Ai__Onnx__OpenVino__CacheDir=/var/cache/nubarca/openvino
 else
   echo "== ovgpu == SKIPPED (no /dev/dri)"
 fi

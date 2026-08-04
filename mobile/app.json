@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "NubArca",
-    "slug": "nanocloud-mobile",
+    "slug": "nubarca-mobile",
     "version": "0.1.0",
     "orientation": "default",
     "platforms": ["ios", "android"],

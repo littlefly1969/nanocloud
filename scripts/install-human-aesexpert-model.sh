@@ -24,7 +24,7 @@
 #   NLU=... irrelevant. Example:
 #   NLU_UNUSED=1 \
 #   HUMANAES_MODEL_KEY=human-aesexpert-1b \
-#   HUMANAES_MODELS_ROOT=/srv/nanocloud/models/human-aesexpert \
+#   HUMANAES_MODELS_ROOT=/srv/nubarca/models/human-aesexpert \
 #   ./scripts/install-human-aesexpert-model.sh
 set -euo pipefail
 
@@ -37,7 +37,7 @@ REPO[human-aesexpert-1b]="KlingTeam/HumanAesExpert-1B"
 REVISION[human-aesexpert-1b]="b8f7ee3f3a1217ecd331fd6d57b6959f5c0da183"
 
 MODEL_KEY="${HUMANAES_MODEL_KEY:-human-aesexpert-1b}"
-MODELS_ROOT="${HUMANAES_MODELS_ROOT:-/srv/nanocloud/models/human-aesexpert}"
+MODELS_ROOT="${HUMANAES_MODELS_ROOT:-/srv/nubarca/models/human-aesexpert}"
 MANIFEST_DIR="$(cd "$(dirname "$0")/human-aesexpert-sidecar/manifests" && pwd)"
 MANIFEST="${MANIFEST_DIR}/${MODEL_KEY}.sha256"
 

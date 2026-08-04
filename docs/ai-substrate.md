@@ -195,48 +195,51 @@ identity model, face embeddings, face clustering, or the `person_groups`/
 Party / TV / People surface. All plate-derived data is owner-private (see the AI
 product rule in `CLAUDE.md`).
 
-- **Slice 1** (`feature/plates-domain-upload`): the secure container + upload/
-  list/detail/preview/original/delete. No AI job, no AI artifacts.
-- **Slice 2** (`feature/plates-alpr-worker`): the ALPR pipeline — detection +
-  OCR + `plate_detections` persistence — driven by the `plates.analyze` worker
-  job (Compute band). It uses a **dedicated `Plates:Alpr` config + `ProfileKey`**
-  (`plate-alpr-v1`), **completely separate** from the AI substrate's
-  `AiModel`/`AiProfile` registry and the face profiles: it does **not** touch
-  `blob_ai_artifact_statuses`, `face_detections`, `face_embeddings`,
-  `person_groups`, or `ai_annotations`. Disabled by default; when unconfigured a
-  run records a safe `model_not_configured` outcome (an environment state, not a
-  content `skipped`/`failed`). This build ships only a deterministic dev/test
-  pipeline (non-semantic; no ONNX weights) — production keeps it disabled until a
-  real detector/OCR runner is deployed.
-- **Slice 3** (`feature/plates-face-redaction-cache`): server-side, **privacy-only**
-  face redaction for plate media (`blurFaces=true` on preview/original/thumbnail)
-  plus a derived redacted-media cache (`plate_face_redaction_boxes` +
-  `plate_redacted_media`). It is **NOT identity**: it detects face *regions* only
-  to blur/pixelate them and creates **no** `face_detections`/`face_embeddings`/
-  `face_clusters`/`people`/`person_face_assignments` rows, uses **no** People
-  embeddings, and produces **no** cross-owner data. It has its own dedicated
-  `Plates:FaceRedaction` config + `ProfileKey` (`plate-face-redaction-v1`),
-  entirely separate from `Ai:Face*`, People, and `Party:FaceSearch*`. Redaction
-  metadata is owner-private PlateImage metadata; boxes are never exposed through
-  any DTO/API (redaction is baked into the served media). Disabled by default;
-  `blurFaces=true` while disabled returns a safe `face_redaction_not_configured`
-  error and **never** the unredacted image. Ships only a deterministic dev/test
-  detector (non-semantic; no ONNX weights) — production keeps it disabled until a
-  real privacy face detector is deployed.
-- **Slice 4** (`feature/plates-production-models-diagnostics`): production model
-  **plumbing** + provider selection for both Plates pipelines, and — the headline
-  — it can **reuse the existing NubArca face detector for Plates redaction,
-  boxes only**. With `Plates:FaceRedaction:Provider=ExistingNanoCloudFaceDetector`,
-  `ExistingNanoCloudPlateFaceBoxDetector` resolves the face profile via
-  `FaceProfileResolver`/`IAiBackendResolver` and calls the SCRFD backend's
-  **detection-only** `IFaceDetector.DetectFacesAsync` — the evaluation-only path
-  that returns normalized boxes and **persists nothing** (`OnnxFaceBackend` writes
-  no `face_detections`/`face_embeddings`, creates no clusters/identities). The
-  adapter takes bbox + score only (drops landmarks), never resolves an embedder,
-  and never touches the People/Face domain tables — so Plates redaction reuses the
-  effective detector while staying fully separate from People identity. The reused
-  face model keeps its provenance/license documentation here; Plates does not
-  duplicate or commit weights. ALPR gains an in-process ONNX detector+OCR runner
-  (`Plates:Alpr:Provider=Onnx`) behind documented tensor contracts with safe
-  missing/unsupported-model errors. Both providers default **disabled**; see
-  [model-deployment/plates.md](model-deployment/plates.md).
+## Plates — capabilities
+
+Plates is a self-contained, owner-private surface with its own configuration,
+profile keys and tables. It is deliberately **not** part of the People identity
+model, and none of its data may surface through any public / Party / TV / People
+path.
+
+**Secure container.** Upload, list, detail, preview, original and delete, over a
+hidden owner-scoped logical container key. No AI is involved in this path.
+
+**ALPR.** Detection + OCR + `plate_detections` persistence, driven by the
+`plates.analyze` worker job (Compute band). It uses a dedicated `Plates:Alpr`
+config and `ProfileKey` (`plate-alpr-v1`), **completely separate** from the AI
+substrate's `AiModel`/`AiProfile` registry and the face profiles: it does not
+touch `blob_ai_artifact_statuses`, `face_detections`, `face_embeddings`,
+`person_groups` or `ai_annotations`. Disabled by default; when unconfigured a run
+records a safe `model_not_configured` outcome — an environment state, never a
+content `skipped`/`failed`. An in-process ONNX detector+OCR runner is available
+behind `Plates:Alpr:Provider=Onnx` with documented tensor contracts and safe
+missing/unsupported-model errors.
+
+**Privacy-only face redaction.** `blurFaces=true` on preview/original/thumbnail,
+backed by a derived redacted-media cache (`plate_face_redaction_boxes` +
+`plate_redacted_media`). This is **NOT identity**: it detects face *regions* only
+in order to blur them, and creates no `face_detections` / `face_embeddings` /
+`face_clusters` / `people` / `person_face_assignments` rows, uses no People
+embeddings and produces no cross-owner data. It has its own
+`Plates:FaceRedaction` config and `ProfileKey` (`plate-face-redaction-v1`),
+entirely separate from `Ai:Face*`, People and `Party:FaceSearch*`. Redaction
+metadata is owner-private PlateImage metadata; boxes are never exposed through any
+DTO or API, because redaction is baked into the served media. Disabled by default;
+`blurFaces=true` while disabled returns a safe `face_redaction_not_configured`
+error and **never** the unredacted image.
+
+**Reusing the face detector for boxes only.** With
+`Plates:FaceRedaction:Provider=ExistingNubArcaFaceDetector`,
+`ExistingNubArcaPlateFaceBoxDetector` resolves the face profile via
+`FaceProfileResolver` / `IAiBackendResolver` and calls the SCRFD backend's
+detection-only `IFaceDetector.DetectFacesAsync` — the evaluation-only path that
+returns normalized boxes and **persists nothing** (`OnnxFaceBackend` writes no
+`face_detections`/`face_embeddings` and creates no clusters or identities). The
+adapter takes bbox + score only, drops landmarks, never resolves an embedder and
+never touches the People/Face tables. So Plates redaction reuses the effective
+detector while staying fully separate from People identity, and Plates commits no
+model weights of its own.
+
+Both providers default **disabled**; see
+[model-deployment/plates.md](model-deployment/plates.md).

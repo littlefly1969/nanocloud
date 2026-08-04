@@ -31,26 +31,16 @@ function psQuote(value: string): string {
 // The default export folder, under the user's Windows profile.
 export const DEFAULT_EXPORT_FOLDER = 'NubArcaExport';
 
-// What the folder was called before the NubArca rename. The generated script
-// re-downloads nothing it already has (it skips by size), so a returning reader
-// whose archive lives in the old folder must keep using it — otherwise a purely
-// cosmetic rename would silently re-fetch their entire photo library. The
-// fallback is one-directional and only applies when the new folder does not
-// exist yet.
-export const LEGACY_EXPORT_FOLDER = 'NanoCloudExport';
-
 // The `$Dest` assignment: a user-chosen absolute path when provided, else the
 // default in the user's profile folder (built with Join-Path so $HOME expands —
-// never a literal "%USERPROFILE%"). An explicit path is used verbatim; only the
-// default consults the legacy folder.
+// never a literal "%USERPROFILE%"). An explicit path is used verbatim.
+//
+// The generated script skips files it already has (by size), so pointing an
+// existing archive at its own folder resumes rather than re-downloads.
 function destLine(destDir: string): string {
   const trimmed = destDir.trim();
   if (trimmed.length > 0) return `$Dest    = ${psQuote(trimmed)}`;
-  return `$Dest    = Join-Path $HOME '${DEFAULT_EXPORT_FOLDER}'
-$Legacy  = Join-Path $HOME '${LEGACY_EXPORT_FOLDER}'
-# Resume a pre-rename export where it already lives, instead of downloading the
-# whole archive again into a differently named folder.
-if (-not (Test-Path -LiteralPath $Dest) -and (Test-Path -LiteralPath $Legacy)) { $Dest = $Legacy }`;
+  return `$Dest    = Join-Path $HOME '${DEFAULT_EXPORT_FOLDER}'`;
 }
 
 // Parallel PowerShell script (RunspacePool, PS 5.x / PS 7 compatible).

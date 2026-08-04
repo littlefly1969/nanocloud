@@ -71,22 +71,22 @@ This runbook documents the **production server's actual topology**: a fast
 
 | What | Where | Why |
 |---|---|---|
-| PostgreSQL data | **root disk** `/srv/nanocloud/postgres` | latency-sensitive (index random I/O, WAL fsync) → put it on the fastest disk |
-| Original blobs | **RAID1** `/mnt/raid1/nanocloud/blobs` | large + unbounded growth + want redundancy → not the small root disk |
-| Local backups | **RAID1** `/mnt/raid1/nanocloud/backups` | must NOT share the DB disk — a root-disk failure would lose data *and* its backup |
+| PostgreSQL data | **root disk** `/srv/nubarca/postgres` | latency-sensitive (index random I/O, WAL fsync) → put it on the fastest disk |
+| Original blobs | **RAID1** `/mnt/raid1/nubarca/blobs` | large + unbounded growth + want redundancy → not the small root disk |
+| Local backups | **RAID1** `/mnt/raid1/nubarca/backups` | must NOT share the DB disk — a root-disk failure would lose data *and* its backup |
 | Derived artifacts | blob store by default; optional faster cache disk | **see note** |
 
 > **Derived-artifact note.** Derived artifacts (thumbnails, medium
 > previews, video posters) are content-addressed blobs that, by default, share
-> the original blob store — so with `NANOCLOUD_BLOB_DATA` on RAID1 they live on
+> the original blob store — so with `NUBARCA_BLOB_DATA` on RAID1 they live on
 > RAID1 alongside the originals, which is fine. If you later add a faster cache
-> disk, point derived artifacts at it with `NANOCLOUD_DERIVED_DATA` →
+> disk, point derived artifacts at it with `NUBARCA_DERIVED_DATA` →
 > `Storage:DerivedRootPath` (uncomment the `storage-derived-data` volume + mount
 > in `docker-compose.prod.yml`). Derived artifacts are **regenerable** cache —
 > that disk needs neither redundancy nor backups, and a missing/empty derived
 > root self-heals on demand (the thumbnail/preview/poster endpoints regenerate)
 > or via `media derivatives backfill` (see §11). On this server (no separate
-> cache disk yet) leave `NANOCLOUD_DERIVED_DATA` unset.
+> cache disk yet) leave `NUBARCA_DERIVED_DATA` unset.
 
 ### Prepare the directories (Ubuntu)
 
@@ -94,7 +94,7 @@ PostgreSQL goes in a plain directory on the **existing root filesystem** — no
 new mount, just create it:
 
 ```bash
-sudo mkdir -p /srv/nanocloud/postgres
+sudo mkdir -p /srv/nubarca/postgres
 ```
 
 The RAID1 array should be mounted at `/mnt/raid1` via fstab by **UUID** (stable
@@ -115,8 +115,8 @@ sudo mount -a
 findmnt /mnt/raid1           # confirm it is mounted (and on the RAID device)
 
 # Create the NubArca data directories on RAID1.
-sudo mkdir -p /mnt/raid1/nanocloud/blobs
-sudo mkdir -p /mnt/raid1/nanocloud/backups
+sudo mkdir -p /mnt/raid1/nubarca/blobs
+sudo mkdir -p /mnt/raid1/nubarca/backups
 ```
 
 ### Point NubArca at them
@@ -124,15 +124,15 @@ sudo mkdir -p /mnt/raid1/nanocloud/backups
 In `.env` set the host paths:
 
 ```
-NANOCLOUD_POSTGRES_DATA=/srv/nanocloud/postgres
-NANOCLOUD_BLOB_DATA=/mnt/raid1/nanocloud/blobs
-BACKUP_DIR=/mnt/raid1/nanocloud/backups
-# NANOCLOUD_DERIVED_DATA=/mnt/raid1/nanocloud/derived   # reserved, no effect yet
+NUBARCA_POSTGRES_DATA=/srv/nubarca/postgres
+NUBARCA_BLOB_DATA=/mnt/raid1/nubarca/blobs
+BACKUP_DIR=/mnt/raid1/nubarca/backups
+# NUBARCA_DERIVED_DATA=/mnt/raid1/nubarca/derived   # reserved, no effect yet
 ```
 
 Then **uncomment the `driver_opts` bind blocks** for `postgres-data` and
 `storage-data` at the bottom of `docker-compose.prod.yml`. The volume *names*
-stay `nanocloud-postgres-data` / `nanocloud-storage-data`, so `backup.sh` /
+stay `nubarca-postgres-data` / `nubarca-storage-data`, so `backup.sh` /
 `restore.sh` keep working unchanged. Validate before continuing:
 
 ```bash
@@ -141,7 +141,7 @@ docker compose -f docker-compose.prod.yml --env-file .env config > /dev/null \
 ```
 
 If you set `BACKUP_DIR` in `.env`, either export it before running backups or
-pass the path explicitly: `./deploy/backup.sh /mnt/raid1/nanocloud/backups`.
+pass the path explicitly: `./deploy/backup.sh /mnt/raid1/nubarca/backups`.
 
 > **⚠ Monitor root free space.** PostgreSQL is on the root filesystem, which is
 > small (~35 GB). WAL + table growth on a full root disk can wedge the whole
@@ -158,8 +158,8 @@ pass the path explicitly: `./deploy/backup.sh /mnt/raid1/nanocloud/backups`.
 "I wrote the runbook" and "you read it" can't surprise you.
 
 ```bash
-git clone https://github.com/<your-fork>/nanocloud.git
-cd nanocloud
+git clone https://github.com/<your-fork>/nubarca.git
+cd nubarca
 
 # Pin to a known release (replace with the tag you intend to deploy).
 git checkout v0.x.y
@@ -210,7 +210,7 @@ git check-ignore -v .env
 **Why.** The compose stack does NOT terminate TLS. Without a proxy the auth
 cookie travels in clear text, which leaks sessions on every request.
 
-Pick one option below. **Replace `nanocloud.example.com`** with your real
+Pick one option below. **Replace `nubarca.example.com`** with your real
 domain.
 
 ### Option A — Caddy (recommended for first deploys)
@@ -220,7 +220,7 @@ Caddy auto-provisions Let's Encrypt certificates and handles renewals.
 ```bash
 # Install Caddy per its official docs, then:
 sudo cp deploy/Caddyfile.example /etc/caddy/Caddyfile
-sudo $EDITOR /etc/caddy/Caddyfile      # replace nanocloud.example.com
+sudo $EDITOR /etc/caddy/Caddyfile      # replace nubarca.example.com
 sudo systemctl reload caddy
 sudo journalctl -u caddy --since '1 min ago'   # watch ACME provisioning
 ```
@@ -228,19 +228,19 @@ sudo journalctl -u caddy --since '1 min ago'   # watch ACME provisioning
 ### Option B — nginx + certbot
 
 ```bash
-sudo cp deploy/nginx.conf.example /etc/nginx/sites-available/nanocloud
-sudo $EDITOR /etc/nginx/sites-available/nanocloud
-sudo ln -sf /etc/nginx/sites-available/nanocloud /etc/nginx/sites-enabled/
+sudo cp deploy/nginx.conf.example /etc/nginx/sites-available/nubarca
+sudo $EDITOR /etc/nginx/sites-available/nubarca
+sudo ln -sf /etc/nginx/sites-available/nubarca /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
-sudo certbot --nginx -d nanocloud.example.com
+sudo certbot --nginx -d nubarca.example.com
 ```
 
 Either way, verify from another machine:
 
 ```bash
-curl -I https://nanocloud.example.com/         # 200 from the SPA bundle
-curl -sk https://nanocloud.example.com/health  # before stack is up: 502/504 is OK
+curl -I https://nubarca.example.com/         # 200 from the SPA bundle
+curl -sk https://nubarca.example.com/health  # before stack is up: 502/504 is OK
 ```
 
 **Docker bridge — required with Apache/nginx on the same host.** The API
@@ -254,7 +254,7 @@ Fix: find your Docker bridge subnet and add it to `KnownNetworks`:
 
 ```bash
 # Find the subnet (run on the server)
-docker network inspect nanocloud_nanocloud-internal \
+docker network inspect nubarca-internal \
   --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}'
 # Typical output: 172.18.0.0/16
 ```
@@ -292,7 +292,7 @@ before continuing.
 ## 6. Build images + initialise volumes
 
 **Why.** Pulls / builds all three images and creates the two named volumes
-(`nanocloud-postgres-data`, `nanocloud-storage-data`) so subsequent CLI
+(`nubarca-postgres-data`, `nubarca-storage-data`) so subsequent CLI
 commands can attach to them.
 
 ```bash
@@ -346,17 +346,17 @@ running stack you cannot log into.
 > **Important — how `docker compose run` handles variables.**
 > `--env-file .env` substitutes compose variables (service names, ports,
 > secrets) but does **not** automatically inject every `.env` line as a
-> container environment variable. The `NANO_CLOUD_ADMIN_*` keys are not
+> container environment variable. The `NUBARCA_ADMIN_*` keys are not
 > declared in the `environment:` block of the api service (deliberately — you
 > don't want the password there permanently), so they never reach the process
 > via `--env-file` alone. Pass them explicitly with `-e` flags instead.
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env run --rm \
-  -e NANO_CLOUD_ADMIN_EMAIL=you@example.com \
-  -e NANO_CLOUD_ADMIN_DISPLAY_NAME="Your Name" \
-  -e NANO_CLOUD_ADMIN_PASSWORD="a-strong-password" \
-  -e NANO_CLOUD_ADMIN_IS_ADMIN=true \
+  -e NUBARCA_ADMIN_EMAIL=you@example.com \
+  -e NUBARCA_ADMIN_DISPLAY_NAME="Your Name" \
+  -e NUBARCA_ADMIN_PASSWORD="a-strong-password" \
+  -e NUBARCA_ADMIN_IS_ADMIN=true \
   api users ensure
 # Expect: "users ensure: created user you@example.com (...) as admin."
 ```
@@ -364,7 +364,7 @@ docker compose -f docker-compose.prod.yml --env-file .env run --rm \
 The credentials are passed only for this one-shot `run` invocation and are
 never written to any config file or image layer.
 
-The first user must be created with `NANO_CLOUD_ADMIN_IS_ADMIN=true` so they
+The first user must be created with `NUBARCA_ADMIN_IS_ADMIN=true` so they
 can reach `/api/admin/*` — otherwise nobody on the system can hit the operator
 endpoints, and you'd have to re-run with `users grant-admin` manually.
 
@@ -430,11 +430,11 @@ deployment. Full per-key docs live in `.env.example`.
 Run the unauthenticated smoke script:
 
 ```bash
-BASE_URL=https://nanocloud.example.com ./deploy/smoke-check.sh
+BASE_URL=https://nubarca.example.com ./deploy/smoke-check.sh
 ```
 
 Then do the manual checks (see [SMOKE_CHECKLIST.md](SMOKE_CHECKLIST.md)).
-At minimum: open `https://nanocloud.example.com/` in a browser, sign in,
+At minimum: open `https://nubarca.example.com/` in a browser, sign in,
 upload a tiny file, download it, create a share link, open the link in a
 private window, revoke the link.
 
@@ -451,12 +451,12 @@ read. Do this BEFORE uploading anything you care about.
 
 # 2. Spot-check what's inside.
 ls -la ./backups/
-cat ./backups/nanocloud-*/manifest.json | head -20
+cat ./backups/nubarca-*/manifest.json | head -20
 
 # 3. Validate the backup is well-formed without mutating anything.
-./deploy/restore.sh ./backups/nanocloud-* --yes   # ← only on a SEPARATE drill host
+./deploy/restore.sh ./backups/nubarca-* --yes   # ← only on a SEPARATE drill host
 # On the production host, the dry-run is the appropriate check:
-./deploy/restore.sh ./backups/nanocloud-*
+./deploy/restore.sh ./backups/nubarca-*
 ```
 
 If you only have the production host, the dry-run is the safe substitute
@@ -486,7 +486,7 @@ together; the derived data is never required.
 ## 12. Lock down
 
 - Since step 8 uses `-e` flags (not `.env` entries), no `.env` cleanup is
-  needed for `NANO_CLOUD_ADMIN_*`. If you did add those lines to `.env` as a
+  needed for `NUBARCA_ADMIN_*`. If you did add those lines to `.env` as a
   temporary measure, remove or comment them out now.
 - Confirm the firewall is enabled and PostgreSQL is not exposed:
   `sudo ufw status verbose` — expect 22/80/443 allowed, 5432 absent.
@@ -522,7 +522,7 @@ docker compose -f docker-compose.prod.yml --env-file .env run --rm api \
 docker compose -f docker-compose.prod.yml --env-file .env up -d
 
 # 6. Verify.
-BASE_URL=https://nanocloud.example.com ./deploy/smoke-check.sh
+BASE_URL=https://nubarca.example.com ./deploy/smoke-check.sh
 docker compose -f docker-compose.prod.yml --env-file .env logs --tail=30 api
 ```
 
@@ -549,7 +549,7 @@ docker compose -f docker-compose.prod.yml --env-file .env build
 
 # 3. Bring the old version up and smoke-check.
 docker compose -f docker-compose.prod.yml --env-file .env up -d
-BASE_URL=https://nanocloud.example.com ./deploy/smoke-check.sh
+BASE_URL=https://nubarca.example.com ./deploy/smoke-check.sh
 ```
 
 Because code + schema move as a pair, never run a new code image against a

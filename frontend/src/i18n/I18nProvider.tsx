@@ -3,12 +3,9 @@ import { DEFAULT_LANGUAGE, LOCALE, toLanguage, type Language } from './types';
 import it, { type MessageKey } from './it';
 import en from './en';
 import { I18nContext, type I18nContextValue, type PluralKey, type TranslateParams } from './I18nContext';
-import { readMigratedItem } from '../storage/brandedStorageKey';
+import { readStoredItem } from '../storage/brandedStorageKey';
 
 const STORAGE_KEY = 'nubarca.lang';
-// Pre-rebrand key. Read once, migrated forward: a reader who chose English
-// must not silently revert to the Italian default because we renamed things.
-const LEGACY_STORAGE_KEY = 'nanocloud.lang';
 
 const DICTIONARIES: Record<Language, Partial<Record<MessageKey, string>>> = {
   it,
@@ -34,8 +31,8 @@ function resolveInitialLanguage(): Language {
   if (typeof window !== 'undefined') {
     const fromQuery = toLanguage(new URLSearchParams(window.location.search).get('lang'));
     if (fromQuery) return fromQuery;
-    // readMigratedItem swallows a blocked-storage failure and returns null.
-    const stored = toLanguage(readMigratedItem(STORAGE_KEY, LEGACY_STORAGE_KEY));
+    // readStoredItem swallows a blocked-storage failure and returns null.
+    const stored = toLanguage(readStoredItem(STORAGE_KEY));
     if (stored) return stored;
   }
   return DEFAULT_LANGUAGE;

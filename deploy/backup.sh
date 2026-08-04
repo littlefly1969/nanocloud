@@ -8,10 +8,10 @@
 # recovery + a quiesced filesystem snapshot, both of which require operator
 # choices we don't want to bake into a default script.
 #
-# Output: a directory under $BACKUP_DIR named `nanocloud-YYYYMMDDTHHMMSSZ/`,
+# Output: a directory under $BACKUP_DIR named `nubarca-YYYYMMDDTHHMMSSZ/`,
 # containing:
 #   - postgres.sql.gz       gzipped `pg_dump --format=plain --no-owner`
-#   - storage.tar.gz        gzipped tar of /var/lib/nanocloud/storage
+#   - storage.tar.gz        gzipped tar of /var/lib/nubarca/storage
 #   - manifest.json         metadata (timestamp, git ref, file checksums)
 #
 # What's required vs regenerable:
@@ -22,21 +22,21 @@
 #               originals and can be rebuilt with `media derivatives backfill`.
 #
 # Backup modes:
-#   This script tars the ORIGINAL blob volume (nanocloud-storage-data) only.
+#   This script tars the ORIGINAL blob volume (nubarca-storage-data) only.
 #   FULL      DB + originals + derived. In the DEFAULT single-root layout
 #             (Storage__DerivedRootPath unset) derived artifacts share the
 #             original volume, so storage.tar.gz already captures them — this
 #             script's output IS a full backup.
 #   ESSENTIAL DB + originals, no derived. If you split derived artifacts onto a
 #             separate root/volume (Storage__DerivedRootPath +
-#             nanocloud-storage-derived-data), this script does NOT tar that
+#             nubarca-storage-derived-data), this script does NOT tar that
 #             volume, so its output is an ESSENTIAL backup. That's fine —
 #             derived artifacts are regenerable cache: after restore run
-#             `dotnet NanoCloud.Api.dll media derivatives backfill` (or just
+#             `dotnet NubArca.Api.dll media derivatives backfill` (or just
 #             let the thumbnail/preview/poster endpoints regenerate on demand).
 #             To capture derived bytes too, additionally tar the derived volume
 #             yourself, e.g.:
-#               docker run --rm -v nanocloud-storage-derived-data:/d:ro \
+#               docker run --rm -v nubarca-storage-derived-data:/d:ro \
 #                 -v "$PWD:/out" alpine:3 tar czf /out/derived.tar.gz -C /d .
 #   Required matched pair: postgres.sql.gz + storage.tar.gz (DB + originals).
 #
@@ -46,7 +46,7 @@
 #   BACKUP_DIR           target root (default ./backups)
 #   ENV_FILE             docker-compose env file (default ./.env)
 #   COMPOSE_FILE         compose file (default docker-compose.prod.yml)
-#   NANOCLOUD_KEEP_UP    if "true", skip the stop / restart (NOT recommended
+#   NUBARCA_KEEP_UP    if "true", skip the stop / restart (NOT recommended
 #                        for the first backup — leaves window for DB/storage
 #                        divergence)
 
@@ -64,7 +64,7 @@ cd "$REPO_ROOT"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-.env}"
 BACKUP_DIR="${1:-${BACKUP_DIR:-./backups}}"
-KEEP_UP="${NANOCLOUD_KEEP_UP:-false}"
+KEEP_UP="${NUBARCA_KEEP_UP:-false}"
 
 [ -f "$COMPOSE_FILE" ] || fail "compose file not found: $COMPOSE_FILE"
 [ -f "$ENV_FILE" ]     || fail "env file not found: $ENV_FILE  (copy .env.example to .env)"
@@ -92,7 +92,7 @@ fi
 # -------- prepare target ---------------------------------------------------
 
 stamp="$(date -u +'%Y%m%dT%H%M%SZ')"
-target="$BACKUP_DIR/nanocloud-$stamp"
+target="$BACKUP_DIR/nubarca-$stamp"
 
 mkdir -p "$target"
 chmod 700 "$target"
@@ -108,7 +108,7 @@ log "env file: $ENV_FILE  (postgres user='$pg_user', db='$pg_db')"
 
 restart_on_exit=false
 if [ "$KEEP_UP" = "true" ]; then
-    log "NANOCLOUD_KEEP_UP=true — taking ONLINE backup. DB and storage may"
+    log "NUBARCA_KEEP_UP=true — taking ONLINE backup. DB and storage may"
     log "diverge if writes land between the two snapshots. Use only for"
     log "low-traffic windows."
 else
@@ -143,7 +143,7 @@ log "tar storage volume → storage.tar.gz"
 # Mount the named volume read-only into a throwaway alpine container; tar
 # from inside so we don't need to know the host-side path of the volume.
 docker run --rm \
-    -v nanocloud-storage-data:/storage:ro \
+    -v nubarca-storage-data:/storage:ro \
     -v "$(cd "$target" && pwd):/out" \
     alpine:3 sh -c "cd /storage && tar czf /out/storage.tar.gz ."
 
@@ -167,7 +167,7 @@ cat > "$target/manifest.json" <<EOF
     "sizeBytes": $sql_size
   },
   "storage": {
-    "volume": "nanocloud-storage-data",
+    "volume": "nubarca-storage-data",
     "archive": "storage.tar.gz",
     "sha256": "$storage_sha",
     "sizeBytes": $storage_size

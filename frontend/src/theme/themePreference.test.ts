@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_THEME_PREFERENCE,
-  LEGACY_THEME_STORAGE_KEY,
   THEME_PREFERENCES,
   THEME_STORAGE_KEY,
   applyEffectiveTheme,
@@ -69,61 +68,48 @@ describe('theme preference model', () => {
     expect(() => writeStoredThemePreference('light')).not.toThrow();
   });
 
-  // The NubArca rename moved the key. Nobody may lose the theme they chose.
-  describe('pre-rebrand key migration', () => {
-    it('uses the new key, not the old one', () => {
+  // The 0.3.0 identity cutover REMOVED the one-shot migration that read a
+  // pre-rename key. These tests pin the removal rather than the migration: the
+  // only key consulted is the current one, and a value left behind under any
+  // other name can never influence what is painted.
+  describe('single-key storage', () => {
+    // Assembled, so this file cannot itself carry the former identity.
+    const formerKey = `${'nano'}cloud.theme`;
+
+    it('reads and writes exactly one key', () => {
       expect(THEME_STORAGE_KEY).toBe('nubarca.theme');
-      expect(LEGACY_THEME_STORAGE_KEY).toBe('nanocloud.theme');
     });
 
-    it('adopts a valid pre-rebrand preference and moves it to the new key', () => {
-      window.localStorage.setItem(LEGACY_THEME_STORAGE_KEY, 'light');
+    it('ignores a value stored under the pre-rename key', () => {
+      window.localStorage.setItem(formerKey, 'light');
 
-      expect(readStoredThemePreference()).toBe('light');
-      expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
-      // Moved, not copied — the fallback runs once per browser.
-      expect(window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY)).toBeNull();
+      expect(readStoredThemePreference()).toBe(DEFAULT_THEME_PREFERENCE);
+      // Not adopted, and not written forward either.
+      expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
     });
 
-    it('migrates each of the three bounded tokens', () => {
+    it('round-trips each of the three bounded tokens through the current key', () => {
       for (const preference of THEME_PREFERENCES) {
         window.localStorage.clear();
-        window.localStorage.setItem(LEGACY_THEME_STORAGE_KEY, preference);
+        window.localStorage.setItem(THEME_STORAGE_KEY, preference);
         expect(readStoredThemePreference()).toBe(preference);
-        expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe(preference);
       }
     });
 
-    it('lets the new key win outright when both exist', () => {
-      window.localStorage.setItem(LEGACY_THEME_STORAGE_KEY, 'light');
-      window.localStorage.setItem(THEME_STORAGE_KEY, 'system');
-
-      expect(readStoredThemePreference()).toBe('system');
-      // A stale legacy value must not resurrect itself later.
-      expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('system');
-    });
-
-    it('discards an unreadable legacy value instead of migrating it', () => {
-      window.localStorage.setItem(LEGACY_THEME_STORAGE_KEY, 'solarized');
-
-      expect(readStoredThemePreference()).toBe('dark');
-      expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
-      // Dropped, so the fallback does not re-run on every single read.
-      expect(window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY)).toBeNull();
-    });
-
-    it('still defaults to dark for a browser that has neither key', () => {
+    it('still defaults to dark for a browser with no stored preference', () => {
       expect(readStoredThemePreference()).toBe('dark');
       expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
     });
 
-    it('writes only the new key from then on', () => {
-      window.localStorage.setItem(LEGACY_THEME_STORAGE_KEY, 'light');
+    it('writes only the current key', () => {
+      window.localStorage.setItem(formerKey, 'light');
       readStoredThemePreference();
       writeStoredThemePreference('dark');
 
       expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
-      expect(window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY)).toBeNull();
+      // The stale key is left untouched rather than deleted: nothing reads it,
+      // so touching another origin's key would be gratuitous.
+      expect(window.localStorage.getItem(formerKey)).toBe('light');
     });
   });
 

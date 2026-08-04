@@ -3,7 +3,6 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  LEGACY_THEME_STORAGE_KEY,
   THEME_STORAGE_KEY,
   readStoredThemePreference,
   resolveEffectiveTheme,
@@ -109,40 +108,42 @@ describe('index.html theme bootstrap', () => {
     expect(document.documentElement.dataset.theme).toBe('dark');
   });
 
-  // The bootstrap decides the FIRST paint, so it has to know about the rename
-  // too. If only the module migrated, a returning light-theme reader would see
-  // a dark flash before React mounted.
-  describe('pre-rebrand key migration', () => {
-    it('paints a pre-rebrand light preference without a dark flash', () => {
-      window.localStorage.setItem(LEGACY_THEME_STORAGE_KEY, 'light');
+  // The bootstrap decides the FIRST paint, so the removal of the pre-rename
+  // fallback has to hold on BOTH sides. If only the module dropped it, the two
+  // would disagree and the disagreement would show up as a flash.
+  describe('single-key storage', () => {
+    // Assembled, so this file cannot itself carry the former identity.
+    const formerKey = `${'nano'}cloud.theme`;
+
+    it('ignores a value stored under the pre-rename key', () => {
+      window.localStorage.setItem(formerKey, 'light');
       stubMatchMedia(false);
 
       runBootstrap();
 
-      expect(document.documentElement.dataset.theme).toBe('light');
-      expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
-      expect(window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY)).toBeNull();
+      expect(document.documentElement.dataset.theme).toBe('dark');
+      expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
     });
 
-    it('agrees with the module on every legacy value', () => {
+    it('agrees with the module for every value under the pre-rename key', () => {
       for (const stored of ['dark', 'light', 'system', 'nonsense']) {
         window.localStorage.clear();
         delete document.documentElement.dataset.theme;
-        window.localStorage.setItem(LEGACY_THEME_STORAGE_KEY, stored);
+        window.localStorage.setItem(formerKey, stored);
         stubMatchMedia(false);
 
         runBootstrap();
         const painted = document.documentElement.dataset.theme;
 
-        // The bootstrap already consumed the legacy key, so the module now reads
-        // the migrated one — and must land on the same paint either way.
         const fromModule = resolveEffectiveTheme(readStoredThemePreference(), systemPrefersLight());
         expect(painted).toBe(fromModule);
+        // Neither side may adopt it.
+        expect(painted).toBe('dark');
       }
     });
 
-    it('lets the new key win when both are present', () => {
-      window.localStorage.setItem(LEGACY_THEME_STORAGE_KEY, 'light');
+    it('honours the current key regardless of what the old one holds', () => {
+      window.localStorage.setItem(formerKey, 'light');
       window.localStorage.setItem(THEME_STORAGE_KEY, 'dark');
       stubMatchMedia(true);
 

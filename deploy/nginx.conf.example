@@ -1,8 +1,8 @@
 # Example host nginx config in front of `docker compose -f
 # docker-compose.prod.yml up -d`. Drop into /etc/nginx/sites-available/,
-# symlink into sites-enabled/, replace `nanocloud.example.com` with your
+# symlink into sites-enabled/, replace `nubarca.example.com` with your
 # domain, and obtain certificates (e.g. `certbot --nginx -d
-# nanocloud.example.com`).
+# nubarca.example.com`).
 #
 # The compose stack binds api → 127.0.0.1:8080 and frontend → 127.0.0.1:8081
 # (loopback only). This server block is the only path the public internet
@@ -11,7 +11,7 @@
 server {
     listen 80;
     listen [::]:80;
-    server_name nanocloud.example.com;
+    server_name nubarca.example.com;
 
     # ACME http-01 challenges only; force everything else to HTTPS.
     location /.well-known/acme-challenge/ {
@@ -25,11 +25,11 @@ server {
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name nanocloud.example.com;
+    server_name nubarca.example.com;
 
     # Replace these paths with whatever your certificate manager produces.
-    ssl_certificate     /etc/letsencrypt/live/nanocloud.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/nanocloud.example.com/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/nubarca.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/nubarca.example.com/privkey.pem;
 
     # Modern-only profile. Tune to taste / Mozilla SSL Configurator output.
     ssl_protocols TLSv1.2 TLSv1.3;

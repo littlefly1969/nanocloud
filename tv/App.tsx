@@ -56,7 +56,7 @@ function resolveBaseUrl(): string {
   // a Fire Stick test build can be pointed at production without editing source;
   // fall back to the app.config.js `extra.apiBaseUrl` (env-derived at build time),
   // then a localhost default. No secrets — just a base URL.
-  const envUrl = process.env.EXPO_PUBLIC_NANOCLOUD_API_BASE_URL;
+  const envUrl = process.env.EXPO_PUBLIC_NUBARCA_API_BASE_URL;
   const extra = (Constants.expoConfig?.extra ?? {}) as { apiBaseUrl?: string };
   return (envUrl || extra.apiBaseUrl || 'http://localhost:5177').replace(/\/$/, '');
 }

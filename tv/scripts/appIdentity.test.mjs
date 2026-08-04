@@ -64,21 +64,22 @@ test('no user-visible identifier carries the former product name', () => {
 test('the default OTA runtime belongs to the new native series', () => {
   const expo = loadConfig();
   assert.equal(expo.runtimeVersion, 'nubarca-tv-native-2');
-  // The retired TV package asks for tv-native-3. Serving it a bundle built for
-  // this package would be a cross-application update.
-  assert.notEqual(expo.runtimeVersion, 'tv-native-3');
+  // A runtime name identifies one native contract for ONE application. It must
+  // carry this app's series, so a bundle can never be offered to an install of a
+  // different package that happens to ask for a bare `tv-native-*` runtime.
+  assert.ok(expo.runtimeVersion.startsWith('nubarca-tv-native-'));
 });
 
 test('the runtime version stays operator-overridable for development only', () => {
-  const expo = loadConfig({ NANOCLOUD_TV_RUNTIME_VERSION: 'development-runtime' });
+  const expo = loadConfig({ NUBARCA_TV_RUNTIME_VERSION: 'development-runtime' });
   assert.equal(expo.runtimeVersion, 'development-runtime');
 });
 
 test('a production https base URL builds with cleartext traffic disabled', () => {
-  const expo = loadConfig({ EXPO_PUBLIC_NANOCLOUD_API_BASE_URL: 'https://nanocloud.littlefly.it' });
+  const expo = loadConfig({ EXPO_PUBLIC_NUBARCA_API_BASE_URL: 'https://nubarca.example.com' });
   assert.equal(expo.android.usesCleartextTraffic, false);
-  assert.equal(expo.extra.apiBaseUrl, 'https://nanocloud.littlefly.it');
-  assert.equal(expo.updates.url, 'https://nanocloud.littlefly.it/api/tv-app/updates');
+  assert.equal(expo.extra.apiBaseUrl, 'https://nubarca.example.com');
+  assert.equal(expo.updates.url, 'https://nubarca.example.com/api/tv-app/updates');
 });
 
 test('development configuration remains usable without signing material', () => {
@@ -89,25 +90,65 @@ test('production configuration fails closed without every release input', () => 
   assert.throws(() => loadConfig({ NODE_ENV: 'production' }), /API_BASE_URL is required/i);
   assert.throws(() => loadConfig({
     NODE_ENV: 'production',
-    EXPO_PUBLIC_NANOCLOUD_API_BASE_URL: 'https://nanocloud.littlefly.it',
+    EXPO_PUBLIC_NUBARCA_API_BASE_URL: 'https://nubarca.example.com',
+  }), /PUBLIC_ORIGIN is required/i);
+  assert.throws(() => loadConfig({
+    NODE_ENV: 'production',
+    EXPO_PUBLIC_NUBARCA_API_BASE_URL: 'https://nubarca.example.com',
+    NUBARCA_PUBLIC_ORIGIN: 'https://nubarca.example.com',
   }), /OTA_UPDATE_URL is required/i);
+});
+
+// The pinned production origin is operator configuration rather than a source
+// constant, so the pin is only as strong as its fail-closed behaviour. These
+// cases are the reason externalising it did not weaken the guard that exists
+// because a release APK once shipped pointing at a LAN dev default.
+test('production pins the API base URL to the operator-supplied origin', () => {
+  const base = { NODE_ENV: 'production' };
+  // An unset origin refuses the build outright.
+  assert.throws(() => loadConfig({
+    ...base,
+    EXPO_PUBLIC_NUBARCA_API_BASE_URL: 'https://nubarca.example.com',
+  }), /PUBLIC_ORIGIN is required/i);
+  // A plaintext origin is refused.
+  assert.throws(() => loadConfig({
+    ...base,
+    EXPO_PUBLIC_NUBARCA_API_BASE_URL: 'http://nubarca.example.com',
+    NUBARCA_PUBLIC_ORIGIN: 'http://nubarca.example.com',
+  }), /must be an https/i);
+  // A base URL that disagrees with the pinned origin is refused, which is the
+  // exact failure the guard was written for.
+  assert.throws(() => loadConfig({
+    ...base,
+    EXPO_PUBLIC_NUBARCA_API_BASE_URL: 'https://somewhere-else.example.com',
+    NUBARCA_PUBLIC_ORIGIN: 'https://nubarca.example.com',
+  }), /must be exactly https:\/\/nubarca\.example\.com/i);
+  // An update URL on a different origin is refused too.
+  assert.throws(() => loadConfig({
+    ...base,
+    EXPO_PUBLIC_NUBARCA_API_BASE_URL: 'https://nubarca.example.com',
+    NUBARCA_PUBLIC_ORIGIN: 'https://nubarca.example.com',
+    NUBARCA_TV_OTA_UPDATE_URL: 'https://somewhere-else.example.com/api/tv-app/updates',
+  }), /must be exactly https:\/\/nubarca\.example\.com\/api\/tv-app\/updates/i);
 });
 
 test('production rejects the wrong runtime and channel before native generation', () => {
   const common = {
     NODE_ENV: 'production',
-    EXPO_PUBLIC_NANOCLOUD_API_BASE_URL: 'https://nanocloud.littlefly.it',
-    NANOCLOUD_TV_OTA_UPDATE_URL: 'https://nanocloud.littlefly.it/api/tv-app/updates',
+    EXPO_PUBLIC_NUBARCA_API_BASE_URL: 'https://nubarca.example.com',
+    NUBARCA_PUBLIC_ORIGIN: 'https://nubarca.example.com',
+    NUBARCA_TV_OTA_UPDATE_URL: 'https://nubarca.example.com/api/tv-app/updates',
   };
-  assert.throws(() => loadConfig({ ...common, NANOCLOUD_TV_RUNTIME_VERSION: 'nubarca-tv-native-1' }), /runtime.*exactly/i);
-  assert.throws(() => loadConfig({ ...common, NANOCLOUD_TV_OTA_CHANNEL: 'staging' }), /channel.*exactly/i);
+  assert.throws(() => loadConfig({ ...common, NUBARCA_TV_RUNTIME_VERSION: 'nubarca-tv-native-1' }), /runtime.*exactly/i);
+  assert.throws(() => loadConfig({ ...common, NUBARCA_TV_OTA_CHANNEL: 'staging' }), /channel.*exactly/i);
 });
 
 test('production requires the OTA public certificate', () => {
   assert.throws(() => loadConfig({
     NODE_ENV: 'production',
-    EXPO_PUBLIC_NANOCLOUD_API_BASE_URL: 'https://nanocloud.littlefly.it',
-    NANOCLOUD_TV_OTA_UPDATE_URL: 'https://nanocloud.littlefly.it/api/tv-app/updates',
+    EXPO_PUBLIC_NUBARCA_API_BASE_URL: 'https://nubarca.example.com',
+    NUBARCA_PUBLIC_ORIGIN: 'https://nubarca.example.com',
+    NUBARCA_TV_OTA_UPDATE_URL: 'https://nubarca.example.com/api/tv-app/updates',
   }), /OTA_CERTIFICATE is required/i);
 });
 
@@ -120,16 +161,17 @@ test('the OTA certificate path is normalized relative to the TV project', () => 
     assert.equal(spawnSync('openssl', ['req', '-x509', '-new', '-key', key, '-out', certificate, '-days', '1',
       '-subj', '/CN=NubArca TV OTA Test', '-addext', 'keyUsage=critical,digitalSignature',
       '-addext', 'extendedKeyUsage=critical,codeSigning']).status, 0);
-    const expo = loadConfig({ NANOCLOUD_TV_OTA_CERTIFICATE: certificate });
+    const expo = loadConfig({ NUBARCA_TV_OTA_CERTIFICATE: certificate });
     assert.equal(expo.updates.codeSigningCertificate, relative(tvRoot, resolve(certificate)));
     assert.deepEqual(expo.updates.codeSigningMetadata, { keyid: 'main', alg: 'rsa-v1_5-sha256' });
     const storeFile = join(certificateRoot, 'release.jks');
     writeFileSync(storeFile, 'test-only-placeholder');
     const production = loadConfig({
       NODE_ENV: 'production',
-      EXPO_PUBLIC_NANOCLOUD_API_BASE_URL: 'https://nanocloud.littlefly.it',
-      NANOCLOUD_TV_OTA_UPDATE_URL: 'https://nanocloud.littlefly.it/api/tv-app/updates',
-      NANOCLOUD_TV_OTA_CERTIFICATE: certificate,
+      EXPO_PUBLIC_NUBARCA_API_BASE_URL: 'https://nubarca.example.com',
+      NUBARCA_PUBLIC_ORIGIN: 'https://nubarca.example.com',
+      NUBARCA_TV_OTA_UPDATE_URL: 'https://nubarca.example.com/api/tv-app/updates',
+      NUBARCA_TV_OTA_CERTIFICATE: certificate,
       NUBARCA_TV_RELEASE_STORE_FILE: storeFile,
       NUBARCA_TV_RELEASE_STORE_PASSWORD: 'test',
       NUBARCA_TV_RELEASE_KEY_ALIAS: 'test',

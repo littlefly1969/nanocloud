@@ -1,6 +1,6 @@
 import { api } from './client';
 
-// Mirrors NanoCloud.Api.Files.ImageItem on the backend. `thumbnailUrl` points
+// Mirrors NubArca.Api.Files.ImageItem on the backend. `thumbnailUrl` points
 // at the existing /api/files/{id}/thumbnail?size=small endpoint; clients hit
 // it directly via <img src>. The URL may 404 for images whose thumbnail was
 // skipped (corrupt source, too large, etc.) — the gallery shows a placeholder
@@ -47,7 +47,7 @@ export function listDuplicateOccurrences(
   return api<DuplicateOccurrence[]>(`/api/files/${fileItemId}/duplicates`, { signal });
 }
 
-// Mirrors NanoCloud.Api.Files.ImageListResponse. `count` is the size of the
+// Mirrors NubArca.Api.Files.ImageListResponse. `count` is the size of the
 // current page (not a total), as the backend deliberately avoids COUNT(*).
 // Slice 60: `nextCursor` is set when more results exist; pass it back via
 // `cursor` on the next request. `hasMore` is the same signal as
@@ -75,7 +75,7 @@ export type ImageSortField = 'created' | 'name' | 'size' | 'datetaken';
 export type ImageSortDirection = 'asc' | 'desc';
 
 // Shared by the photo and video galleries — one backend concept, one wire
-// vocabulary. Mirrors NanoCloud.Api.Files.AlbumMembershipFilter.
+// vocabulary. Mirrors NubArca.Api.Files.AlbumMembershipFilter.
 export type AlbumMembership = 'any' | 'assigned' | 'unassigned';
 
 export interface ListImagesQuery {

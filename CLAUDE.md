@@ -101,8 +101,11 @@ Owner-private APIs may expose rich derived data to the owner. Privacy boundary:
   Compose stack, immutable image builds, OpenVINO target, smoke checks and
   rollback. Do not deploy from remembered chat commands.
 - SSH target: `stefano@192.168.1.180`
-- Repo path: `/opt/nanocloud`
-- Public domain: `https://nanocloud.littlefly.it`
+- Repo path: `/opt/nanocloud` — the one place the former product name is
+  deliberately retained; see the identity rule below
+- Public origin: read `NUBARCA_PUBLIC_ORIGIN` from the production `.env`
+  (`grep '^NUBARCA_PUBLIC_ORIGIN=' .env`). The installation host is operator
+  configuration and is never written into tracked source.
 
 The current release deployment always uses all four Compose files:
 
@@ -125,10 +128,30 @@ SASL/SCRAM-SHA-256`, failing in `ApplyStartupMigrationsAsync` on boot). Always l
 `grep '^KEY=' .env` (not `source`). To recover from a poisoned recreate: in a
 fresh shell (or after `unset ConnectionStrings__Postgres POSTGRES_PASSWORD`),
 `$DC up -d --force-recreate api worker frontend` and confirm the container env with
-`docker inspect nanocloud-api --format '{{range .Config.Env}}{{println .}}{{end}}' | grep ConnectionStrings`
+`docker inspect nubarca-api --format '{{range .Config.Env}}{{println .}}{{end}}' | grep ConnectionStrings`
 shows the FULL string (incl. `Password=`).
 
+## Product identity
+
+The product is **NubArca**. `scripts/check-identity-cleanliness.sh` fails when a
+former product name appears anywhere in tracked source, and
+`IdentityCleanlinessTests` runs it inside `dotnet test`.
+
+There is no allowlist, and adding one is not the remedy: an identifier that truly
+cannot be renamed belongs in operator configuration outside Git. The single
+permitted textual exception is the exact production deployment checkout path
+`/opt/nanocloud`, a live filesystem location on the running host. It is permitted
+only as that exact path — a nested path, a suffixed variant or a longer word built
+on it is rejected.
+
 ## Validation commands
+
+Identity:
+
+```bash
+scripts/check-identity-cleanliness.sh
+scripts/check-identity-cleanliness.sh --self-test
+```
 
 Backend:
 
@@ -160,9 +183,9 @@ green. Run it bare, or set `pipefail` first.
 Production validation:
 
 ```bash
-$DC exec api dotnet NanoCloud.Api.dll storage blobs audit-references
-$DC exec api dotnet NanoCloud.Api.dll media derivatives verify-bytes
-$DC exec api dotnet NanoCloud.Api.dll ai status
+$DC exec api dotnet NubArca.Api.dll storage blobs audit-references
+$DC exec api dotnet NubArca.Api.dll media derivatives verify-bytes
+$DC exec api dotnet NubArca.Api.dll ai status
 $DC ps
 ```
 

@@ -3,19 +3,14 @@
 // The API base URL is configurable for real Fire Stick / Android TV testing
 // against a production server, WITHOUT hardcoding any host or secret in source:
 //
-//   EXPO_PUBLIC_NANOCLOUD_API_BASE_URL   (preferred; also readable at runtime via
-//                                         process.env.* since it is an EXPO_PUBLIC_ var)
-//   NANOCLOUD_TV_API_BASE_URL            (build-time alias, config only)
-//
-// RETAINED LEGACY BRAND: every NANOCLOUD_* / EXPO_PUBLIC_NANOCLOUD_* variable name
-// below keeps its pre-NubArca spelling on purpose — operators already have them set
-// in production environments and CI. They are recorded in the legacy-brand
-// compatibility allowlist; renaming them would silently break existing builds.
+//   EXPO_PUBLIC_NUBARCA_API_BASE_URL   (preferred; also readable at runtime via
+//                                       process.env.* since it is an EXPO_PUBLIC_ var)
+//   NUBARCA_TV_API_BASE_URL            (build-time alias, config only)
 //
 // When neither is set, a LAN dev default is used (plain http, cleartext) so the
 // normal dev workflow keeps working. Point the app at production with:
 //
-//   EXPO_PUBLIC_NANOCLOUD_API_BASE_URL=https://nanocloud.littlefly.it \
+//   EXPO_PUBLIC_NUBARCA_API_BASE_URL="$NUBARCA_PUBLIC_ORIGIN" \
 //     npm run tv:prebuild && (cd android && ./gradlew assembleRelease)
 //
 // A release build additionally requires the NubArca TV release signing key; see
@@ -35,8 +30,19 @@ const RELEASE_VERSION = '1.0.1';
 const RELEASE_VERSION_CODE = 2;
 const RELEASE_RUNTIME = 'nubarca-tv-native-2';
 const RELEASE_CHANNEL = 'production';
-const RELEASE_API_BASE_URL = 'https://nanocloud.littlefly.it';
-const RELEASE_UPDATE_URL = `${RELEASE_API_BASE_URL}/api/tv-app/updates`;
+
+// The exact origin this installation's release APK must talk to. It is supplied
+// by the operator and deliberately NOT hardcoded: an installation-specific host
+// is deployment configuration, not product source, and the exported repository
+// must not name one.
+//
+// The pin it backs stays FAIL-CLOSED. A production build with the variable unset
+// throws below rather than accepting whatever base URL happens to be exported —
+// which is the failure mode that once produced a perfectly signed APK unable to
+// reach any server.
+const releaseOrigin =
+  process.env.NUBARCA_PUBLIC_ORIGIN?.trim().replace(/\/$/, '') || null;
+const releaseUpdateUrl = releaseOrigin ? `${releaseOrigin}/api/tv-app/updates` : null;
 const RELEASE_SIGNING_INPUTS = [
   'NUBARCA_TV_RELEASE_STORE_FILE',
   'NUBARCA_TV_RELEASE_STORE_PASSWORD',
@@ -62,7 +68,7 @@ function readGradleProperties() {
 }
 
 const explicitBaseUrl =
-  process.env.EXPO_PUBLIC_NANOCLOUD_API_BASE_URL || process.env.NANOCLOUD_TV_API_BASE_URL;
+  process.env.EXPO_PUBLIC_NUBARCA_API_BASE_URL || process.env.NUBARCA_TV_API_BASE_URL;
 
 // This config is evaluated TWICE: once by `expo prebuild`, and again by the
 // Gradle JS-bundling step that writes assets/app.config into the APK. Only the
@@ -76,7 +82,7 @@ const explicitBaseUrl =
 // 'production' during release bundling and in the documented build procedure.
 if (!explicitBaseUrl && process.env.NODE_ENV === 'production') {
   throw new Error(
-    'EXPO_PUBLIC_NANOCLOUD_API_BASE_URL is required for a production build.\n' +
+    'EXPO_PUBLIC_NUBARCA_API_BASE_URL is required for a production build.\n' +
       'Export it in the SAME shell that runs Gradle, not only for prebuild — the\n' +
       'JS bundle is produced by the Gradle build. Refusing to embed the LAN dev\n' +
       `default (${DEV_DEFAULT_BASE_URL}) into a production bundle.`,
@@ -88,7 +94,7 @@ const apiBaseUrl = (explicitBaseUrl || DEV_DEFAULT_BASE_URL).replace(/\/$/, '');
 // Only permit cleartext http on non-https (LAN dev) targets. A production
 // https:// base URL does not need — and does not get — cleartext traffic.
 const usesCleartextTraffic = apiBaseUrl.startsWith('http://');
-const explicitUpdateUrl = process.env.NANOCLOUD_TV_OTA_UPDATE_URL;
+const explicitUpdateUrl = process.env.NUBARCA_TV_OTA_UPDATE_URL;
 const updateUrl = (explicitUpdateUrl || `${apiBaseUrl}/api/tv-app/updates`).replace(/\/$/, '');
 // This value identifies one exact native ABI/configuration contract. Increment
 // it before every build containing native or build-time environment changes.
@@ -99,26 +105,36 @@ const updateUrl = (explicitUpdateUrl || `${apiBaseUrl}/api/tv-app/updates`).repl
 // package: a device still running that package asks for `tv-native-3` and must
 // never be served a bundle built for this one. See tv/README.md for the
 // retired identity.
-const runtimeVersion = process.env.NANOCLOUD_TV_RUNTIME_VERSION || RELEASE_RUNTIME;
-const updateChannel = process.env.NANOCLOUD_TV_OTA_CHANNEL || RELEASE_CHANNEL;
-const codeSigningCertificate = process.env.NANOCLOUD_TV_OTA_CERTIFICATE;
+const runtimeVersion = process.env.NUBARCA_TV_RUNTIME_VERSION || RELEASE_RUNTIME;
+const updateChannel = process.env.NUBARCA_TV_OTA_CHANNEL || RELEASE_CHANNEL;
+const codeSigningCertificate = process.env.NUBARCA_TV_OTA_CERTIFICATE;
 const codeSigningCertificateConfigPath = codeSigningCertificate
   ? path.relative(__dirname, path.resolve(codeSigningCertificate))
   : null;
 
 if (codeSigningCertificate && !fs.existsSync(codeSigningCertificate)) {
-  throw new Error(`NANOCLOUD_TV_OTA_CERTIFICATE does not exist: ${codeSigningCertificate}`);
+  throw new Error(`NUBARCA_TV_OTA_CERTIFICATE does not exist: ${codeSigningCertificate}`);
 }
 if (codeSigningCertificate) {
   validateCodeSigningCertificate(path.resolve(codeSigningCertificate));
 }
 
 if (process.env.NODE_ENV === 'production') {
-  if (apiBaseUrl !== RELEASE_API_BASE_URL) {
-    throw new Error(`Production API base URL must be exactly ${RELEASE_API_BASE_URL}.`);
+  if (!releaseOrigin) {
+    throw new Error(
+      'NUBARCA_PUBLIC_ORIGIN is required for a production build.\n' +
+        'Set it to this installation\'s public https origin in the SAME shell that\n' +
+        'runs Gradle. Refusing to build a release APK without a pinned origin.',
+    );
   }
-  if (!explicitUpdateUrl || updateUrl !== RELEASE_UPDATE_URL) {
-    throw new Error(`NANOCLOUD_TV_OTA_UPDATE_URL is required and must be exactly ${RELEASE_UPDATE_URL}.`);
+  if (!releaseOrigin.startsWith('https://')) {
+    throw new Error('NUBARCA_PUBLIC_ORIGIN must be an https:// origin.');
+  }
+  if (apiBaseUrl !== releaseOrigin) {
+    throw new Error(`Production API base URL must be exactly ${releaseOrigin}.`);
+  }
+  if (!explicitUpdateUrl || updateUrl !== releaseUpdateUrl) {
+    throw new Error(`NUBARCA_TV_OTA_UPDATE_URL is required and must be exactly ${releaseUpdateUrl}.`);
   }
   if (runtimeVersion !== RELEASE_RUNTIME) {
     throw new Error(`Production runtime must be exactly ${RELEASE_RUNTIME}.`);
@@ -127,7 +143,7 @@ if (process.env.NODE_ENV === 'production') {
     throw new Error(`Production OTA channel must be exactly ${RELEASE_CHANNEL}.`);
   }
   if (!codeSigningCertificate) {
-    throw new Error('NANOCLOUD_TV_OTA_CERTIFICATE is required for a production build.');
+    throw new Error('NUBARCA_TV_OTA_CERTIFICATE is required for a production build.');
   }
 
   const gradleProperties = readGradleProperties();

@@ -18,6 +18,9 @@ const { validateCodeSigningCertificate } = require('./code-signing-certificate.c
 const runtime = 'nubarca-tv-native-2';
 const channel = 'production';
 const gitSha = '1234567890abcdef1234567890abcdef12345678';
+// The public origin is operator configuration; these tests supply their own.
+const host = 'nubarca.example.com';
+const updateUrl = `https://${host}/api/tv-app/updates`;
 let root;
 let key;
 let certificate;
@@ -43,9 +46,10 @@ test.beforeEach(() => {
   ({ key, certificate } = createCertificate(root, 'NubArca OTA Test'));
   env = {
     TV_OTA_STORAGE_ROOT: root,
-    NANOCLOUD_TV_RUNTIME_VERSION: runtime,
-    NANOCLOUD_TV_OTA_CHANNEL: channel,
-    NANOCLOUD_TV_OTA_CERTIFICATE: certificate,
+    NUBARCA_TV_RUNTIME_VERSION: runtime,
+    NUBARCA_TV_OTA_CHANNEL: channel,
+    NUBARCA_TV_OTA_CERTIFICATE: certificate,
+    NUBARCA_TV_OTA_UPDATE_URL: updateUrl,
     TV_OTA_RELEASE_GIT_SHA: gitSha,
   };
 });
@@ -60,7 +64,7 @@ function publication(id = randomUUID(), createdAt = new Date().toISOString(), ov
   mkdirSync(join(directory, 'files', '_expo/static/js/android'), { recursive: true });
   writeFileSync(file, `bundle-${id}`);
   const hash = createHash('sha256').update(readFileSync(file)).digest('base64url');
-  const url = `https://nanocloud.littlefly.it/api/tv-app/updates/assets/${publicationRuntime}/${id}/${relative}`;
+  const url = `https://nubarca.example.com/api/tv-app/updates/assets/${publicationRuntime}/${id}/${relative}`;
   const manifest = {
     id, createdAt, runtimeVersion: publicationRuntime,
     launchAsset: { hash, key: hash, contentType: 'application/octet-stream', url },
@@ -82,12 +86,36 @@ function publication(id = randomUUID(), createdAt = new Date().toISOString(), ov
 
 function config(overrides = {}) {
   return {
-    storage: root, runtime, channel, certificatePath: certificate, gitSha,
+    storage: root, runtime, channel, certificatePath: certificate, gitSha, updateUrl,
     publications: join(root, 'publications', 'android', runtime),
     pointer: join(root, 'channels', channel, 'android', `${runtime}.json`),
     ...overrides,
   };
 }
+
+// The public origin is operator configuration rather than a source constant, so
+// the shape validation is what keeps a publication's asset URLs pinned. These
+// cases prove externalising it did not turn the pin into a free-text field.
+test('the operator-supplied OTA update URL is pinned to one exact shape', () => {
+  assert.throws(() => paths({ ...env, NUBARCA_TV_OTA_UPDATE_URL: undefined }), /is required/i);
+  assert.throws(() => paths({ ...env, NUBARCA_TV_OTA_UPDATE_URL: 'not-a-url' }), /absolute URL/i);
+  assert.throws(() => paths({ ...env, NUBARCA_TV_OTA_UPDATE_URL: `http://${host}/api/tv-app/updates` }), /https/i);
+  assert.throws(() => paths({ ...env, NUBARCA_TV_OTA_UPDATE_URL: `https://${host}/api/other` }), /must be exactly/i);
+  assert.throws(() => paths({ ...env, NUBARCA_TV_OTA_UPDATE_URL: `https://u:p@${host}/api/tv-app/updates` }), /must be exactly/i);
+  assert.throws(() => paths({ ...env, NUBARCA_TV_OTA_UPDATE_URL: `https://${host}/api/tv-app/updates?x=1` }), /must be exactly/i);
+  // A trailing slash is normalised rather than rejected.
+  assert.equal(paths({ ...env, NUBARCA_TV_OTA_UPDATE_URL: `${updateUrl}/` }).updateUrl, updateUrl);
+});
+
+// An asset URL on any other origin must be rejected even when everything else
+// about the publication is valid and correctly signed.
+test('a publication whose assets point at another origin is rejected', () => {
+  const item = publication();
+  assert.throws(
+    () => validatePublication(item.directory, config({ updateUrl: 'https://somewhere-else.example.com/api/tv-app/updates' })),
+    /immutable|another update/i,
+  );
+});
 
 test('activation is atomic, retains previous, and rollback swaps pointers', () => {
   const first = publication('11111111-1111-4111-8111-111111111111', '2026-01-01T00:00:00Z');
@@ -137,15 +165,15 @@ test('wrong certificate and wrong private key are rejected', () => {
   assert.throws(() => validatePublication(item.directory, config({ certificatePath: wrong.certificate })), /signature verification/i);
   assert.throws(() => publish({
     ...env,
-    NANOCLOUD_TV_OTA_UPDATE_URL: 'https://nanocloud.littlefly.it/api/tv-app/updates',
+    NUBARCA_TV_OTA_UPDATE_URL: 'https://nubarca.example.com/api/tv-app/updates',
     TV_OTA_PRIVATE_KEY_PATH: wrong.key,
   }), /does not match/i);
 });
 
 test('wrong runtime, wrong channel, runtime 1 and cross-runtime publications are rejected', () => {
-  assert.throws(() => paths({ ...env, NANOCLOUD_TV_RUNTIME_VERSION: 'nubarca-tv-native-1' }), /runtime.*exactly/i);
-  assert.throws(() => paths({ ...env, NANOCLOUD_TV_RUNTIME_VERSION: 'tv-native-3' }), /runtime.*exactly/i);
-  assert.throws(() => paths({ ...env, NANOCLOUD_TV_OTA_CHANNEL: 'staging' }), /channel.*exactly/i);
+  assert.throws(() => paths({ ...env, NUBARCA_TV_RUNTIME_VERSION: 'nubarca-tv-native-1' }), /runtime.*exactly/i);
+  assert.throws(() => paths({ ...env, NUBARCA_TV_RUNTIME_VERSION: 'tv-native-3' }), /runtime.*exactly/i);
+  assert.throws(() => paths({ ...env, NUBARCA_TV_OTA_CHANNEL: 'staging' }), /channel.*exactly/i);
 
   const wrongRuntime = publication(randomUUID(), undefined, { runtime: 'nubarca-tv-native-1' });
   assert.throws(() => validatePublication(wrongRuntime.directory, config()), /runtime|immutable/i);
@@ -157,7 +185,7 @@ test('malformed and traversing publications and pointers are rejected', () => {
   const item = publication();
   const manifestPath = join(item.directory, 'manifest.json');
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  manifest.launchAsset.url = `https://nanocloud.littlefly.it/api/tv-app/updates/assets/${runtime}/${item.id}/../secret`;
+  manifest.launchAsset.url = `https://nubarca.example.com/api/tv-app/updates/assets/${runtime}/${item.id}/../secret`;
   writeFileSync(manifestPath, JSON.stringify(manifest));
   assert.throws(() => validatePublication(item.directory, config()), /unsafe|immutable|missing|signature/i);
 
@@ -183,10 +211,10 @@ test('cleanup protects active, previous, newest, and other-channel references', 
 
 test('publication requires signing material before export and cannot opt out', () => {
   assert.throws(() => publish({
-    ...env, NANOCLOUD_TV_OTA_UPDATE_URL: 'https://nanocloud.littlefly.it/api/tv-app/updates',
+    ...env, NUBARCA_TV_OTA_UPDATE_URL: 'https://nubarca.example.com/api/tv-app/updates',
   }), /private.key/i);
   assert.throws(() => publish({
-    ...env, NANOCLOUD_TV_OTA_UPDATE_URL: 'https://nanocloud.littlefly.it/api/tv-app/updates',
+    ...env, NUBARCA_TV_OTA_UPDATE_URL: 'https://nubarca.example.com/api/tv-app/updates',
     TV_OTA_PRIVATE_KEY_PATH: key, TV_OTA_SIGNING_REQUIRED: 'false',
   }), /unsigned.*forbidden/i);
 });

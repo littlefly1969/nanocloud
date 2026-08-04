@@ -2,7 +2,7 @@
 
 > **Your files. Your hardware. A modern private cloud.**
 
-**NubArca 0.2.0** is a self-hosted, local-first personal cloud for secure file storage and rich photo/video management. It combines immutable content-addressed storage, exact deduplication, resilient background processing and optional locally hosted AI — without turning your server into an oversized collaboration suite.
+**NubArca 0.3.0** is a self-hosted, local-first personal cloud for secure file storage and rich photo/video management. It combines immutable content-addressed storage, exact deduplication, resilient background processing and optional locally hosted AI — without turning your server into an oversized collaboration suite.
 
 NubArca is designed for a **single operator and their users**, running on one small server through Docker Compose.
 
@@ -16,7 +16,7 @@ NubArca is designed for a **single operator and their users**, running on one sm
 - **Local AI, under your control** — optional services provide semantic text-to-photo search, image similarity and post-ingestion face detection/embedding. The experimental **Aesthetics Lab** evaluates selected images locally and remains isolated from the main library.
 - **Built for the living room** — the dedicated Fire TV / Android TV experience supports secure QR pairing, remote-first albums and slideshows, personal videos and live Party Mode refresh as new guest photos arrive.
 
-## Current state — 0.2.0
+## Current state — 0.3.0
 
 The core product is implemented and usable for controlled self-hosted deployments:
 
@@ -68,4 +68,4 @@ To run NubArca, start with the production runbook:
 
 ---
 
-**NubArca 0.2.0** focuses on a clear promise: private ownership of your files, resilient storage mechanics and a media experience that feels modern — all on infrastructure you control.
+**NubArca 0.3.0** focuses on a clear promise: private ownership of your files, resilient storage mechanics and a media experience that feels modern — all on infrastructure you control.

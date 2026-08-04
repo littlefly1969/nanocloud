@@ -4,12 +4,10 @@ set -euo pipefail
 # Publish an already-built NubArca TV APK without ever exposing a partial
 # upload. Override these only when deploying to a different installation.
 #
-# The canonical artifact is nubarca-tv.apk. The previously published artifact
-# remains on disk under its old name as an unadvertised nginx alias; this script
-# never writes to it and never deletes it.
+# The canonical artifact is nubarca-tv.apk.
 apk_path="${1:-tv/android/app/build/outputs/apk/release/app-release.apk}"
-target="${NANOCLOUD_PRODUCTION_SSH:-stefano@192.168.1.180}"
-remote_dir="${NANOCLOUD_TV_APK_DIR:-/srv/nanocloud/tv-apk}"
+target="${NUBARCA_PRODUCTION_SSH:-stefano@192.168.1.180}"
+remote_dir="${NUBARCA_TV_APK_DIR:-/srv/nubarca/tv-apk}"
 remote_name="nubarca-tv.apk"
 temporary_name=".${remote_name}.$$.upload"
 expected_signer_sha256="d79cc09c3df0df09a279633c728d6d753e3290d74f309ced7bf73344d2ab3547"
@@ -18,7 +16,23 @@ expected_version="1.0.1"
 expected_version_code="2"
 expected_runtime="nubarca-tv-native-2"
 expected_channel="production"
-expected_update_url="https://nanocloud.littlefly.it/api/tv-app/updates"
+
+# The origin the published APK must talk to. Operator-supplied, because an
+# installation-specific host is deployment configuration and must not live in
+# source. FAIL-CLOSED: an unset or non-https origin refuses the publication
+# rather than skipping the check — this guard exists because a release APK once
+# passed every manifest check while pointing at a LAN dev default.
+release_origin="${NUBARCA_PUBLIC_ORIGIN:-}"
+release_origin="${release_origin%/}"
+if [[ -z "$release_origin" ]]; then
+  echo "NUBARCA_PUBLIC_ORIGIN is required: set it to this installation's public https origin." >&2
+  exit 1
+fi
+if [[ "$release_origin" != https://* ]]; then
+  echo "NUBARCA_PUBLIC_ORIGIN must be an https:// origin." >&2
+  exit 1
+fi
+expected_update_url="${release_origin}/api/tv-app/updates"
 
 if [[ ! -f "$apk_path" ]]; then
   echo "APK not found: $apk_path" >&2
@@ -92,7 +106,7 @@ fi
 # Refuse to publish an APK whose embedded config still points at a dev server.
 # The manifest can be perfect — right package, label, leanback, signature — while
 # the JS bundle carries the LAN fallback, because the bundle is produced by the
-# Gradle step and picks up EXPO_PUBLIC_NANOCLOUD_API_BASE_URL separately from
+# Gradle step and picks up EXPO_PUBLIC_NUBARCA_API_BASE_URL separately from
 # prebuild. That APK installs, launches and can never reach a server.
 embedded_config="$(unzip -p "$apk_path" assets/app.config 2>/dev/null || true)"
 if [[ -z "$embedded_config" ]]; then
@@ -103,7 +117,7 @@ embedded_base_url="$(printf '%s' "$embedded_config" | node -e \
   'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(String(JSON.parse(s)?.extra?.apiBaseUrl??""))}catch{process.exit(1)}})')"
 if [[ "$embedded_base_url" != https://* ]]; then
   echo "Refusing to publish: the embedded API base URL is not HTTPS: ${embedded_base_url:-<unset>}" >&2
-  echo "Export EXPO_PUBLIC_NANOCLOUD_API_BASE_URL in the shell that runs Gradle." >&2
+  echo "Export EXPO_PUBLIC_NUBARCA_API_BASE_URL in the shell that runs Gradle." >&2
   exit 1
 fi
 embedded_release="$(printf '%s' "$embedded_config" | node -e \
@@ -114,9 +128,9 @@ if [[ "$embedded_release" != "$expected_release" ]]; then
   exit 1
 fi
 
-ota_certificate="${NANOCLOUD_TV_OTA_CERTIFICATE:-}"
+ota_certificate="${NUBARCA_TV_OTA_CERTIFICATE:-}"
 if [[ -z "$ota_certificate" || ! -f "$ota_certificate" ]]; then
-  echo "Refusing to publish: NANOCLOUD_TV_OTA_CERTIFICATE is required to verify embedded OTA trust." >&2
+  echo "Refusing to publish: NUBARCA_TV_OTA_CERTIFICATE is required to verify embedded OTA trust." >&2
   exit 1
 fi
 expected_ota_cert_sha="$(openssl x509 -in "$ota_certificate" -outform DER | sha256sum | awk '{print $1}')"
@@ -148,7 +162,7 @@ echo "OTA certificate SHA-256: $expected_ota_cert_sha (embedded)"
 local_sha="$(sha256sum "$apk_path" | awk '{print $1}')"
 local_bytes="$(stat -c %s "$apk_path")"
 
-if [[ "${NANOCLOUD_TV_APK_VALIDATE_ONLY:-false}" == "true" ]]; then
+if [[ "${NUBARCA_TV_APK_VALIDATE_ONLY:-false}" == "true" ]]; then
   echo "Validation only: no upload performed."
   echo "Bytes: $local_bytes"
   echo "SHA-256: $local_sha"
@@ -167,8 +181,8 @@ if [[ "$remote_sha" != "$local_sha" ]]; then
   exit 1
 fi
 
-echo "Published: https://nanocloud.littlefly.it/tv.apk"
-echo "Canonical: https://nanocloud.littlefly.it/download/tv/$remote_name"
-echo "Checksum:  https://nanocloud.littlefly.it/download/tv/$remote_name.sha256"
+echo "Published: ${release_origin}/tv.apk"
+echo "Canonical: ${release_origin}/download/tv/$remote_name"
+echo "Checksum:  ${release_origin}/download/tv/$remote_name.sha256"
 echo "Bytes: $local_bytes"
 echo "SHA-256: $local_sha (verified on the server)"

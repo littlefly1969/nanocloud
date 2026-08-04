@@ -1,6 +1,6 @@
 import { api } from './client';
 
-// Mirrors NanoCloud.Api.Folders.FolderTrashSummary on the backend. The
+// Mirrors NubArca.Api.Folders.FolderTrashSummary on the backend. The
 // `parentFolderId` is part of the user's own logical tree, not a storage
 // secret, so it is exposed by design — a trash UI uses it for "originally
 // located in …" hints. OwnerUserId / BlobObjectId / StorageKey are never

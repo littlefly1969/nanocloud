@@ -1,7 +1,7 @@
 import { api } from './client';
 import type { AlbumMembership, ImageSortDirection, ImageSortField, MediaGalleryScope } from './images';
 
-// Slice 86: mirrors NanoCloud.Api.Files.VideoItem. `posterUrl` points at the
+// Slice 86: mirrors NubArca.Api.Files.VideoItem. `posterUrl` points at the
 // existing GET /api/files/{id}/poster (generated on demand); playback uses
 // GET /api/files/{id}/video (Range-enabled). No storage internals.
 export interface VideoItem {

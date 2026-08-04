@@ -20,7 +20,7 @@
 #
 # Usage:
 #   NLU_MODEL_KEY=phi-4-mini-instruct-cpu-int4 \
-#   NLU_MODELS_ROOT=/srv/nanocloud/models/nlu \
+#   NLU_MODELS_ROOT=/srv/nubarca/models/nlu \
 #   ./scripts/install-nlu-model.sh
 set -euo pipefail
 
@@ -37,7 +37,7 @@ REVISION[qwen3-4b-instruct-2507-cpu-int4]="__PIN_COMMIT_SHA__"
 SUBDIR[qwen3-4b-instruct-2507-cpu-int4]="onnx-cpu-int4"                 # export output dir (see build docs)
 
 MODEL_KEY="${NLU_MODEL_KEY:?set NLU_MODEL_KEY (e.g. phi-4-mini-instruct-cpu-int4)}"
-MODELS_ROOT="${NLU_MODELS_ROOT:-/srv/nanocloud/models/nlu}"
+MODELS_ROOT="${NLU_MODELS_ROOT:-/srv/nubarca/models/nlu}"
 MANIFEST_DIR="$(cd "$(dirname "$0")/nlu-sidecar/manifests" && pwd)"
 MANIFEST="${MANIFEST_DIR}/${MODEL_KEY}.sha256"
 

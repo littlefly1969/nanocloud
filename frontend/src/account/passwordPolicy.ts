@@ -1,4 +1,4 @@
-// Mirrors NanoCloud.Api.Users.PasswordPolicy on the backend. The backend is
+// Mirrors NubArca.Api.Users.PasswordPolicy on the backend. The backend is
 // the source of truth (this is just fast client-side feedback before a
 // round-trip) — length bounds + not-all-whitespace, no complexity rules.
 export const PasswordPolicy = {

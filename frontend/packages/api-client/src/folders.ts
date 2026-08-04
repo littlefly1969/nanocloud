@@ -1,6 +1,6 @@
 import { api } from './client';
 
-// Mirrors NanoCloud.Api.Folders.FolderSummary on the backend. Deliberately
+// Mirrors NubArca.Api.Folders.FolderSummary on the backend. Deliberately
 // omits OwnerUserId / ParentFolderId / DeletedAt — those are storage
 // internals the API itself never returns.
 export interface FolderSummary {
@@ -9,7 +9,7 @@ export interface FolderSummary {
   createdAt: string;
 }
 
-// Mirrors NanoCloud.Api.Files.FileSummary. Same no-leak contract.
+// Mirrors NubArca.Api.Files.FileSummary. Same no-leak contract.
 export interface FileSummary {
   id: string;
   name: string;
@@ -20,7 +20,7 @@ export interface FileSummary {
   height?: number | null;
 }
 
-// Mirrors NanoCloud.Api.Folders.FolderChildrenResponse. `folderId` is null
+// Mirrors NubArca.Api.Folders.FolderChildrenResponse. `folderId` is null
 // at the root and non-null when listing a specific folder's contents.
 //
 // Files UI v2: `folders` is the full ordered set, present only on the first

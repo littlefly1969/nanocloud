@@ -1,7 +1,7 @@
 import { api } from './client';
 
 // Slice 93 — web remote-staging upload client. Mirrors the backend DTOs in
-// NanoCloud.Api.Uploads. Every shape is safe: relative paths and stable
+// NubArca.Api.Uploads. Every shape is safe: relative paths and stable
 // categories only — no absolute server paths, storage keys, hashes, blob ids,
 // or payloads ever appear here.
 

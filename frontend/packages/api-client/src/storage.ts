@@ -1,6 +1,6 @@
 import { api } from './client';
 
-// Mirrors NanoCloud.Api.Storage.UserStorageUsage. Owner-scoped: the backend
+// Mirrors NubArca.Api.Storage.UserStorageUsage. Owner-scoped: the backend
 // returns ONLY the authenticated user's figures. `quotaBytes` /
 // `remainingBytes` are null when no quota is configured (unlimited). No ids,
 // names, paths, or storage internals.

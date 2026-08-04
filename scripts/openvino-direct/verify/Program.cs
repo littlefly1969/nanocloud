@@ -9,11 +9,11 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 // Exit codes: 0 = OK; 10 = core missing; 11 = OpenVINO EP absent; 12 = inference
 // failed; 13 = numeric check failed. Non-zero fails the Docker build.
 //
-// Env: NANOCLOUD_ORT_NATIVE_DIR (dir with libonnxruntime.so.<ver>),
-//      NANOCLOUD_ORT_ABI (default 1.24.1), arg[0]=model.onnx, arg[1]=device (CPU|GPU).
+// Env: NUBARCA_ORT_NATIVE_DIR (dir with libonnxruntime.so.<ver>),
+//      NUBARCA_ORT_ABI (default 1.24.1), arg[0]=model.onnx, arg[1]=device (CPU|GPU).
 
-string nativeDir = Environment.GetEnvironmentVariable("NANOCLOUD_ORT_NATIVE_DIR") ?? "/opt/nanocloud/ort-openvino";
-string abi = Environment.GetEnvironmentVariable("NANOCLOUD_ORT_ABI") ?? "1.24.1";
+string nativeDir = Environment.GetEnvironmentVariable("NUBARCA_ORT_NATIVE_DIR") ?? "/opt/nubarca/ort-openvino";
+string abi = Environment.GetEnvironmentVariable("NUBARCA_ORT_ABI") ?? "1.24.1";
 string core = Path.Combine(nativeDir, $"libonnxruntime.so.{abi}");
 string model = args.Length > 0 ? args[0] : "model.onnx";
 string device = args.Length > 1 ? args[1] : "CPU";

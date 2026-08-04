@@ -1,6 +1,6 @@
 import { api } from './client';
 
-// Mirrors NanoCloud.Api.Admin.StorageStatsResponse on the backend. The
+// Mirrors NubArca.Api.Admin.StorageStatsResponse on the backend. The
 // types are aggregate counters only — there are no ids, names, paths, or
 // tokens anywhere in this shape, matching the no-leak contract for
 // `GET /api/admin/storage-stats`.

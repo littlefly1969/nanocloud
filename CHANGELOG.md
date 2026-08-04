@@ -1,70 +1,107 @@
 # Changelog
 
-## Unreleased
+This changelog begins at the NubArca product baseline. Earlier development
+happened under a different product name; that history is preserved in the
+originating repository and is deliberately not reproduced here.
 
-### Renamed to NubArca
+## 0.3.0
 
-Effective 31 July 2026, NanoCloud was renamed **NubArca**. NubArca is the current
-product and brand name; the television product is **NubArca TV**.
+NubArca `0.3.0` is the consolidated product baseline: one coherent identity
+across source, runtime, database and clients.
 
-Entries below this one keep the name they were written with — they are a record
-of what shipped, not a description of the product today.
+### The product
 
-- Every current user-facing surface now reads NubArca: web title, meta
-  description, PWA manifest, favicon and app icons, login and authenticated
-  shell, all locale resources, the OpenAPI document, the operator CLI banner,
-  API validation messages, and the TV and mobile display names.
-- Official palette, typography (Space Grotesk + Exo 2, bundled locally under the
-  SIL OFL — no runtime CDN) and geometry are implemented as design tokens. Dark
-  remains the first-run default; a contrast-checked light theme is derived from
-  the same palette.
-- Existing theme, language and navigation preferences migrate from the
-  pre-rename browser-storage keys, so nobody loses a choice to the rename.
-- Identifiers that cannot move without breaking a running deployment keep the
-  former name and are documented in `config/legacy-brand-compatibility.txt`:
-  session cookies, persisted container-key prefixes and hash peppers, the
-  database and its role, Docker volumes/networks/paths, `NANOCLOUD_*`
-  environment variables, the Android application id, the published APK filename,
-  and the .NET assembly (which is the container entrypoint). No database, blob
-  storage or Docker volume identity changed.
-- `scripts/check-brand-cleanliness.sh` fails on any new occurrence of the former
-  name outside that allowlist. See `docs/brand.md`.
-- The approved visual package is imported under `assets/brand/nubarca/` as the
-  canonical source of truth: 54 catalogued assets with checksums, dimensions,
-  alpha and provenance, all verified against the real binaries.
-  `scripts/sync-brand-assets.py` copies runtime assets into the platform
-  directories byte-for-byte — it never resizes, recolours or regenerates — so
-  every shipped image hashes identically to its canonical source. Source
-  masters and reference boards are structurally excluded from the build.
-- Small UI contexts use the approved flat mark rather than the luminous
-  launcher icon, and dark and light surfaces get their own approved mark and
-  wordmark variants.
+A self-hosted, local-first personal cloud for a single operator and their users,
+running on one server through Docker Compose.
 
-### Fixed
+- **Storage** — originals are immutable and content-addressed by SHA-256, so
+  identical content is stored once. Folders, albums, moves and renames are
+  database-only operations that never rewrite a byte. Reference accounting is
+  exact, and physical deletion happens only after the last reference is released
+  and a configured grace period has elapsed.
+- **Files** — owner-scoped files, folders, search, rename, move, Trash and
+  restore. Missing and foreign resources are indistinguishable in responses.
+- **Sharing** — revocable share links with expiry and download limits; albums
+  with viewer, contributor and editor roles, plus detached album copies.
+- **Media** — photo and video galleries with small thumbnails, medium previews,
+  posters and metadata; a full-screen viewer; HTTP Range video streaming and
+  optional adaptive fMP4 HLS.
+- **Photo organization** — date-based foldering through previewable, cancellable
+  background jobs. Moves are logical: originals, derivatives, metadata and
+  shares survive intact.
+- **Ingestion** — resumable staged browser uploads and resumable server-side
+  imports with persisted per-item manifests, progress, cancellation and
+  diagnostics.
+- **Jobs** — a durable PostgreSQL-backed queue with leases, heartbeats, retries,
+  bounded slices, priorities and cooperative cancellation.
+- **Local AI** — semantic text-to-photo and text-to-video search, image
+  similarity, face detection/embedding/clustering and owner-level People,
+  including faces in videos. Everything runs locally and is disabled by default.
+  Every derived artifact belongs to the owner of the file it came from.
+- **Living room** — NubArca TV for Fire TV and Android TV: QR pairing,
+  remote-first albums and slideshows, personal videos, and Party Mode refresh.
+- **Laboratory** — Plates and the experimental Aesthetics Lab, owner-private and
+  isolated from the main library. Disabled by default.
 
-- Similar Photos reserved tiles from the coded pixel dimensions while thumbnails
-  are auto-oriented, so EXIF-rotated photos got a landscape tile for a portrait
-  image and the wall filled the gap with a blurred copy of the thumbnail. The
-  similarity results now resolve display dimensions through the same helper the
-  library uses, and the media wall no longer renders a blurred backdrop layer at
-  all.
-- The photo viewer's similarity actions are resolved centrally, so a photo
-  offers the same actions from every origin. Opening a photo from Similar Photos
-  now exposes "Find similar in Library", which was missing. An album workspace
-  was applying the similarity anchor to itself instead of the library.
+### Identity
 
-## 0.2.0
+One product name, applied everywhere it can be applied:
 
-NanoCloud `0.2.0` is the consolidated public baseline.
+- solution, projects, assembly and namespaces are `NubArca.*`;
+- operator configuration is `NUBARCA_*`;
+- the PostgreSQL database and role are `nubarca`;
+- Docker images, containers, network, named volumes and the Compose project are
+  `nubarca-*`;
+- container and host filesystem paths are `/var/lib/nubarca`, `/srv/nubarca`,
+  `/mnt/nubarca`, `/var/cache/nubarca` and `/opt/nubarca`;
+- backup archives are `nubarca-<timestamp>`;
+- browser storage keys are `nubarca.*` and the photo-export folder is
+  `NubArcaExport`;
+- persisted logical container keys are `__nubarca_plates_` and
+  `__nubarca_aesthetics_` (migration `RenameLogicalContainerKeyPrefixes`).
 
-Highlights:
+`scripts/check-identity-cleanliness.sh` enforces this, and
+`IdentityCleanlinessTests` runs it inside `dotnet test`. There is no
+compatibility allowlist: the single permitted exception is the exact production
+deployment checkout path `/opt/nanocloud`, a live filesystem location on the
+running host rather than a product identifier.
 
-- Responsive file, folder, Trash, sharing and media-management workflows
-- Photo and video galleries with metadata, derivatives and playback
-- Durable background processing, resumable uploads and administrative imports
-- Content-addressed storage with reference accounting and controlled cleanup
-- Local face, image-semantic and video-semantic capabilities
-- Production Docker Compose deployment and operational diagnostics
+Installation-specific values are operator configuration rather than source
+constants — the public origin, the PostgreSQL credentials, the hash peppers and
+the TV signing material all live outside Git. Where a source constant previously
+pinned the production origin, the pin is preserved and still fails closed: a
+production TV build or an OTA publication with the origin unset is refused rather
+than defaulted.
 
-Detailed behavior and invariants are documented in `README.md`,
-`ARCHITECTURE.md` and the focused documents under `docs/`.
+### Breaking changes
+
+- **Every web user is signed out once.** The authentication cookie is now
+  `NubArca.Auth`.
+- **Every paired television must be paired again once.** The TV session cookie is
+  now `NubArca.TvSession`. An Android `applicationId` cannot be renamed and the
+  released APK is not rebuilt, so a single re-pair was accepted rather than
+  carrying the former cookie name forward indefinitely.
+- **The one-shot browser-preference migration is removed.** Theme, language and
+  navigation preferences already moved to `nubarca.*` keys; a browser that has
+  not loaded the app since then returns to the defaults (dark theme, Italian,
+  expanded navigation).
+- **The unadvertised pre-rename APK download alias is removed.** The canonical
+  artifact is `/download/tv/nubarca-tv.apk`, with `/tv.apk` as a
+  remote-friendly short alias.
+- **Operator configuration is renamed.** Every environment variable that carried
+  the former product prefix is now `NUBARCA_*`, with no fallback read of the old
+  spelling. `.env` must be migrated before the new images start, or configuration
+  silently reverts to defaults.
+- **The PostgreSQL database and role are renamed** to `nubarca` by an in-place
+  rename. Connection strings and backup/restore configuration must match.
+
+### Native clients
+
+Native clients version independently of the server and were not advanced:
+
+| Client | Version | Runtime |
+| --- | --- | --- |
+| NubArca TV | `1.0.1` (`versionCode` 2) | `nubarca-tv-native-2` |
+
+The released TV package `it.littlefly.nubarca.tv`, its signing certificate, its
+OTA runtime contract and its published APK are unchanged.

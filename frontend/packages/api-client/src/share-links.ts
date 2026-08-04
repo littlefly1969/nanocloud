@@ -1,6 +1,6 @@
 import { api } from './client';
 
-// Mirrors NanoCloud.Api.ShareLinks.ShareLinkCreatedResponse on the backend.
+// Mirrors NubArca.Api.ShareLinks.ShareLinkCreatedResponse on the backend.
 // Critically, the backend never returns `TokenHash` (only the raw `token`
 // + a relative URL) and we never model it here — the raw token is the only
 // shareable artifact and exists ONLY in transient component state. We do
@@ -40,7 +40,7 @@ export function revokeShareLink(shareLinkId: string, signal?: AbortSignal): Prom
   });
 }
 
-// Mirrors NanoCloud.Api.ShareLinks.ShareLinkSummary on the backend.
+// Mirrors NubArca.Api.ShareLinks.ShareLinkSummary on the backend.
 // Critically, the backend does NOT return the raw token or `TokenHash` for
 // existing links — the raw token is recoverable ONLY at creation time. We do
 // not model either field here, matching the no-leak contract.
@@ -70,7 +70,7 @@ export function listShareLinksForFile(
 
 export type ShareLinkStatusFilter = 'all' | 'active' | 'expired' | 'revoked';
 
-// Mirrors NanoCloud.Api.ShareLinks.ShareLinkListItem. Like ShareLinkSummary it
+// Mirrors NubArca.Api.ShareLinks.ShareLinkListItem. Like ShareLinkSummary it
 // never carries the raw token or TokenHash; it additionally carries the file
 // name + logical folder path so the global page can show which file each link
 // points at. `folderPath` is "/" for a root file, "/A/B" for a nested one.
@@ -89,7 +89,7 @@ export interface ShareLinkListItem {
   isExhausted: boolean;
 }
 
-// Mirrors NanoCloud.Api.ShareLinks.ShareLinkListResponse. `total` is the full
+// Mirrors NubArca.Api.ShareLinks.ShareLinkListResponse. `total` is the full
 // owner-scoped count for the active filter (not just the current page) so the
 // page can render "N of total" and stop paging at the end.
 export interface ShareLinkListResponse {

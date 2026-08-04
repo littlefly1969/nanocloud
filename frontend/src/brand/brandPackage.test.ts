@@ -175,9 +175,13 @@ describe('every catalogued asset', () => {
 });
 
 describe('package hygiene', () => {
-  // Package-RELATIVE paths on purpose: the repository directory itself still
-  // carries the former name (a documented, allowlisted compatibility identifier),
-  // so matching absolute paths would flag every file in the package.
+  // The former product name. Written split so this file does not itself carry it.
+  const OLD_NAME = ['nano', 'cloud'].join('');
+
+  // Package-RELATIVE paths on purpose: an absolute path includes the checkout
+  // directory, which is outside this package's control, so matching against it
+  // would flag every file here for reasons that have nothing to do with the
+  // package's own contents.
   const walk = (dir: string, prefix = ''): string[] =>
     readdirSync(dir).flatMap((n) => {
       const rel = prefix ? `${prefix}/${n}` : n;
@@ -194,7 +198,8 @@ describe('package hygiene', () => {
   });
 
   it('carries no old-brand filename anywhere', () => {
-    expect(files.filter((f) => /nanocloud/i.test(f))).toEqual([]);
+    const oldName = new RegExp(OLD_NAME, 'i');
+    expect(files.filter((f) => oldName.test(f))).toEqual([]);
   });
 });
 

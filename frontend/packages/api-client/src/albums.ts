@@ -1,7 +1,7 @@
 import { api } from './client';
 
 // One tile of an album card's cover mosaic. Mirrors
-// NanoCloud.Api.Albums.AlbumCoverItem. `thumbnailUrl` is the small thumbnail for
+// NubArca.Api.Albums.AlbumCoverItem. `thumbnailUrl` is the small thumbnail for
 // images and the poster for videos.
 export interface AlbumCoverItem {
   fileItemId: string;

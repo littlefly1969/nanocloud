@@ -191,7 +191,7 @@ describe('brand artwork', () => {
 
   it('leaves no old-brand artwork behind in the served directory', () => {
     for (const file of readdirSync(resolve(PUBLIC, 'brand'))) {
-      expect(file.toLowerCase()).not.toContain('nanocloud');
+      expect(file.toLowerCase()).not.toContain(OLD_NAME.toLowerCase());
     }
   });
 

@@ -9,7 +9,7 @@
 # window — never via a shell script that might dump a password to logs.
 #
 # Usage:
-#   BASE_URL=https://nanocloud.example.com ./deploy/smoke-check.sh
+#   BASE_URL=https://nubarca.example.com ./deploy/smoke-check.sh
 #   BASE_URL=http://127.0.0.1:8080         ./deploy/smoke-check.sh   # local
 #
 # Exit code 0  → all checks passed.

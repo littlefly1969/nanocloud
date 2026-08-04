@@ -6,7 +6,7 @@
 # This override builds api/worker from the `runtime-openvino` image target (pinned
 # OpenVINO-enabled ORT native runtime + Intel GPU userspace, no Python), mounts the
 # models read-only IN-PROCESS, and maps /dev/dri only because a device defaults to
-# GPU. For a CPU-only direct config set NANOCLOUD_FACE_*_DEVICE=CPU and remove the
+# GPU. For a CPU-only direct config set NUBARCA_FACE_*_DEVICE=CPU and remove the
 # devices/group_add blocks. Detector and recognizer choose their device
 # INDEPENDENTLY (e.g. detector GPU, recognizer CPU).
 #
@@ -23,16 +23,16 @@ x-openvino-direct-env: &openvino-direct-env
   Ai__Onnx__ExecutionProvider: openvino-direct
   Ai__Onnx__ModelDir: /models/ai
   # NativeDir is baked into the runtime-openvino image; overridable here.
-  Ai__Onnx__OpenVino__NativeDir: /opt/nanocloud/ort-openvino
+  Ai__Onnx__OpenVino__NativeDir: /opt/nubarca/ort-openvino
   # Independent per-model device placement (CPU | GPU).
-  Ai__Onnx__OpenVino__FaceDetectorDevice: ${NANOCLOUD_FACE_DETECTOR_DEVICE:-GPU}
-  Ai__Onnx__OpenVino__FaceRecognizerDevice: ${NANOCLOUD_FACE_RECOGNIZER_DEVICE:-GPU}
+  Ai__Onnx__OpenVino__FaceDetectorDevice: ${NUBARCA_FACE_DETECTOR_DEVICE:-GPU}
+  Ai__Onnx__OpenVino__FaceRecognizerDevice: ${NUBARCA_FACE_RECOGNIZER_DEVICE:-GPU}
   # SigLIP image tower device: CPU | GPU | DUAL:CPU,GPU. DUAL runs a bounded CPU+GPU
   # tandem (benchmark: +34.7% at FP32, identical rankings) and REQUIRES two worker
   # job slots to feed both devices — set Jobs__MaxConcurrentJobs=2 on the worker.
   # The GPU leg degrades gracefully to CPU-only if the device is unavailable.
   # Default CPU (opt-in): see docs/model-deployment/openvino-siglip2-benchmark-2026-07.md.
-  Ai__Onnx__OpenVino__PhotoImageDevice: ${NANOCLOUD_PHOTO_IMAGE_DEVICE:-CPU}
+  Ai__Onnx__OpenVino__PhotoImageDevice: ${NUBARCA_PHOTO_IMAGE_DEVICE:-CPU}
   # FP32 is mandatory for output-equivalence with the CPU/sidecar reference.
   Ai__Onnx__OpenVino__GpuPrecision: FP32
   # Bounded, writable OpenVINO compile cache (on tmpfs; see tmpfs below).
@@ -40,11 +40,11 @@ x-openvino-direct-env: &openvino-direct-env
 
 x-openvino-direct-build: &openvino-direct-build
   context: .
-  dockerfile: src/NanoCloud.Api/Dockerfile
+  dockerfile: src/NubArca.Api/Dockerfile
   target: runtime-openvino
   args:
     # Stamp the exact commit into the image for canary/diagnostic identity.
-    GIT_SHA: ${NANOCLOUD_GIT_SHA:-unknown}
+    GIT_SHA: ${NUBARCA_GIT_SHA:-unknown}
 
 # Safe, always-on hardening for the direct-mode services. (Strict read-only root is
 # applied by the ISOLATED canary compose, which carries no production data; here the

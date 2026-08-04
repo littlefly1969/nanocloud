@@ -1,4 +1,4 @@
-# Plates model deployment (Slice 4)
+# Plates model deployment
 
 Deployment guidance for the owner-private **Plates (Targhe)** model pipelines:
 ALPR (license-plate detection + OCR) and privacy-only face redaction. This is
@@ -31,7 +31,7 @@ empty it falls back to the legacy `Enabled` bool (`Enabled=true` →
 |---------------------------------|---------|
 | `Disabled`                      | No redaction. `blurFaces=true` returns `face_redaction_not_configured` (409). Never serves the unredacted image. |
 | `DeterministicDev`              | Deterministic, **non-semantic** dev/test detector (a fixed box). |
-| `ExistingNanoCloudFaceDetector` | **Reuses** the AI substrate's face-box detector (ONNX SCRFD) for **bounding boxes only**. No embeddings, clusters, people, or `FaceDetection` rows. |
+| `ExistingNubArcaFaceDetector` | **Reuses** the AI substrate's face-box detector (ONNX SCRFD) for **bounding boxes only**. No embeddings, clusters, people, or `FaceDetection` rows. |
 | `OnnxDedicatedFaceDetector`     | Future/optional dedicated ONNX face detector. **Not implemented** in this build — selecting it reports unavailable. |
 
 `Plates__FaceRedaction__Enabled` is the master switch; it must be `true` in
@@ -94,7 +94,7 @@ Plates pipeline gates concurrency with `WorkerConcurrency`.
 
 ## Face redaction — existing-detector option
 
-`Provider=ExistingNanoCloudFaceDetector` needs **no Plates-owned model file**: it
+`Provider=ExistingNubArcaFaceDetector` needs **no Plates-owned model file**: it
 resolves the AI substrate's face detector by profile key and calls its
 detection-only path (`IFaceDetector.DetectFacesAsync`), which returns normalized
 boxes and **persists nothing**. Configure the underlying face model via the AI
@@ -110,13 +110,13 @@ slice; `DetectorModelPath` / `NmsThreshold` exist for it but it is not wired.
 
 ```bash
 # Sanitized config validation (no DB, no inference, no path leakage):
-dotnet NanoCloud.Api.dll plates models validate
-dotnet NanoCloud.Api.dll plates models validate alpr
-dotnet NanoCloud.Api.dll plates models validate face-redaction
+dotnet NubArca.Api.dll plates models validate
+dotnet NubArca.Api.dll plates models validate alpr
+dotnet NubArca.Api.dll plates models validate face-redaction
 
 # Benchmark on a LOCAL image (no PlateImage/FileItem/DB record created):
-dotnet NanoCloud.Api.dll plates benchmark alpr --image /path/to/car.jpg --runs 5
-dotnet NanoCloud.Api.dll plates benchmark face-redaction --image /path/to/car.jpg --runs 5
+dotnet NubArca.Api.dll plates benchmark alpr --image /path/to/car.jpg --runs 5
+dotnet NubArca.Api.dll plates benchmark face-redaction --image /path/to/car.jpg --runs 5
 ```
 
 Diagnostics print only sanitized facts: provider, profile key, model **kind**,
@@ -132,8 +132,8 @@ traces, or secrets.
 2. Run `plates models validate` and confirm `status: ready`.
 3. Only then set `Plates__Alpr__Provider=Onnx` (ALPR) and/or
    `Plates__FaceRedaction__Enabled=true` +
-   `Plates__FaceRedaction__Provider=ExistingNanoCloudFaceDetector`.
-4. Ensure `Plates__Pepper` is a stable production secret (unchanged from Slice 1;
+   `Plates__FaceRedaction__Provider=ExistingNubArcaFaceDetector`.
+4. Ensure `Plates__Pepper` is a stable production secret (never rotated once rows exist;
    a changed pepper re-keys owner container keys).
 5. Migrations are additive and do not auto-apply — back up and apply as usual.
    **This slice adds no new migration.**

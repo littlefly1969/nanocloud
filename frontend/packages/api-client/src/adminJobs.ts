@@ -1,7 +1,7 @@
 import { api } from './client';
 
 // Slice 90 — admin background-jobs dashboard client. Mirrors the safe DTOs in
-// NanoCloud.Api.Jobs (AdminJobSummary / AdminJobPage). Every field is an id,
+// NubArca.Api.Jobs (AdminJobSummary / AdminJobPage). Every field is an id,
 // a status/type string, a count, a timestamp, or an already-sanitized error
 // string. The backend never returns PayloadJson, lock owner, storage keys,
 // hashes, blob ids, paths, raw metadata, or tokens — and neither does this UI.

@@ -1,7 +1,7 @@
 # Optional internal-only NLU command-model sidecar for the "onnx" natural-language
 # gallery interpreter. Compose it ALONGSIDE the prod files (never alone):
 #
-#   NLU_MODEL_DIR=/srv/nanocloud-models/nlu \
+#   NLU_MODEL_DIR=/srv/nubarca-models/nlu \
 #   docker compose -f docker-compose.prod.yml \
 #                  -f docker-compose.prod.local.yml \
 #                  -f docker-compose.nlu.yml \
@@ -19,12 +19,12 @@ services:
     build:
       context: ./scripts/nlu-sidecar
       dockerfile: Dockerfile
-    image: nanocloud-nlu:local
-    container_name: nanocloud-nlu
+    image: nubarca-nlu:local
+    container_name: nubarca-nlu
     restart: unless-stopped
     # Internal-only: reachable from api/worker as http://nlu:8090. No ports block.
     networks:
-      - nanocloud-internal
+      - nubarca-internal
     # Weights mounted READ-ONLY from the operator-installed host dir. Never baked
     # into the image, never committed to git.
     volumes:
@@ -56,9 +56,12 @@ services:
       start_period: 120s
 
 # Composed together with docker-compose.prod.yml, this merges with the
-# nanocloud-internal network defined there (same key) — the sidecar joins the
+# nubarca-internal network defined there (same key) — the sidecar joins the
 # existing internal bridge, no public port. (Defined here too so `-f
 # docker-compose.nlu.yml` is valid; the prod file's definition wins on merge.)
 networks:
-  nanocloud-internal:
+  nubarca-internal:
+    # Pinned so the created network is exactly `nubarca-internal`. Without it
+    # Compose prefixes the project name and produces `nubarca_nubarca-internal`.
+    name: nubarca-internal
     driver: bridge

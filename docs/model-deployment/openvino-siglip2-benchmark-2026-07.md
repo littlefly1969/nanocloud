@@ -100,7 +100,7 @@ P-core is correct on this host.
 
 The original winning **mixed** measurement did not use OpenVINO's `MULTI`
 plugin. The recovered benchmark artifact
-(`/tmp/nanocloud-siglip-scheduling-probe.py` on the target host) compiled one
+(`/tmp/nubarca-siglip-scheduling-probe.py` on the target host) compiled one
 CPU FP32 model and one GPU FP32 model, created one `InferRequest` for each, and
 fed them from a shared `queue.Queue` using two Python threads. The CPU processed
 34 images and the GPU 26 in the same interval. No NubArca application code was

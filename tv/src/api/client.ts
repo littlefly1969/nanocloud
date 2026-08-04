@@ -1,13 +1,12 @@
 // NubArca TV API client.
 //
-// RETAINED LEGACY BRAND: the wire-level cookie identifiers below
-// ("NanoCloud.TvSession", "NanoCloud.Auth") keep their pre-NubArca spelling.
-// They are server contracts; renaming either would break paired TVs. The
-// package-local AsyncStorage key is the already-released NubArca identity and
-// is likewise immutable for in-place upgrades.
+// The cookie names below ("NubArca.TvSession", "NubArca.Auth") are SERVER
+// contracts, not local choices: they must match Program.cs and TvPairingService
+// exactly. The package-local AsyncStorage key is the released TV identity and is
+// immutable for in-place upgrades. Changing any of the three un-pairs the fleet.
 //
 // Cookie handling: React Native's fetch does not maintain a browser-style
-// cookie jar. The limited TV session is a SESSION COOKIE ("NanoCloud.TvSession",
+// cookie jar. The limited TV session is a SESSION COOKIE ("NubArca.TvSession",
 // HttpOnly, path-scoped to /api/tv) set by the pairing-poll response. We capture
 // Set-Cookie (RN exposes it, unlike browsers) and forward it manually via the
 // Cookie request header on subsequent /api/tv calls.
@@ -16,11 +15,11 @@
 // and PERSISTED (unencrypted) across app restarts via AsyncStorage — see below.
 //
 // The TV app ONLY ever calls /api/tv/* endpoints. It has no access to the normal
-// owner APIs and never sends the normal NanoCloud.Auth cookie.
+// owner APIs and never sends the normal NubArca.Auth cookie.
 //
-// Persistence scope (deliberately narrow): only the limited NanoCloud.TvSession
+// Persistence scope (deliberately narrow): only the limited NubArca.TvSession
 // cookie string is persisted. By construction _cookieJar can hold nothing else —
-// /api/tv responses only ever Set-Cookie the TV session; the owner NanoCloud.Auth
+// /api/tv responses only ever Set-Cookie the TV session; the owner NubArca.Auth
 // cookie is never received here, the pairing secret travels in a header (never a
 // cookie), and party tokens live in URLs (never cookies). Storage is AsyncStorage
 // (device-local, app-private, NOT encrypted); on a shared/rooted device another
@@ -40,7 +39,7 @@ import { tvDebug } from '../debug';
 // sandbox — the old value is not reachable from here even if we wanted it.
 // Every install of NubArca TV starts unpaired and pairs once.
 //
-// The cookie this holds is still named NanoCloud.TvSession: that is the backend
+// The cookie this holds is still named NubArca.TvSession: that is the backend
 // wire contract with /api/tv/*, not a user-visible name, and renaming it would
 // invalidate live sessions. It stays on the compatibility allowlist.
 const SESSION_STORAGE_KEY = 'nubarca.tv.session.cookie';

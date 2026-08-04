@@ -3,18 +3,18 @@
 The production APK is available without authentication at the short Fire TV
 Downloader URL:
 
-`https://nanocloud.littlefly.it/tv.apk`
+`https://nubarca.example.com/tv.apk`
 
 Its canonical URL is
-`https://nanocloud.littlefly.it/download/tv/nubarca-tv.apk`.
+`https://nubarca.example.com/download/tv/nubarca-tv.apk`.
 
 The adjacent `nubarca-tv.apk.sha256` file contains its SHA-256 checksum. The
 APK is a deployment artifact and is deliberately not committed to Git. The
-frontend container mounts `${NANOCLOUD_TV_APK_DIR:-/srv/nanocloud/tv-apk}`
+frontend container mounts `${NUBARCA_TV_APK_DIR:-/srv/nubarca/tv-apk}`
 read-only at `/download/tv`; nginx serves the APK with the Android package MIME
 type, an attachment filename, and no-cache headers.
 
-`https://nanocloud.littlefly.it/download/tv/nanocloud-tv.apk` remains as an
+`https://nubarca.example.com/download/tv/nubarca-tv.apk` remains as an
 **unadvertised compatibility alias** so links and QR codes handed out before the
 rename do not 404. It is not the canonical download, nothing publishes to it,
 and it serves whatever file is still on disk under the old name. Remove the two
@@ -35,11 +35,9 @@ one backend and one account ecosystem. There is no universal mobile/TV binary.
 | Expo slug | `nubarca-tv` | `nubarca` |
 | Deep-link scheme | `nubarca-tv` | `nubarca` |
 
-This identity replaces it.littlefly.nanocloudtv, which was retired in TV-ID-01.
-An Android applicationId cannot be renamed in place, so there is **no upgrade
-path** between the two: the old app must be uninstalled and NubArca TV installed
-fresh, and the device pairs again. The single private device holding the old
-package was migrated that way deliberately.
+An Android `applicationId` cannot be renamed in place. Any change to it is a
+different application: there is no upgrade path, the previous app must be
+uninstalled, NubArca TV installed fresh, and the device pairs again.
 
 ## Signing
 
@@ -89,11 +87,11 @@ export JAVA_HOME=/usr/lib/jvm/java-17-openjdk
 export ANDROID_HOME="$HOME/Android/Sdk"
 export PATH="$JAVA_HOME/bin:$PATH"
 export NODE_ENV=production
-export EXPO_PUBLIC_NANOCLOUD_API_BASE_URL=https://nanocloud.littlefly.it
-export NANOCLOUD_TV_RUNTIME_VERSION=nubarca-tv-native-2
-export NANOCLOUD_TV_OTA_CHANNEL=production
-export NANOCLOUD_TV_OTA_UPDATE_URL=https://nanocloud.littlefly.it/api/tv-app/updates
-export NANOCLOUD_TV_OTA_CERTIFICATE=/absolute/path/to/expo-root.pem
+export EXPO_PUBLIC_NUBARCA_API_BASE_URL=https://nubarca.example.com
+export NUBARCA_TV_RUNTIME_VERSION=nubarca-tv-native-2
+export NUBARCA_TV_OTA_CHANNEL=production
+export NUBARCA_TV_OTA_UPDATE_URL=https://nubarca.example.com/api/tv-app/updates
+export NUBARCA_TV_OTA_CERTIFICATE=/absolute/path/to/expo-root.pem
 npm run tv:prebuild
 cd android
 ./gradlew assembleRelease
@@ -126,7 +124,7 @@ From the repository root:
 Publication is permitted only after `adb install -r` over 1.0.0 proves the
 package data and pairing survive. The default production target is
 `stefano@192.168.1.180`; override
-`NANOCLOUD_PRODUCTION_SSH` for a different server. The script re-verifies the
+`NUBARCA_PRODUCTION_SSH` for a different server. The script re-verifies the
 package/version/runtime/channel/endpoint, definitive signer fingerprint,
 embedded OTA certificate and signatures; it then uploads to a temporary name,
 atomically replaces the public APK and
@@ -135,9 +133,9 @@ checksum, and confirms the SHA-256 of the bytes that landed on the server.
 Then verify headers and bytes over HTTPS:
 
 ```bash
-curl -fsSI https://nanocloud.littlefly.it/tv.apk
-curl -fsS  https://nanocloud.littlefly.it/download/tv/nubarca-tv.apk.sha256
-curl -fsS  https://nanocloud.littlefly.it/download/tv/nubarca-tv.apk | sha256sum
+curl -fsSI https://nubarca.example.com/tv.apk
+curl -fsS  https://nubarca.example.com/download/tv/nubarca-tv.apk.sha256
+curl -fsS  https://nubarca.example.com/download/tv/nubarca-tv.apk | sha256sum
 ```
 
 The `Content-Type` must be `application/vnd.android.package-archive` and the
@@ -149,12 +147,12 @@ is the failure this check exists to catch.
 Enable **Install unknown apps** for Downloader in Fire TV settings, enter the
 direct HTTPS URL above, download it, and choose **Install**.
 
-Installing over the retired package is **not** possible — the applicationId
-differs, so Android treats NubArca TV as a new app. Uninstall the old one first;
-its pairing and session data are not carried over and the TV pairs again.
+Installing over an app with a different `applicationId` is **not** possible —
+Android treats NubArca TV as a new app. Uninstall the other one first; its
+pairing and session data are not carried over and the TV pairs again.
 
-Later NubArca TV releases keep the same package and certificate and only raise
-`versionCode`, so those install in place and preserve the pairing.
+NubArca TV releases keep the same package and certificate and only raise
+`versionCode`, so they install in place and preserve the pairing.
 
 ## Android TV / Google TV
 

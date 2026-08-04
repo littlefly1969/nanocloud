@@ -1,5 +1,12 @@
 # NubArca — production compose stack.
 #
+# The project name is PINNED. Compose otherwise derives it from the checkout
+# directory basename, and the production checkout deliberately keeps its historic
+# path, which would label every resource with the former identity. Pinning it
+# means `docker compose ls`, resource labels and any implicitly-named resource
+# all read `nubarca` regardless of where the checkout lives.
+name: nubarca
+
 # This file is INTENDED to be paired with a `.env` file (see .env.example) and
 # a reverse proxy on the host that terminates TLS. The compose stack itself
 # does NOT terminate TLS and is not safe to expose directly to the internet.
@@ -36,7 +43,7 @@ services:
     # See docs/ai-photo-pgvector.md. Without pgvector the migration skips the
     # vector table cleanly and similarity falls back to exact-scan.
     image: pgvector/pgvector:pg17
-    container_name: nanocloud-postgres
+    container_name: nubarca-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
@@ -50,15 +57,15 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - nanocloud-internal
+      - nubarca-internal
     # No `ports:` block on purpose — PostgreSQL must only be reachable from
     # the api service on the internal network.
 
   api:
     build:
       context: .
-      dockerfile: src/NanoCloud.Api/Dockerfile
-    container_name: nanocloud-api
+      dockerfile: src/NubArca.Api/Dockerfile
+    container_name: nubarca-api
     restart: unless-stopped
     depends_on:
       postgres:
@@ -66,14 +73,14 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ConnectionStrings__Postgres: ${ConnectionStrings__Postgres:?ConnectionStrings__Postgres is required}
-      Storage__RootPath: ${Storage__RootPath:-/var/lib/nanocloud/storage}
+      Storage__RootPath: ${Storage__RootPath:-/var/lib/nubarca/storage}
       # Native TV Expo Updates publications. Keep this separate from public web
       # roots and bind the volume in docker-compose.prod.local.yml when the host
       # publication script needs direct access.
-      TvUpdates__RootPath: ${TvUpdates__RootPath:-/var/lib/nanocloud/tv-updates}
+      TvUpdates__RootPath: ${TvUpdates__RootPath:-/var/lib/nubarca/tv-updates}
       # Public trust root used to verify every manifest before it is served.
       # Mount this read-only through the production-local override.
-      TvUpdates__CodeSigningCertificatePath: ${TvUpdates__CodeSigningCertificatePath:-/var/lib/nanocloud/tv-ota-trust/certificate.pem}
+      TvUpdates__CodeSigningCertificatePath: ${TvUpdates__CodeSigningCertificatePath:-/var/lib/nubarca/tv-ota-trust/certificate.pem}
       # Slice 72: optional separate root for DERIVED media (thumbnails /
       # previews / posters). Empty => derived artifacts use Storage__RootPath
       # (single-root default, unchanged). Set to a path under a faster/cache
@@ -199,7 +206,7 @@ services:
       # the import jobs that READ staged files). Staging is temporary space —
       # it does not need the redundancy/backups the blob store does.
       Staging__Enabled: ${Staging__Enabled:-false}
-      Staging__RootPath: ${Staging__RootPath:-/var/lib/nanocloud/staging}
+      Staging__RootPath: ${Staging__RootPath:-/var/lib/nubarca/staging}
       Staging__MaxSessionBytes: ${Staging__MaxSessionBytes:-6871947673600}
       Staging__MaxFileBytes: ${Staging__MaxFileBytes:-201474836480}
       Staging__MaxFilesPerSession: ${Staging__MaxFilesPerSession:-500000}
@@ -212,7 +219,7 @@ services:
       # ASP.NET Core DataProtection: persist keys in a named volume so they
       # survive container restarts and image rebuilds. Without this, every
       # restart invalidates all auth cookies (everyone gets logged out).
-      ASPNETCORE_DataProtection__KeyPath: /var/lib/nanocloud/dataprotection-keys
+      ASPNETCORE_DataProtection__KeyPath: /var/lib/nubarca/dataprotection-keys
       # AI substrate (Phase 0A–1). OFF by default — these only flip on when set
       # in .env. The deterministic photo-similarity pilot uses Ai__Enabled=true,
       # Ai__Provider=deterministic, Ai__ImageEmbeddingsEnabled=true; every other
@@ -302,24 +309,24 @@ services:
       # dev fallback (fine for a fresh deploy; set a real secret in .env).
       DeletedContent__Pepper: ${DeletedContent__Pepper:-}
     volumes:
-      - storage-data:/var/lib/nanocloud/storage
-      - dataprotection-keys:/var/lib/nanocloud/dataprotection-keys
-      - tv-updates-data:/var/lib/nanocloud/tv-updates:ro
+      - storage-data:/var/lib/nubarca/storage
+      - dataprotection-keys:/var/lib/nubarca/dataprotection-keys
+      - tv-updates-data:/var/lib/nubarca/tv-updates:ro
       # Slice 72: mount a separate volume for derived media ONLY if you set
       # Storage__DerivedRootPath (above) to this in-container path. Leave both
       # commented for the single-root default. The host backing for this volume
-      # is configured via NANOCLOUD_DERIVED_DATA in the storage-derived-data
+      # is configured via NUBARCA_DERIVED_DATA in the storage-derived-data
       # volume block at the bottom of this file.
-      # - storage-derived-data:/var/lib/nanocloud/derived
+      # - storage-derived-data:/var/lib/nubarca/derived
       # Slice 93: OPTIONAL staging volume for web remote-staging uploads.
       # Uncomment together with Staging__Enabled=true (and the staging-data
       # volume block at the bottom). Temporary space only.
-      - staging-data:/var/lib/nanocloud/staging
+      - staging-data:/var/lib/nubarca/staging
     ports:
       # Loopback-only: only the host's reverse proxy can reach this.
       - "127.0.0.1:8080:8080"
     networks:
-      - nanocloud-internal
+      - nubarca-internal
 
   # Slice 89: OPTIONAL dedicated background-job worker. DISABLED by default —
   # only started with `--profile worker` (e.g.
@@ -333,8 +340,8 @@ services:
   worker:
     build:
       context: .
-      dockerfile: src/NanoCloud.Api/Dockerfile
-    container_name: nanocloud-worker
+      dockerfile: src/NubArca.Api/Dockerfile
+    container_name: nubarca-worker
     restart: unless-stopped
     profiles: ["worker"]
     depends_on:
@@ -344,7 +351,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ConnectionStrings__Postgres: ${ConnectionStrings__Postgres:?ConnectionStrings__Postgres is required}
-      Storage__RootPath: ${Storage__RootPath:-/var/lib/nanocloud/storage}
+      Storage__RootPath: ${Storage__RootPath:-/var/lib/nubarca/storage}
       Storage__DerivedRootPath: ${Storage__DerivedRootPath:-}
       # Image-processing safety caps; mirror api so worker/backfill sees the
       # same source-image eligibility policy.
@@ -396,7 +403,7 @@ services:
 
 
       Staging__Enabled: ${Staging__Enabled:-false}
-      Staging__RootPath: ${Staging__RootPath:-/var/lib/nanocloud/staging}
+      Staging__RootPath: ${Staging__RootPath:-/var/lib/nubarca/staging}
       Staging__MaxSessionBytes: ${Staging__MaxSessionBytes:-6871947673600}
       Staging__MaxFileBytes: ${Staging__MaxFileBytes:-201474836480}
       Staging__MaxFilesPerSession: ${Staging__MaxFilesPerSession:-500000}
@@ -481,28 +488,28 @@ services:
       # To run admin-import jobs on the worker, mirror the api service's
       # AdminImport__* settings here AND mount the same read-only import roots.
     volumes:
-      - storage-data:/var/lib/nanocloud/storage
+      - storage-data:/var/lib/nubarca/storage
       # If api uses a split derived root / import mounts, mirror them here too.
       # Slice 93: the worker executes staging-import jobs, which READ staged
       # files — when staging is enabled, mirror the api's staging mount:
-      - staging-data:/var/lib/nanocloud/staging
+      - staging-data:/var/lib/nubarca/staging
     networks:
-      - nanocloud-internal
+      - nubarca-internal
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: nanocloud-frontend
+    container_name: nubarca-frontend
     restart: unless-stopped
     ports:
       - "127.0.0.1:8081:80"
     volumes:
       # APKs are release artifacts, not source files. The publishing helper
       # replaces nubarca-tv.apk atomically in this host directory.
-      - ${NANOCLOUD_TV_APK_DIR:-/srv/nanocloud/tv-apk}:/usr/share/nginx/html/download/tv:ro
+      - ${NUBARCA_TV_APK_DIR:-/srv/nubarca/tv-apk}:/usr/share/nginx/html/download/tv:ro
     networks:
-      - nanocloud-internal
+      - nubarca-internal
 
 volumes:
   # Default: Docker-managed named volumes — zero host setup, they "just work".
@@ -520,53 +527,56 @@ volumes:
   # (needs a second storage backend); see ARCHITECTURE.md. On a single server
   # they live with the originals on the blob volume below.
   postgres-data:
-    name: nanocloud-postgres-data
+    name: nubarca-postgres-data
     # driver: local
     # driver_opts:
     #   type: none
     #   o: bind
-    #   device: ${NANOCLOUD_POSTGRES_DATA:?set NANOCLOUD_POSTGRES_DATA to the fast-disk path when bind-mounting}
+    #   device: ${NUBARCA_POSTGRES_DATA:?set NUBARCA_POSTGRES_DATA to the fast-disk path when bind-mounting}
   dataprotection-keys:
-    name: nanocloud-dataprotection-keys
+    name: nubarca-dataprotection-keys
 
   tv-updates-data:
-    name: nanocloud-tv-updates-data
+    name: nubarca-tv-updates-data
 
   storage-data:
-    name: nanocloud-storage-data
+    name: nubarca-storage-data
     # driver: local
     # driver_opts:
     #   type: none
     #   o: bind
-    #   device: ${NANOCLOUD_BLOB_DATA:?set NANOCLOUD_BLOB_DATA to the blob-storage path when bind-mounting}
+    #   device: ${NUBARCA_BLOB_DATA:?set NUBARCA_BLOB_DATA to the blob-storage path when bind-mounting}
 
   # Slice 72: separate volume for DERIVED media (thumbnails / previews /
   # posters). Used ONLY when Storage__DerivedRootPath is set and the api
   # service's storage-derived-data mount is uncommented. Uncomment this whole
-  # block to enable; bind it to a faster/cache disk via NANOCLOUD_DERIVED_DATA.
+  # block to enable; bind it to a faster/cache disk via NUBARCA_DERIVED_DATA.
   # Derived artifacts are regenerable cache — this volume does NOT need the
   # redundancy/backups the originals do.
   # storage-derived-data:
-  #   name: nanocloud-storage-derived-data
+  #   name: nubarca-storage-derived-data
 
   # Slice 93: staging volume shared by API and worker. It stays empty while
   # Staging__Enabled=false, but must be declared because both services mount it.
   # TEMPORARY acquisition space: sessions expire and are reclaimed; it needs
   # neither redundancy nor backups. Size it for your largest expected upload
-  # batch (bind-mount a big disk via NANOCLOUD_STAGING_DATA if needed).
+  # batch (bind-mount a big disk via NUBARCA_STAGING_DATA if needed).
   staging-data:
-    name: nanocloud-staging-data
+    name: nubarca-staging-data
   #   # driver: local
   #   # driver_opts:
   #   #   type: none
   #   #   o: bind
-  #   #   device: ${NANOCLOUD_STAGING_DATA:?set NANOCLOUD_STAGING_DATA when bind-mounting}
+  #   #   device: ${NUBARCA_STAGING_DATA:?set NUBARCA_STAGING_DATA when bind-mounting}
   #   driver: local
   #   driver_opts:
   #     type: none
   #     o: bind
-  #     device: ${NANOCLOUD_DERIVED_DATA:?set NANOCLOUD_DERIVED_DATA to the derived-cache path when bind-mounting}
+  #     device: ${NUBARCA_DERIVED_DATA:?set NUBARCA_DERIVED_DATA to the derived-cache path when bind-mounting}
 
 networks:
-  nanocloud-internal:
+  nubarca-internal:
+    # Pinned so the created network is exactly `nubarca-internal`. Without it
+    # Compose prefixes the project name and produces `nubarca_nubarca-internal`.
+    name: nubarca-internal
     driver: bridge

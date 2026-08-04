@@ -57,7 +57,7 @@ startup. Install them once into a host directory that is mounted read-only:
 
 ```bash
 pip install 'huggingface_hub[cli]'
-NLU_MODEL_DIR=/srv/nanocloud-models/nlu ./scripts/install-nlu-model.sh
+NLU_MODEL_DIR=/srv/nubarca-models/nlu ./scripts/install-nlu-model.sh
 ```
 
 The installer downloads only the pinned revision + CPU-int4 variant, then either
@@ -72,7 +72,7 @@ Expected files: `genai_config.json`, `model.onnx`, `model.onnx.data`,
 Compose ALONGSIDE the prod files (never alone — see CLAUDE.md):
 
 ```bash
-NLU_MODEL_DIR=/srv/nanocloud-models/nlu \
+NLU_MODEL_DIR=/srv/nubarca-models/nlu \
 docker compose -f docker-compose.prod.yml \
                -f docker-compose.prod.local.yml \
                -f docker-compose.nlu.yml \
@@ -142,7 +142,7 @@ uses the deterministic interpreter. Nothing downloads weights automatically.
 Run the deterministic baseline benchmark (real numbers, no sidecar):
 
 ```bash
-dotnet test tests/NanoCloud.Api.Tests --filter "FullyQualifiedName~Benchmark_Corpus"
+dotnet test tests/NubArca.Api.Tests --filter "FullyQualifiedName~Benchmark_Corpus"
 ```
 
 For the `onnx` sidecar, extend the harness (`GalleryCommandBenchmark.RunAsync`)

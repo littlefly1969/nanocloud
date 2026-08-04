@@ -1,19 +1,19 @@
 # NubArca Architecture
 
-> **Architecture baseline:** NubArca **0.2.0**
+> **Architecture baseline:** NubArca **0.3.0**
 > **Repository snapshot:** `main`, reviewed on 2026-07-27
 > **Document role:** authoritative architectural description of the implementation currently present in this repository.
 
 ## 1. Authority, scope, and reading rules
 
-The repository is the source of truth for NubArca 0.2.0. This document describes the architecture implemented by:
+The repository is the source of truth for NubArca 0.3.0. This document describes the architecture implemented by:
 
-- `src/NanoCloud.Api/` — backend, CLI, worker, persistence, storage, media, AI, TV, and bounded contexts;
+- `src/NubArca.Api/` — backend, CLI, worker, persistence, storage, media, AI, TV, and bounded contexts;
 - `frontend/` — authenticated web application and public browser surfaces;
 - `tv/` — native React Native TV application;
 - `mobile/` — authenticated read-only mobile gallery application;
 - `deploy/`, root Compose files, and scripts — production topology and operational tooling;
-- `tests/NanoCloud.Api.Tests/`, frontend tests, and TV tests — executable contracts and safety regressions;
+- `tests/NubArca.Api.Tests/`, frontend tests, and TV tests — executable contracts and safety regressions;
 - EF Core migrations and entity configurations — authoritative persisted schema and database constraints.
 
 When comments, historical notes, release-candidate labels, or older documentation disagree with executable code, migrations, configuration, or tests, the executable repository wins. Historical documents such as `CHANGELOG.md`, `DEVELOPMENT_STATE.md`, and `docs/current-work.md` explain evolution; they are not substitutes for the current architecture.
@@ -45,7 +45,7 @@ The following are not current product capabilities:
 - generic plugins or arbitrary third-party code execution;
 - DASH generation;
 - a distributed multi-worker scheduler with resource-aware routing;
-- completed document extraction, document embedding, or automatic tagging pipelines. Schema and job seams exist for these AI capabilities, but their handlers remain skeleton/no-op paths in 0.2.0.
+- completed document extraction, document embedding, or automatic tagging pipelines. Schema and job seams exist for these AI capabilities, but their handlers remain skeleton/no-op paths in 0.3.0.
 
 ## 3. Architectural principles and non-negotiable invariants
 
@@ -140,13 +140,13 @@ The API and worker must receive matching storage, media-provider, staging, job, 
 
 ### 4.2 Worker modes
 
-Exactly one of these execution modes should process durable jobs on the 0.2.0 single-server topology:
+Exactly one of these execution modes should process durable jobs on the 0.3.0 single-server topology:
 
 1. in-process hosted worker with `Jobs:WorkerEnabled=true`;
 2. dedicated Compose `worker` profile running `jobs worker`;
 3. operator-driven `jobs run-once` invocations.
 
-The default deployment guidance is one active worker process and `Jobs:MaxConcurrentJobs=1`. Lease/heartbeat recovery protects against a crashed process, but 0.2.0 does not claim a general multi-worker, multi-resource scheduler. The explicitly configured OpenVINO `DUAL:CPU,GPU` image mode is a narrow exception: it uses two job slots inside the same worker process to feed a bounded CPU/GPU tandem and does not change the queue's single-server ownership model.
+The default deployment guidance is one active worker process and `Jobs:MaxConcurrentJobs=1`. Lease/heartbeat recovery protects against a crashed process, but 0.3.0 does not claim a general multi-worker, multi-resource scheduler. The explicitly configured OpenVINO `DUAL:CPU,GPU` image mode is a narrow exception: it uses two job slots inside the same worker process to feed a bounded CPU/GPU tandem and does not change the queue's single-server ownership model.
 
 ### 4.3 Optional inference overlays
 
@@ -165,22 +165,22 @@ These fragments are selected according to the deployed inference topology and co
 
 | Path | Architectural responsibility |
 |---|---|
-| `src/NanoCloud.Api/Program.cs` | Composition root, middleware, service registration, minimal API route map, HTTP contracts |
-| `src/NanoCloud.Api/Domain/` | Persisted domain entities and stable domain constants |
-| `src/NanoCloud.Api/Data/` | `AppDbContext`, EF configurations, migrations, database-specific invariants |
-| `src/NanoCloud.Api/Storage/` | Original and derived filesystem stores, content-addressing, physical safety |
-| `src/NanoCloud.Api/Files/`, `Folders/`, `Metadata/`, `Media/`, `MediaLibrary/`, `Albums/` | Core owner library and media query model |
-| `src/NanoCloud.Api/Jobs/` | Durable queue, processor, worker, scheduling and job contracts |
-| `src/NanoCloud.Api/Ingestion/`, `Uploads/`, `Organizer/`, `PhotoExport/` | Import, resumable staging, organization, and export workflows |
-| `src/NanoCloud.Api/Ai/` | AI profiles, providers, local inference, photo and face pipelines, diagnostics |
-| `src/NanoCloud.Api/Party/`, `Tv/`, `TvUpdates/` | Public event albums, paired TV projections, Personal Area, OTA publications |
-| `src/NanoCloud.Api/Vault/` | Private Vault authentication and exclusion-first logical moves |
-| `src/NanoCloud.Api/Plates/` | Segregated ALPR and privacy-redaction domain |
-| `src/NanoCloud.Api/Aesthetics/` | Segregated HumanAesExpert/Beauty Lab domain |
+| `src/NubArca.Api/Program.cs` | Composition root, middleware, service registration, minimal API route map, HTTP contracts |
+| `src/NubArca.Api/Domain/` | Persisted domain entities and stable domain constants |
+| `src/NubArca.Api/Data/` | `AppDbContext`, EF configurations, migrations, database-specific invariants |
+| `src/NubArca.Api/Storage/` | Original and derived filesystem stores, content-addressing, physical safety |
+| `src/NubArca.Api/Files/`, `Folders/`, `Metadata/`, `Media/`, `MediaLibrary/`, `Albums/` | Core owner library and media query model |
+| `src/NubArca.Api/Jobs/` | Durable queue, processor, worker, scheduling and job contracts |
+| `src/NubArca.Api/Ingestion/`, `Uploads/`, `Organizer/`, `PhotoExport/` | Import, resumable staging, organization, and export workflows |
+| `src/NubArca.Api/Ai/` | AI profiles, providers, local inference, photo and face pipelines, diagnostics |
+| `src/NubArca.Api/Party/`, `Tv/`, `TvUpdates/` | Public event albums, paired TV projections, Personal Area, OTA publications |
+| `src/NubArca.Api/Vault/` | Private Vault authentication and exclusion-first logical moves |
+| `src/NubArca.Api/Plates/` | Segregated ALPR and privacy-redaction domain |
+| `src/NubArca.Api/Aesthetics/` | Segregated HumanAesExpert/Beauty Lab domain |
 | `frontend/` | React web application, public Party/upload pages, browser TV fallback |
 | `mobile/` | Expo authenticated read-only gallery client |
 | `tv/` | Native React Native TV client, pairing/personal state machine, media cache, OTA |
-| `tests/NanoCloud.Api.Tests/` | Service, endpoint, security, storage, scheduler, integration, and regression tests |
+| `tests/NubArca.Api.Tests/` | Service, endpoint, security, storage, scheduler, integration, and regression tests |
 | `deploy/` and `scripts/` | First deployment, production validation, backup/restore, model and TV publication tooling |
 
 ## 6. Technology stack
@@ -322,7 +322,7 @@ The backend remains one minimal-API host, but its routes form clear architectura
 
 The route map is not itself the business layer. Endpoints resolve identity and request contracts, call scoped services, and return sanitized projections or streams.
 
-`Program.cs` remains the application composition root (middleware, DI, rate limiting, route registration order). The endpoint-module extraction is complete (see `docs/current-work.md`, slice 16 final audit): endpoint mappings were split into modules under `src/NanoCloud.Api/Endpoints/` (`AuthEndpoints`, `AdminUserEndpoints`, `AdminJobsEndpoints`, `AdminImportEndpoints`, `StagingUploadEndpoints`, `PeopleEndpoints`, `AlbumEndpoints`, `PartyEndpoints`, `TvEndpoints`, `PlatesEndpoints`, `AestheticsEndpoints`, `GalleryMediaEndpoints`, `FileEndpoints`, `FolderTrashEndpoints`, `ShareLinkEndpoints`, `PrivateVaultEndpoints`, `PhotoOrganizerEndpoints`, `PhotoExportEndpoints`, `AdminAiEndpoints`), each a `MapXxxEndpoints(this IEndpointRouteBuilder)` extension called from `Program.cs` at the same point the routes used to be defined inline. `AlbumEndpoints` covers only true album CRUD/membership/TV-visibility; `PartyEndpoints` covers both the public `/api/party/*` surface and the album-nested Party routes (`/api/albums/{id}/party-settings`, `/api/albums/{id}/party-uploads/*`); `TvEndpoints` covers TV pairing/session, owner-side TV device management, the TV Personal Area (PIN + TV-session-authenticated personal gallery/videos/media/aesthetics), and TV Party-album browsing/media delivery; `PlatesEndpoints` covers the owner-private Plates (Targhe) surface (upload, gallery import, list/detail/delete, thumbnail/preview/original media incl. face-redacted variants, and ALPR analysis request/status); `AestheticsEndpoints` covers the owner-private Aesthetics/Beauty Lab surface (public TV QR mobile upload plus the owner-facing list/upload/analyze lab); `GalleryMediaEndpoints` covers the unified gallery/media query surface (`/api/images`, `/api/videos`, `/api/media`, `/api/albums/{albumId}/media`); `FileEndpoints` covers FileItem-scoped media delivery (content/thumbnail/preview/video/HLS renditions/poster/video-preview-strip), metadata, privacy-safe download, duplicates, similar-photo search, and the file lifecycle (upload/rename/move/delete/restore); `FolderTrashEndpoints` covers folder listing, Trash, and the folder lifecycle (create/rename/move/delete-preview/delete/restore); `ShareLinkEndpoints` covers owner-side share create/list/revoke plus the public, anonymous, rate-limited `/s/{token}` short-URL download; `PrivateVaultEndpoints` covers the owner-private Vault (v0) status/setup/unlock/lock, browse, move-in/move-out, and vault-scoped derived-media delivery (thumbnail/preview/poster/info) — never original bytes or Range streams; `PhotoOrganizerEndpoints` covers Media Library (gallery membership rules + per-file exclusion) and the owner-scoped date-taken reorganization workflow (dry-run/run/status); `PhotoExportEndpoints` covers the read-only owner-private photo archive export sessions (manifest + per-file original download, cookie-or-bearer-token authorized); `AdminAiEndpoints` covers the admin-only medium-preview derivative rebuild status/trigger and the AI substrate status/diagnostics/face-settings surface — aggregate/status data only, never raw vectors, blob ids, SHA, storage keys, or physical paths. Five endpoints remain intentionally inline in `Program.cs`: `/health` and `/health/ready` (liveness/readiness probes, composition-root infrastructure by nature), `GET /api/storage/me` (owner-scoped usage, `IStorageAccountingService`), `GET /api/admin/storage-stats` (admin-only aggregate counters, `IStorageStatsService` — a distinct, admin-namespaced service, not the same domain as `storage/me` despite the shared word "storage"), and `GET /api/search` (owner-scoped file search). None of the three domain endpoints is large or cohesive enough on its own or paired with another to justify a dedicated module without creating a single-trivial-handler file. This is a modular-monolith cleanup, not a microservices split: one process, one deployable, the same middleware pipeline and DI container.
+`Program.cs` remains the application composition root (middleware, DI, rate limiting, route registration order). The endpoint-module extraction is complete: endpoint mappings are split into modules under `src/NubArca.Api/Endpoints/` (`AuthEndpoints`, `AdminUserEndpoints`, `AdminJobsEndpoints`, `AdminImportEndpoints`, `StagingUploadEndpoints`, `PeopleEndpoints`, `AlbumEndpoints`, `PartyEndpoints`, `TvEndpoints`, `PlatesEndpoints`, `AestheticsEndpoints`, `GalleryMediaEndpoints`, `FileEndpoints`, `FolderTrashEndpoints`, `ShareLinkEndpoints`, `PrivateVaultEndpoints`, `PhotoOrganizerEndpoints`, `PhotoExportEndpoints`, `AdminAiEndpoints`), each a `MapXxxEndpoints(this IEndpointRouteBuilder)` extension called from `Program.cs` at the same point the routes used to be defined inline. `AlbumEndpoints` covers only true album CRUD/membership/TV-visibility; `PartyEndpoints` covers both the public `/api/party/*` surface and the album-nested Party routes (`/api/albums/{id}/party-settings`, `/api/albums/{id}/party-uploads/*`); `TvEndpoints` covers TV pairing/session, owner-side TV device management, the TV Personal Area (PIN + TV-session-authenticated personal gallery/videos/media/aesthetics), and TV Party-album browsing/media delivery; `PlatesEndpoints` covers the owner-private Plates (Targhe) surface (upload, gallery import, list/detail/delete, thumbnail/preview/original media incl. face-redacted variants, and ALPR analysis request/status); `AestheticsEndpoints` covers the owner-private Aesthetics/Beauty Lab surface (public TV QR mobile upload plus the owner-facing list/upload/analyze lab); `GalleryMediaEndpoints` covers the unified gallery/media query surface (`/api/images`, `/api/videos`, `/api/media`, `/api/albums/{albumId}/media`); `FileEndpoints` covers FileItem-scoped media delivery (content/thumbnail/preview/video/HLS renditions/poster/video-preview-strip), metadata, privacy-safe download, duplicates, similar-photo search, and the file lifecycle (upload/rename/move/delete/restore); `FolderTrashEndpoints` covers folder listing, Trash, and the folder lifecycle (create/rename/move/delete-preview/delete/restore); `ShareLinkEndpoints` covers owner-side share create/list/revoke plus the public, anonymous, rate-limited `/s/{token}` short-URL download; `PrivateVaultEndpoints` covers the owner-private Vault (v0) status/setup/unlock/lock, browse, move-in/move-out, and vault-scoped derived-media delivery (thumbnail/preview/poster/info) — never original bytes or Range streams; `PhotoOrganizerEndpoints` covers Media Library (gallery membership rules + per-file exclusion) and the owner-scoped date-taken reorganization workflow (dry-run/run/status); `PhotoExportEndpoints` covers the read-only owner-private photo archive export sessions (manifest + per-file original download, cookie-or-bearer-token authorized); `AdminAiEndpoints` covers the admin-only medium-preview derivative rebuild status/trigger and the AI substrate status/diagnostics/face-settings surface — aggregate/status data only, never raw vectors, blob ids, SHA, storage keys, or physical paths. Five endpoints remain intentionally inline in `Program.cs`: `/health` and `/health/ready` (liveness/readiness probes, composition-root infrastructure by nature), `GET /api/storage/me` (owner-scoped usage, `IStorageAccountingService`), `GET /api/admin/storage-stats` (admin-only aggregate counters, `IStorageStatsService` — a distinct, admin-namespaced service, not the same domain as `storage/me` despite the shared word "storage"), and `GET /api/search` (owner-scoped file search). None of the three domain endpoints is large or cohesive enough on its own or paired with another to justify a dedicated module without creating a single-trivial-handler file. This is a modular-monolith cleanup, not a microservices split: one process, one deployable, the same middleware pipeline and DI container.
 
 ## 8. Persistence architecture
 
@@ -583,7 +583,7 @@ A separate FFmpeg path creates a six-frame preview strip used by hover/focus UI.
 
 The original video endpoint supports HTTP Range streaming. It remains the compatibility/fallback path.
 
-HLS is a real optional 0.2.0 subsystem. With `Media:VideoHlsProvider=ffmpeg`:
+HLS is a real optional 0.3.0 subsystem. With `Media:VideoHlsProvider=ffmpeg`:
 
 - an authorized playback request can discover that a ladder is absent and enqueue generation;
 - `media.video.hls.generate` builds an adaptive high/low rendition set in a temporary directory;
@@ -811,7 +811,7 @@ Model weights are deployment inputs and are not part of the repository. Provider
 
 ### 17.2 Current capability maturity
 
-| Capability | 0.2.0 status |
+| Capability | 0.3.0 status |
 |---|---|
 | Photo image embeddings | Implemented, persistent, sliceable, profile-aware |
 | Similar Photos | Implemented; pgvector HNSW when available, exact-scan fallback |
@@ -858,7 +858,7 @@ People APIs support named people, suggested groups, assignment/removal, ignored 
 
 ## 18. Private Vault
 
-Private Vault 0.2.0 is an exclusion and authorization boundary, not cryptographic at-rest encryption. `PrivateVault.EncryptionMode` is currently `none`; the original blob store remains the underlying byte store.
+Private Vault 0.3.0 is an exclusion and authorization boundary, not cryptographic at-rest encryption. `PrivateVault.EncryptionMode` is currently `none`; the original blob store remains the underlying byte store.
 
 ### 18.1 Exclusion model
 
@@ -1082,7 +1082,7 @@ Changes to architecture-sensitive code should include tests for:
 
 ### 25.1 Production-capable core
 
-The 0.2.0 architecture treats the following as implemented product paths: authentication, owner file tree, immutable blob storage/dedup, Trash, shares, albums, media workspace, image/video derivatives, metadata, direct video streaming, optional HLS, jobs, admin import, staged upload, organizer, photo export, Party, paired TV and Personal Area, local photo/face AI when configured, People, Private Vault exclusion, Plates, and Aesthetics/Beauty Lab when configured.
+The 0.3.0 architecture treats the following as implemented product paths: authentication, owner file tree, immutable blob storage/dedup, Trash, shares, albums, media workspace, image/video derivatives, metadata, direct video streaming, optional HLS, jobs, admin import, staged upload, organizer, photo export, Party, paired TV and Personal Area, local photo/face AI when configured, People, Private Vault exclusion, Plates, and Aesthetics/Beauty Lab when configured.
 
 “Implemented” does not mean enabled by default. Model- or process-dependent paths remain unavailable until an operator supplies the required local models, binaries, sidecar, flags, and shared storage.
 
@@ -1129,7 +1129,7 @@ When changing a subsystem, review the following implementation anchors together 
 
 | Concern | Primary implementation anchors |
 |---|---|
-| HTTP, auth, middleware, routes | `src/NanoCloud.Api/Program.cs`, `Security/`, `Auth/` |
+| HTTP, auth, middleware, routes | `src/NubArca.Api/Program.cs`, `Security/`, `Auth/` |
 | Schema and filters | `Data/AppDbContext.cs`, `Data/Configurations/`, `Data/Migrations/`, `Domain/` |
 | Original/derived bytes | `Storage/`, `Files/BlobService.cs`, `Files/FileThumbnailService.cs` |
 | Tree and lifecycle | `Folders/`, `Files/FileItemService.cs`, cleanup services |
@@ -1162,4 +1162,4 @@ When changing a subsystem, review the following implementation anchors together 
 - client responsibilities or TV/mobile authorization models;
 - an optional/skeleton capability becoming a real product path, or the reverse.
 
-Historical slice numbers and implementation chronology belong in the changelog or development ledger. This document should describe the current 0.2.0 system in present tense and should never preserve a superseded limitation after the code has removed it.
+Historical slice numbers and implementation chronology belong in the changelog or development ledger. This document should describe the current 0.3.0 system in present tense and should never preserve a superseded limitation after the code has removed it.

@@ -23,7 +23,7 @@ Driven by [`deploy/smoke-check.sh`](smoke-check.sh). Unauthenticated only —
 no login, no plaintext password, no state mutation:
 
 ```bash
-BASE_URL=https://nanocloud.example.com ./deploy/smoke-check.sh
+BASE_URL=https://nubarca.example.com ./deploy/smoke-check.sh
 ```
 
 The script verifies:
@@ -53,7 +53,7 @@ admin user created by `users ensure`.
       view without a refresh loop.
 - [ ] **Cookie is `HttpOnly` and `Secure`** under HTTPS. DevTools →
       Application → Cookies → `https://your-domain`. The cookie named
-      `NanoCloud.Auth` must show ✓ HttpOnly and ✓ Secure. (If `Secure` is
+      `NubArca.Auth` must show ✓ HttpOnly and ✓ Secure. (If `Secure` is
       missing, the request reached the api over HTTP — fix the proxy.)
 - [ ] **Folder browser** loads at `/`. Empty folder shows "This folder is
       empty.".
@@ -108,7 +108,7 @@ deployment to real users.
 - [ ] **`docker compose ps`** shows `postgres` healthy and `api` +
       `frontend` running.
 - [ ] **Background jobs CLI** (read-only): `docker compose ... run --rm api
-      dotnet NanoCloud.Api.dll jobs list` prints status counts (and recent
+      dotnet NubArca.Api.dll jobs list` prints status counts (and recent
       rows) without exposing any payload. `jobs run-once` is safe to run too
       — it only processes already-queued jobs and is a no-op when the queue
       is empty.
@@ -118,7 +118,7 @@ deployment to real users.
       preview) and a video (poster) to confirm they render. Then, to prove the
       regenerable path, an operator may wipe the derived cache directory and
       re-open the same items — they must come back (the endpoints regenerate)
-      — or run `dotnet NanoCloud.Api.dll media derivatives backfill`. Do this
+      — or run `dotnet NubArca.Api.dll media derivatives backfill`. Do this
       on a drill host, not production.
 
 > **Derived artifacts (thumbnails / medium previews / video posters) are
@@ -126,7 +126,7 @@ deployment to real users.
 > `storage.tar.gz` already backs them up. If you split them onto a separate
 > `Storage:DerivedRootPath`, a **full** backup must include that
 > root too; an **essential** backup (DB + originals) may skip it. Either way
-> they are rebuildable from the source blobs — `dotnet NanoCloud.Api.dll media
+> they are rebuildable from the source blobs — `dotnet NubArca.Api.dll media
 > derivatives backfill` (or the `media-derivatives-backfill` job), and the
 > endpoints also regenerate on demand. Only the DB dump + the **originals**
 > archive are a required matched pair; restore those together.
@@ -148,7 +148,7 @@ that is not your production box).
          once to create the volumes.
       4. `./deploy/restore.sh /path/to/backup --yes`.
       5. `curl http://127.0.0.1:8080/health` → `200`.
-      6. Optional: `dotnet NanoCloud.Api.dll db migrate` if the dump
+      6. Optional: `dotnet NubArca.Api.dll db migrate` if the dump
          pre-dates a schema change in the running code.
       7. Log in with a real user from production. Browse a folder.
          Download a file. Bytes must match the original.
@@ -170,7 +170,7 @@ that is not your production box).
 | `/health` returns 5xx | `docker compose ps`, `docker compose logs api --tail=50` |
 | `/health` returns 200 but `/` returns 5xx | reverse proxy route for `/` → frontend container |
 | `/api/auth/me` returns 200 (instead of 401) when unauthenticated | api pipeline is mis-wired; almost certainly a regression — file an issue |
-| Login 401 with the correct password | run `dotnet NanoCloud.Api.dll users ensure --update-password` to rehash |
+| Login 401 with the correct password | run `dotnet NubArca.Api.dll users ensure --update-password` to rehash |
 | Cookie missing `Secure` flag | request reached the api over HTTP; check `ForwardedHeaders__Enabled` and the proxy's `X-Forwarded-Proto` |
 | Share link works while logged in but 404s in private window | the proxy is sending `/s/*` to the SPA instead of the api; fix the path split |
 | Backup script asks for `POSTGRES_USER` | typo / missing in `.env`; `grep ^POSTGRES_ .env` |

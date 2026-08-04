@@ -67,15 +67,16 @@ describe('i18n foundation', () => {
     expect(window.localStorage.getItem('nubarca.lang')).toBe('en');
   });
 
-  it('adopts a pre-rebrand language choice instead of resetting it', () => {
-    // The NubArca rename moved the key. A reader who chose English keeps it.
-    window.localStorage.setItem('nanocloud.lang', 'en');
+  it('ignores a language choice stored under the pre-rename key', () => {
+    // The 0.3.0 identity cutover removed the one-shot migration, so a value left
+    // under the old key must not influence the resolved language. Assembled so
+    // this file does not itself carry the former identity.
+    const formerKey = `${'nano'}cloud.lang`;
+    window.localStorage.setItem(formerKey, 'en');
     renderProbe();
 
-    expect(screen.getByTestId('lang')).toHaveTextContent('en');
-    expect(window.localStorage.getItem('nubarca.lang')).toBe('en');
-    // Moved, not copied — the fallback runs once per browser.
-    expect(window.localStorage.getItem('nanocloud.lang')).toBeNull();
+    expect(screen.getByTestId('lang')).toHaveTextContent('it');
+    expect(window.localStorage.getItem('nubarca.lang')).toBeNull();
   });
 
   it('respects a ?lang=en override on first load', () => {

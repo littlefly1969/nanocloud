@@ -4,7 +4,7 @@ import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n';
 import { BrandMark } from '../brand/BrandMark';
 import { PRODUCT_NAME, SHELL_MARK_VISIBLE_PX, markBoxForVisibleWidth } from '../brand/brand';
-import { readMigratedItem } from '../storage/brandedStorageKey';
+import { readStoredItem } from '../storage/brandedStorageKey';
 import { AppNav } from './nav/AppNav';
 import { NavDrawer } from './nav/NavDrawer';
 import { UserMenu } from './UserMenu';
@@ -23,11 +23,9 @@ import { Icon } from './icons/Icon';
 // Bounded local key for the rail state. Not a preference the backend knows or
 // needs to know about.
 const RAIL_KEY = 'nubarca.nav.collapsed';
-// Pre-rebrand key, migrated once so a collapsed rail stays collapsed.
-const LEGACY_RAIL_KEY = 'nanocloud.nav.collapsed';
 
 function readCollapsed(): boolean {
-  return readMigratedItem(RAIL_KEY, LEGACY_RAIL_KEY) === '1';
+  return readStoredItem(RAIL_KEY) === '1';
 }
 
 export function Layout() {

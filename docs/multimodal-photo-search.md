@@ -86,22 +86,22 @@ Back up first, then:
 
 ```bash
 $DC build api worker frontend
-$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NanoCloud.Api.dll db migrate
-$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NanoCloud.Api.dll ai onnx image seed-profiles
-$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NanoCloud.Api.dll ai onnx image models
+$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NubArca.Api.dll db migrate
+$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NubArca.Api.dll ai onnx image seed-profiles
+$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NubArca.Api.dll ai onnx image models
 ```
 
 Validate one real image before writing anything:
 
 ```bash
-$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NanoCloud.Api.dll ai onnx image embed-test \
+$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NubArca.Api.dll ai onnx image embed-test \
   --profile photo-siglip2-so400m-patch14-384-v2 --file <owner-file-guid>
 ```
 
 Run the profile-keyed backfill while the legacy data is still inertly present:
 
 ```bash
-$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NanoCloud.Api.dll jobs enqueue \
+$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NubArca.Api.dll jobs enqueue \
   ai-photos-embeddings-backfill \
   --profile photo-siglip2-so400m-patch14-384-v2
 ```
@@ -109,7 +109,7 @@ $DC run --rm -e Jobs__WorkerEnabled=false api dotnet NanoCloud.Api.dll jobs enqu
 Monitor until both missing counts are zero:
 
 ```bash
-$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NanoCloud.Api.dll ai photos embeddings coverage \
+$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NubArca.Api.dll ai photos embeddings coverage \
   --profile photo-siglip2-so400m-patch14-384-v2
 ```
 
@@ -155,7 +155,7 @@ also bounded by `Ai__MaxConcurrency` and should set a conservative
 Dry-run first:
 
 ```bash
-$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NanoCloud.Api.dll ai photos embeddings retire-legacy-768
+$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NubArca.Api.dll ai photos embeddings retire-legacy-768
 ```
 
 The command refuses to become ready unless the configured active profile is the
@@ -163,7 +163,7 @@ approved 1152 v2 profile and both canonical + pgvector coverage are complete.
 Then execute:
 
 ```bash
-$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NanoCloud.Api.dll \
+$DC run --rm -e Jobs__WorkerEnabled=false api dotnet NubArca.Api.dll \
   ai photos embeddings retire-legacy-768 --execute
 ```
 

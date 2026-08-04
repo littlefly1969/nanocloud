@@ -75,9 +75,9 @@ committed SHA-256 manifest, stages to a temp dir, and activates by atomic rename
 #    (see that folder's README.md for how to populate it safely)
 pip install 'huggingface_hub[cli]'
 HUMANAES_MODEL_KEY=human-aesexpert-1b \
-HUMANAES_MODELS_ROOT=/srv/nanocloud/models/human-aesexpert \
+HUMANAES_MODELS_ROOT=/srv/nubarca/models/human-aesexpert \
 ./scripts/install-human-aesexpert-model.sh
-# → installs to /srv/nanocloud/models/human-aesexpert/human-aesexpert-1b
+# → installs to /srv/nubarca/models/human-aesexpert/human-aesexpert-1b
 ```
 
 A missing manifest, missing expected file, or ANY checksum mismatch aborts with
@@ -93,7 +93,7 @@ prod files — see CLAUDE.md). The ordinary stack without this fragment continue
 to resolve and run.
 
 ```bash
-HUMANAES_MODEL_DIR=/srv/nanocloud/models/human-aesexpert/human-aesexpert-1b \
+HUMANAES_MODEL_DIR=/srv/nubarca/models/human-aesexpert/human-aesexpert-1b \
 docker compose -f docker-compose.prod.yml \
                -f docker-compose.prod.local.yml \
                -f docker-compose.human-aesexpert.yml \
@@ -198,7 +198,7 @@ extrapolate these to production hardware.
 
 - Host: Linux x86-64, Intel Core i7-8550U (4C/8T @ 1.8 GHz), 7.4 GiB RAM +
   15 GiB swap, CPU-only (no CUDA).
-- Sidecar image: `nanocloud-human-aesexpert:local` 1.69 GB (python:3.11-slim,
+- Sidecar image: `nubarca-human-aesexpert:local` 1.69 GB (python:3.11-slim,
   `torch 2.4.1+cpu`, `transformers 4.44.2`, `accelerate 0.34.2`).
 - **Direct inference** (one 512×512 synthetic image, official 448 tiling):
   model load **≈103 s**, inference **≈40 s** (reported `durationMs` 40415),

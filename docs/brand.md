@@ -1,12 +1,7 @@
 # NubArca brand
 
-**Effective 31 July 2026, NanoCloud was renamed NubArca. NubArca is the current
-product and brand name. Historical records and compatibility identifiers may
-retain the former name.**
-
-This document is the current-state reference for the brand in software. It does
-not rewrite history: changelog entries, release notes, EF migration identifiers
-and past design documents keep the name they were written with.
+This document is the current-state reference for the brand in software: the name,
+the palette, the typography, the geometry and which approved artwork goes where.
 
 ## Name
 
@@ -19,8 +14,10 @@ NubArca
 Capital N, capital A, nothing between them. The television product is
 `NubArca TV`.
 
-Never `Nubarca`, `NUBARCA`, `nubarca`, `Nub Arca`, or the former name, on any
-current user-facing surface.
+Never `Nubarca`, `NUBARCA`, `nubarca` or `Nub Arca` on a user-facing surface.
+Lower-case `nubarca` is correct only inside identifiers that are conventionally
+lower-case: hostnames, Docker resources, filesystem paths, environment-variable
+prefixes and storage keys.
 
 Brand names are **not translated**. Every locale renders the identical string.
 In the web frontend the name lives in [`frontend/src/brand/brand.ts`](../frontend/src/brand/brand.ts);
@@ -179,17 +176,24 @@ width of the **visible lockup** in either theme and the 120 px minimum is real.
 Reference boards are documentation only. They are never copied into
 `public/` or `tv/assets/`, and the production build contains none.
 
-## Legacy compatibility identifiers
+## Identity cleanliness
 
-Some identifiers keep the former name because renaming them would break a running
-deployment, log users out, orphan stored rows, or install the TV app as a
-separate application. They are **not** scattered: every one is listed with its
-reason in [`config/legacy-brand-compatibility.txt`](../config/legacy-brand-compatibility.txt).
+[`scripts/check-identity-cleanliness.sh`](../scripts/check-identity-cleanliness.sh)
+fails when a former product name appears anywhere in tracked source. There is no
+allowlist file, and adding one is not the remedy: an identifier that genuinely
+cannot be renamed belongs in operator configuration outside Git.
 
-[`scripts/check-brand-cleanliness.sh`](../scripts/check-brand-cleanliness.sh)
-fails when an occurrence of the former name appears outside that allowlist. Run
-it before committing. Adding an entry is a deliberate act that requires stating
-what would break and under what condition it can be removed.
+The single permitted textual exception is the exact production deployment
+checkout path `/opt/nanocloud` — a live filesystem location on the running host,
+not a product identifier. It is permitted only as that exact path; a nested path,
+a suffixed variant, or any longer word built on it is rejected.
 
-The allowlist is the only sanctioned home for the former name in current code.
-Everything else uses NubArca.
+`--self-test` proves the checker's own engine, and `IdentityCleanlinessTests`
+runs both the self-test and the tree scan inside `dotnet test`, so a
+reintroduced identifier fails the canonical test matrix rather than only a step
+somebody can forget.
+
+Installation-specific values — the public origin, database credentials, hash
+peppers and TV signing material — are operator configuration, never source
+constants. Where a source constant used to pin the production origin, the pin is
+preserved and still fails closed.

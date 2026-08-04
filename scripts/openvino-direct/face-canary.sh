@@ -18,7 +18,7 @@
 #      first-vs-warm latency (session reuse / no second compile), bounded
 #      concurrency, and warm throughput + resource usage.
 #
-# The candidate image entrypoint is `dotnet NanoCloud.Api.dll`; the web host is
+# The candidate image entrypoint is `dotnet NubArca.Api.dll`; the web host is
 # launched with NO args, the CLI harness with ONLY the CLI verb + args.
 # =============================================================================
 set -euo pipefail
@@ -41,7 +41,7 @@ done
 
 cd "$(git rev-parse --show-toplevel)"
 GIT_SHA="$(git rev-parse HEAD)"
-IMAGE_TAG="nanocloud-api:facecanary-${GIT_SHA:0:12}"
+IMAGE_TAG="nubarca-api:facecanary-${GIT_SHA:0:12}"
 RENDER_GID=""; [[ -e /dev/dri/renderD128 ]] && RENDER_GID="$(stat -c '%g' /dev/dri/renderD128)" || true
 WEB="facecanary-web-$$"
 
@@ -56,7 +56,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "== build (commit ${GIT_SHA}) =="
-docker build -f src/NanoCloud.Api/Dockerfile --target runtime-openvino \
+docker build -f src/NubArca.Api/Dockerfile --target runtime-openvino \
   --build-arg "GIT_SHA=${GIT_SHA}" -t "$IMAGE_TAG" . 1>&2
 
 # Direct-mode env shared by web host + CLI harness.
@@ -64,11 +64,11 @@ direct_env=(
   -e Ai__Enabled=true -e Ai__Onnx__ModelDir=/models/ai
   -e Ai__FaceProfileKey=face-insightface-antelopev2-v1
   -e Ai__Onnx__ExecutionProvider=openvino-direct
-  -e Ai__Onnx__OpenVino__NativeDir=/opt/nanocloud/ort-openvino
+  -e Ai__Onnx__OpenVino__NativeDir=/opt/nubarca/ort-openvino
   -e "Ai__Onnx__OpenVino__FaceDetectorDevice=${DETECTOR_DEVICE}"
   -e "Ai__Onnx__OpenVino__FaceRecognizerDevice=${RECOGNIZER_DEVICE}"
   -e Ai__Onnx__OpenVino__GpuPrecision=FP32 -e Ai__Onnx__OpenVino__CacheDir=/tmp/ov-cache
-  -e "NANOCLOUD_GIT_SHA=${GIT_SHA}"
+  -e "NUBARCA_GIT_SHA=${GIT_SHA}"
   -e "ConnectionStrings__Postgres=Host=127.0.0.1;Port=1;Database=x;Username=x;Password=x"
 )
 hardening=(--read-only --tmpfs /tmp:size=512m,mode=1777 --cap-drop ALL

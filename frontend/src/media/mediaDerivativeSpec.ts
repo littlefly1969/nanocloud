@@ -1,5 +1,5 @@
 // Frontend mirror of the backend media-derivative contract
-// (src/NanoCloud.Api/Files/MediaDerivativeSpec / VideoPreviewStripSpec). Only
+// (src/NubArca.Api/Files/MediaDerivativeSpec / VideoPreviewStripSpec). Only
 // the values the browser genuinely needs live here; they are documented as a
 // deliberate cross-boundary contract in docs/media-derivatives.md. Keep this in
 // sync with the backend spec when the derivative geometry changes.

@@ -58,9 +58,9 @@ the tested expectation, not a guarantee.
 | Docker Engine | not declared | 29.6.2 | >= 24 | optional per area | not declared | — |
 | Docker Compose | not declared | 5.3.1 | >= 2.20 (compose plugin) | optional per area | not declared | — |
 | **PostgreSQL** | `pgvector/pgvector:pg17` | container image | 17 (with pgvector) | required to run the API | [`docker-compose.yml`](../docker-compose.yml), `docker-compose.prod.yml` | — |
-| FFmpeg | image installs distro `ffmpeg` | 8.1.2 | >= 6 | optional — media derivatives | `src/NanoCloud.Api/Dockerfile` | host 8.1.2 vs image distro build; see §12 |
+| FFmpeg | image installs distro `ffmpeg` | 8.1.2 | >= 6 | optional — media derivatives | `src/NubArca.Api/Dockerfile` | host 8.1.2 vs image distro build; see §12 |
 | FFprobe | shipped with FFmpeg | 8.1.2 | >= 6 | optional — video metadata | same | — |
-| **ONNX Runtime (managed)** | `1.24.1` | 1.24.1 | must equal ORT ABI | optional — AI | [`src/NanoCloud.Api/NanoCloud.Api.csproj`](../src/NanoCloud.Api/NanoCloud.Api.csproj) | — |
+| **ONNX Runtime (managed)** | `1.24.1` | 1.24.1 | must equal ORT ABI | optional — AI | [`src/NubArca.Api/NubArca.Api.csproj`](../src/NubArca.Api/NubArca.Api.csproj) | — |
 | **ONNX Runtime (native, OpenVINO)** | `ORT_OPENVINO_VERSION=1.24.1`, `ORT_ABI_VERSION=1.24.1` | build-time only | exact, SHA-256 verified | optional — OpenVINO only | [`scripts/openvino-direct/onnxruntime-openvino.lock`](../scripts/openvino-direct/onnxruntime-openvino.lock) | — |
 | OpenVINO | `2025.4.1` (soname `2541`) | build-time only | exact, bundled in the pinned wheel | optional — OpenVINO only | same lock file | — |
 | curl | not declared | 8.21.0 | any | optional | not declared | — |
@@ -88,7 +88,7 @@ dotnet --info
 # restore the pinned EF Core CLI (dotnet-tools.json)
 dotnet tool restore
 
-dotnet build NanoCloud.sln
+dotnet build NubArca.sln
 ```
 
 Do **not** install a .NET SDK newer than the 10.0.1xx feature band expecting it
@@ -189,7 +189,7 @@ a command separator, silently producing a passwordless connection string.
 
 ### Image targets
 
-`src/NanoCloud.Api/Dockerfile` is multi-stage. The targets are not
+`src/NubArca.Api/Dockerfile` is multi-stage. The targets are not
 interchangeable:
 
 | Target | Contents | Used by |
@@ -251,14 +251,14 @@ Never print, commit, or `source` a real `.env`.
 ## 13. New workstation bootstrap
 
 ```bash
-git clone <repo> nanocloud && cd nanocloud
+git clone <repo> nubarca && cd nubarca
 
 # 1. verify the toolchain before building anything
 scripts/check-development-environment.sh
 
 # 2. backend
 dotnet tool restore
-dotnet build NanoCloud.sln
+dotnet build NubArca.sln
 
 # 3. frontend
 (cd frontend && npm ci && npm run lint && npm run build)
@@ -274,7 +274,7 @@ docker compose up -d postgres
 
 | Area | Command |
 | --- | --- |
-| Backend build | `dotnet build NanoCloud.sln` |
+| Backend build | `dotnet build NubArca.sln` |
 | Backend tests (fast) | `scripts/test-backend-fast.sh` |
 | Backend tests (full) | `scripts/test-backend-full.sh` |
 | Frontend | `cd frontend && npm ci && npm run lint && npm run build && npm run test:run` |
@@ -401,6 +401,6 @@ And never bump these without a dedicated, reviewed slice:
 - [ ] *Media work only:* FFmpeg + FFprobe >= 6
 - [ ] *Deploy only:* `jq`, `rsync`
 - [ ] `scripts/check-development-environment.sh` exits 0
-- [ ] `dotnet build NanoCloud.sln` succeeds
+- [ ] `dotnet build NubArca.sln` succeeds
 - [ ] `cd frontend && npm ci && npm run lint && npm run build` succeeds
 - [ ] `cd tv && npm ci && npm run lint && npm test && npx expo-doctor` succeeds (21/21)

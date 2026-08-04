@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 // Dev proxy forwards the API + share-link endpoints to the backend so the
 // browser sees a single origin (avoids CORS + lets the auth cookie ride
 // every request unchanged). The backend dev port is fixed by
-// src/NanoCloud.Api/Properties/launchSettings.json.
+// src/NubArca.Api/Properties/launchSettings.json.
 //
 // Vitest's `test` block lives in `vitest.config.ts` so the build-time tsc
 // pass on this file does not pull in vitest's bundled Vite types (which

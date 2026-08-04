@@ -1,6 +1,6 @@
 import { api } from './client';
 
-// Mirrors NanoCloud.Api.Users.AdminUserDto on the backend. Never includes
+// Mirrors NubArca.Api.Users.AdminUserDto on the backend. Never includes
 // PasswordHash, raw auth claims, token hashes, or storage internals —
 // `hasPassword` is the only signal about credential state.
 export interface AdminUser {

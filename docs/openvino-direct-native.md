@@ -92,12 +92,12 @@ build on any non-zero exit. GPU is verified at run time against a real device.
 
 ```bash
 # Reproducible native layer + build-time CPU fail-closed verification:
-docker build -t nanocloud-openvino-native:local scripts/openvino-direct
+docker build -t nubarca-openvino-native:local scripts/openvino-direct
 
 # Real-GPU verification (map only /dev/dri into GPU-using containers):
 docker run --rm --device /dev/dri \
   --group-add "$(getent group render | cut -d: -f3)" \
-  nanocloud-openvino-native:local GPU
+  nubarca-openvino-native:local GPU
 # expected: "[verify] OK — OpenVINO EP present and OpenVINO-GPU inference verified."
 
 # Local (non-Docker) fetch of just the natives:

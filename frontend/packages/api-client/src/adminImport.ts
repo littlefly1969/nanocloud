@@ -1,7 +1,7 @@
 import { api } from './client';
 
 // Slice 81 — admin server-side import client. Mirrors the backend DTOs in
-// NanoCloud.Api.Admin. Every shape is safe: roots are opaque ids + display
+// NubArca.Api.Admin. Every shape is safe: roots are opaque ids + display
 // labels, locations are relative paths — no absolute server paths, storage
 // keys, hashes, or blob ids ever appear here.
 

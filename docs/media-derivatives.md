@@ -1,6 +1,6 @@
 # Media derivatives & failure diagnostics
 
-> **Backends (slice 100):** image derivatives are rendered by a pluggable
+> **Backends:** image derivatives are rendered by a pluggable
 > backend — the high-performance **libvips** path with the original
 > **ImageSharp** path as an always-available fallback. See
 > [Image backends](#image-backends-libvips--imagesharp) below.
@@ -171,10 +171,10 @@ in-flight file.
 
 ```
 # Aggregate reasons, by size / status / error code / detected format.
-dotnet NanoCloud.Api.dll media derivatives failures
+dotnet NubArca.Api.dll media derivatives failures
 
 # Re-attempt previously-failed derivatives.
-dotnet NanoCloud.Api.dll media derivatives backfill --retry-failed
+dotnet NubArca.Api.dll media derivatives backfill --retry-failed
 ```
 
 `failures` prints counts only — never a file name, path, key, id, or metadata.
@@ -313,7 +313,7 @@ backend call produces both sizes).
 ### Benchmark
 
 ```sh
-dotnet NanoCloud.Api.dll media derivatives benchmark --limit 50
+dotnet NubArca.Api.dll media derivatives benchmark --limit 50
 ```
 
 Samples up to N real image source blobs, renders small + medium with **each

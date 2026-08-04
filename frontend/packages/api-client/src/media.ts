@@ -4,7 +4,7 @@ import type { ImageSortDirection, ImageSortField, AlbumMembership, MediaGalleryS
 // Slice 5: unified media-workspace client for GET /api/media and
 // GET /api/albums/{albumId}/media. One discriminated item type carries both
 // images and videos so the "Tutti" tab renders a mixed, server-ordered grid.
-// Mirrors NanoCloud.Api.Files.MediaItem. No storage internals (no BlobObjectId,
+// Mirrors NubArca.Api.Files.MediaItem. No storage internals (no BlobObjectId,
 // StorageKey, SHA, embeddings, raw metadata); GPS is presence-only.
 
 export type MediaKind = 'image' | 'video';
@@ -46,7 +46,7 @@ export interface VideoMediaItem extends MediaItemBase {
 
 export type MediaItem = ImageMediaItem | VideoMediaItem;
 
-// Mirrors NanoCloud.Api.Files.MediaListResponse. `total` is the server-
+// Mirrors NubArca.Api.Files.MediaListResponse. `total` is the server-
 // authoritative filtered total (paging-independent, duplicate-collapse aware);
 // `photoCount`/`videoCount` split it by kind for the tab labels.
 export interface MediaListResponse {

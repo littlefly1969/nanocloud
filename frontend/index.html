@@ -30,15 +30,10 @@
       // mounts, so a light-theme flash is impossible. It mirrors, verbatim, the
       // rules in src/theme/themePreference.ts:
       //   * key 'nubarca.theme' holds exactly 'dark' | 'light' | 'system'
-      //   * absent => fall back ONCE to the pre-rebrand 'nanocloud.theme',
-      //     migrate a valid value forward, then drop the old key
       //   * anything else (missing, stale, unreadable) => 'dark' (the default)
       //   * 'system' asks for prefers-color-scheme: light, so "no preference"
       //     still resolves to dark
       // ThemeProvider re-applies the same value on mount, which is a no-op.
-      // The migration has to live HERE as well as in the module: this script
-      // decides the FIRST paint, so without it a returning light-theme user
-      // would flash dark before React could read the old key.
       (function () {
         var effective = 'dark';
         try {
@@ -46,16 +41,6 @@
             return v === 'dark' || v === 'light' || v === 'system' ? v : null;
           };
           var preference = valid(window.localStorage.getItem('nubarca.theme'));
-          if (preference === null) {
-            var legacyRaw = window.localStorage.getItem('nanocloud.theme');
-            if (legacyRaw !== null) {
-              preference = valid(legacyRaw);
-              if (preference !== null) {
-                window.localStorage.setItem('nubarca.theme', preference);
-              }
-              window.localStorage.removeItem('nanocloud.theme');
-            }
-          }
           if (preference === null) preference = 'dark';
           if (preference === 'system') {
             effective =

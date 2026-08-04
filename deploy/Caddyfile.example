@@ -4,13 +4,13 @@
 #
 # Usage:
 #   sudo cp Caddyfile.example /etc/caddy/Caddyfile
-#   $EDITOR /etc/caddy/Caddyfile      # replace nanocloud.example.com
+#   $EDITOR /etc/caddy/Caddyfile      # replace nubarca.example.com
 #   sudo systemctl reload caddy
 #
 # The compose stack binds api → 127.0.0.1:8080 and frontend → 127.0.0.1:8081
 # (loopback only). Caddy is the only thing the public internet can reach.
 
-nanocloud.example.com {
+nubarca.example.com {
     # Automatic HTTPS via Let's Encrypt. Override the ACME email if Caddy
     # didn't pick one from the global config:
     # tls youremail@example.com

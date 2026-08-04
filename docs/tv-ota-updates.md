@@ -6,14 +6,14 @@ OTA can replace the JavaScript/Hermes bundle and Metro-bundled assets. It cannot
 
 ## Runtime and launch behavior
 
-`NANOCLOUD_TV_RUNTIME_VERSION` is a manually managed native contract. This explicit value is intentionally not derived from the application version: operators must increment it for every native/configuration change listed above, including changing native environment values embedded while building. TypeScript, React UI/layout, business logic, and bundled asset changes keep the existing runtime.
+`NUBARCA_TV_RUNTIME_VERSION` is a manually managed native contract. This explicit value is intentionally not derived from the application version: operators must increment it for every native/configuration change listed above, including changing native environment values embedded while building. TypeScript, React UI/layout, business logic, and bundled asset changes keep the existing runtime.
 
 The current NubArca TV package (`it.littlefly.nubarca.tv`) uses the
 `nubarca-tv-native-*` series. Release 1.0.1 uses exactly
 **`nubarca-tv-native-2`**; runtime 1 belongs to the 1.0.0 APK, which did not
 embed an OTA verification certificate and must always receive `204 No Content`.
 
-The `tv-native-*` series is **retired**. It belongs to the previous TV package, which used `tv-native-1` for the legacy APK, `tv-native-2` for the first `expo-video` build and `tv-native-3` for the last Expo 56 build. The two series must never be mixed: an update is addressed by runtime version alone, so publishing a NubArca TV bundle under `tv-native-3` would offer it to an install of a different application. Because the publication tree and the channel pointer are both keyed by runtime (`publications/android/<runtime>/`, `channels/<channel>/android/<runtime>.json`), the new series is isolated by construction — a device asking for `tv-native-3` gets `204 No Content` once nothing is published there.
+A runtime version identifies one exact native ABI/configuration contract, and an update is addressed by runtime version **alone** — nothing else in the request distinguishes one application from another. So a runtime name must never be reused across application identities: publishing a NubArca TV bundle under a runtime belonging to some other package would offer it to installs of that package. Isolation is structural rather than conventional, because the publication tree and the channel pointer are both keyed by runtime (`publications/android/<runtime>/`, `channels/<channel>/android/<runtime>.json`): a device asking for a runtime with nothing published under it gets `204 No Content`. Only the `nubarca-tv-native-*` series is served.
 
 The APK always embeds a bundle. `fallbackToCacheTimeout` is zero and the native automatic check is disabled, so the existing app renders immediately. App startup fires one background `checkForUpdateAsync`; overlapping/repeated checks in that JS process are suppressed. If an update exists it is downloaded, but `reloadAsync` is never called. It is selected only on a later cold launch. Network, HTTP, malformed manifest, signature, asset, storage, interruption, and damaged-update handling remains in the native `expo-updates` downloader/error-recovery path; failures are logged and the running or embedded update remains usable. Killing the app during a download leaves the prior complete update intact.
 
@@ -29,13 +29,13 @@ sanitized error text. No secret is logged.
 Build/export and server publication must use matching values:
 
 ```sh
-export EXPO_PUBLIC_NANOCLOUD_API_BASE_URL=https://nanocloud.littlefly.it
-export NANOCLOUD_TV_OTA_UPDATE_URL=https://nanocloud.littlefly.it/api/tv-app/updates
-export NANOCLOUD_TV_RUNTIME_VERSION=nubarca-tv-native-2
-export NANOCLOUD_TV_OTA_CHANNEL=production
-export TV_OTA_STORAGE_ROOT=/srv/nanocloud/tv-updates
-export NANOCLOUD_TV_OTA_CERTIFICATE=/secure/nanocloud-tv-ota/cert/certificate.pem
-export TV_OTA_PRIVATE_KEY_PATH=/secure/nanocloud-tv-ota/keys/private-key.pem
+export EXPO_PUBLIC_NUBARCA_API_BASE_URL=https://nubarca.example.com
+export NUBARCA_TV_OTA_UPDATE_URL=https://nubarca.example.com/api/tv-app/updates
+export NUBARCA_TV_RUNTIME_VERSION=nubarca-tv-native-2
+export NUBARCA_TV_OTA_CHANNEL=production
+export TV_OTA_STORAGE_ROOT=/srv/nubarca/tv-updates
+export NUBARCA_TV_OTA_CERTIFICATE=/secure/nubarca-tv-ota/cert/certificate.pem
+export TV_OTA_PRIVATE_KEY_PATH=/secure/nubarca-tv-ota/keys/private-key.pem
 export TV_OTA_RELEASE_GIT_SHA="$(git rev-parse HEAD)"
 export TV_OTA_RETENTION_COUNT=5
 ```
@@ -52,8 +52,8 @@ publication directory and public trust certificate read-only into the API:
 services:
   api:
     volumes:
-      - /srv/nanocloud/tv-updates:/var/lib/nanocloud/tv-updates:ro
-      - /secure/nanocloud-tv-ota/cert/certificate.pem:/var/lib/nanocloud/tv-ota-trust/certificate.pem:ro
+      - /srv/nubarca/tv-updates:/var/lib/nubarca/tv-updates:ro
+      - /secure/nubarca-tv-ota/cert/certificate.pem:/var/lib/nubarca/tv-ota-trust/certificate.pem:ro
 ```
 
 Continue using the repository's overlay pattern:
@@ -67,30 +67,30 @@ docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml --env
 Protocol v1 code signing is supported with `rsa-v1_5-sha256`. Generate material in controlled storage; do not generate or keep the private key in this repository:
 
 ```sh
-install -d -m 0700 /secure/nanocloud-tv-ota/keys /secure/nanocloud-tv-ota/cert
+install -d -m 0700 /secure/nubarca-tv-ota/keys /secure/nubarca-tv-ota/cert
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 \
-  -out /secure/nanocloud-tv-ota/keys/private-key.pem
-chmod 0600 /secure/nanocloud-tv-ota/keys/private-key.pem
+  -out /secure/nubarca-tv-ota/keys/private-key.pem
+chmod 0600 /secure/nubarca-tv-ota/keys/private-key.pem
 openssl req -x509 -new -sha256 \
-  -key /secure/nanocloud-tv-ota/keys/private-key.pem \
-  -out /secure/nanocloud-tv-ota/cert/certificate.pem \
-  -days 1825 -subj '/CN=NanoCloud TV OTA' \
+  -key /secure/nubarca-tv-ota/keys/private-key.pem \
+  -out /secure/nubarca-tv-ota/cert/certificate.pem \
+  -days 1825 -subj '/CN=NubArca TV OTA' \
   -addext 'basicConstraints=critical,CA:FALSE' \
   -addext 'keyUsage=critical,digitalSignature' \
   -addext 'extendedKeyUsage=critical,codeSigning' \
   -addext 'subjectKeyIdentifier=hash' \
   -addext 'authorityKeyIdentifier=keyid:always'
-chmod 0644 /secure/nanocloud-tv-ota/cert/certificate.pem
+chmod 0644 /secure/nubarca-tv-ota/cert/certificate.pem
 openssl verify -purpose codesign \
-  -CAfile /secure/nanocloud-tv-ota/cert/certificate.pem \
-  /secure/nanocloud-tv-ota/cert/certificate.pem
+  -CAfile /secure/nubarca-tv-ota/cert/certificate.pem \
+  /secure/nubarca-tv-ota/cert/certificate.pem
 ```
 
 For the bootstrap APK set
-`NANOCLOUD_TV_OTA_CERTIFICATE=/secure/nanocloud-tv-ota/cert/certificate.pem`.
+`NUBARCA_TV_OTA_CERTIFICATE=/secure/nubarca-tv-ota/cert/certificate.pem`.
 Only
 that public certificate is embedded. Publication uses
-`TV_OTA_PRIVATE_KEY_PATH=/secure/nanocloud-tv-ota/keys/private-key.pem`; the private
+`TV_OTA_PRIVATE_KEY_PATH=/secure/nubarca-tv-ota/keys/private-key.pem`; the private
 key is read locally and never served. Unsigned publication cannot be enabled:
 `TV_OTA_SIGNING_REQUIRED=false` is rejected. Publication fails before export if
 either key or certificate is absent or they do not match. The API independently

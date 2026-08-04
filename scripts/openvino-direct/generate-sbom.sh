@@ -25,7 +25,7 @@ cat > "$out" <<JSON
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
   "metadata": {
-    "component": { "type": "library", "name": "nanocloud-openvino-direct-native", "version": "${ORT_OPENVINO_VERSION}" }
+    "component": { "type": "library", "name": "nubarca-openvino-direct-native", "version": "${ORT_OPENVINO_VERSION}" }
   },
   "components": [
     { "type": "library", "name": "onnxruntime", "version": "${ORT_OPENVINO_VERSION}",
@@ -38,7 +38,7 @@ cat > "$out" <<JSON
     { "type": "library", "name": "onetbb", "version": "bundled",
       "licenses": [ { "license": { "id": "Apache-2.0" } } ] }
   ],
-  "properties": [ { "name": "nanocloud:native-files", "value": "see files[]" } ],
+  "properties": [ { "name": "nubarca:native-files", "value": "see files[]" } ],
   "files": [ ${files_json} ]
 }
 JSON

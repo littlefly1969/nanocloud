@@ -15,8 +15,8 @@ const SAFE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const GIT_SHA = /^[0-9a-f]{40}$/;
 const RELEASE_RUNTIME = 'nubarca-tv-native-2';
 const RELEASE_CHANNEL = 'production';
-const RELEASE_UPDATE_URL = 'https://nanocloud.littlefly.it/api/tv-app/updates';
 const SIGNATURE = /^sig="([A-Za-z0-9+/]+={0,2})", keyid="main", alg="rsa-v1_5-sha256"$/;
+const UPDATE_PATH = '/api/tv-app/updates';
 
 export function safeSegment(value, name) {
   if (!SAFE.test(value ?? '')) throw new Error(`${name} contains unsupported characters`);
@@ -41,15 +41,40 @@ function requireEnv(name, env = process.env) {
   return value;
 }
 
+// The public OTA endpoint this installation serves. Operator-supplied, because
+// an installation-specific host is deployment configuration and must not appear
+// in product source. It is pinned per invocation and validated to one exact
+// shape, so a publication whose assets point anywhere else is still rejected —
+// externalising the value must not weaken the check.
+export function assertReleaseUpdateUrl(value) {
+  let parsed;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error('NUBARCA_TV_OTA_UPDATE_URL must be an absolute URL');
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new Error('NUBARCA_TV_OTA_UPDATE_URL must use https');
+  }
+  if (parsed.pathname !== UPDATE_PATH || parsed.search || parsed.hash
+      || parsed.username || parsed.password) {
+    throw new Error(`NUBARCA_TV_OTA_UPDATE_URL must be exactly <origin>${UPDATE_PATH}`);
+  }
+  return value;
+}
+
 export function paths(env = process.env) {
   const storage = resolve(requireEnv('TV_OTA_STORAGE_ROOT', env));
-  const runtime = safeSegment(requireEnv('NANOCLOUD_TV_RUNTIME_VERSION', env), 'runtime version');
-  const channel = safeSegment(env.NANOCLOUD_TV_OTA_CHANNEL || 'production', 'channel');
+  const runtime = safeSegment(requireEnv('NUBARCA_TV_RUNTIME_VERSION', env), 'runtime version');
+  const channel = safeSegment(env.NUBARCA_TV_OTA_CHANNEL || 'production', 'channel');
   assertReleaseTarget(runtime, channel);
+  const updateUrl = assertReleaseUpdateUrl(
+    requireEnv('NUBARCA_TV_OTA_UPDATE_URL', env).replace(/\/$/, ''),
+  );
   return {
-    storage, runtime, channel,
-    certificatePath: env.NANOCLOUD_TV_OTA_CERTIFICATE
-      ? resolve(env.NANOCLOUD_TV_OTA_CERTIFICATE)
+    storage, runtime, channel, updateUrl,
+    certificatePath: env.NUBARCA_TV_OTA_CERTIFICATE
+      ? resolve(env.NUBARCA_TV_OTA_CERTIFICATE)
       : null,
     publications: join(storage, 'publications', 'android', runtime),
     pointer: join(storage, 'channels', channel, 'android', `${runtime}.json`),
@@ -138,7 +163,7 @@ export function validatePublication(directory, options) {
     if (!asset || typeof asset.url !== 'string' || typeof asset.hash !== 'string') throw new Error('invalid manifest asset');
     const prefix = `/api/tv-app/updates/assets/${encodeURIComponent(expectedRuntime)}/${manifest.id}/`;
     const parsedAssetUrl = new URL(asset.url);
-    if (parsedAssetUrl.origin !== new URL(RELEASE_UPDATE_URL).origin || parsedAssetUrl.username || parsedAssetUrl.password ||
+    if (parsedAssetUrl.origin !== new URL(options.updateUrl).origin || parsedAssetUrl.username || parsedAssetUrl.password ||
         parsedAssetUrl.search || parsedAssetUrl.hash || !parsedAssetUrl.pathname.startsWith(prefix)) {
       throw new Error('asset URL is not immutable or belongs to another update');
     }
@@ -171,7 +196,7 @@ export function activate(publicationId, config = paths()) {
 }
 
 function expoEnvironment(runtime, env) {
-  return { ...process.env, ...env, NODE_ENV: 'production', NANOCLOUD_TV_RUNTIME_VERSION: runtime };
+  return { ...process.env, ...env, NODE_ENV: 'production', NUBARCA_TV_RUNTIME_VERSION: runtime };
 }
 
 function runExport(output, runtime, env) {
@@ -229,17 +254,15 @@ export function validateReleaseGitSha(intendedSha, gitRunner = git) {
 
 export function publish(env = process.env) {
   const config = paths(env);
-  const publicBase = requireEnv('NANOCLOUD_TV_OTA_UPDATE_URL', env).replace(/\/$/, '');
-  if (publicBase !== RELEASE_UPDATE_URL) {
-    throw new Error(`NANOCLOUD_TV_OTA_UPDATE_URL must be exactly ${RELEASE_UPDATE_URL}`);
-  }
+  // paths() has already required and shape-validated the operator's origin.
+  const publicBase = config.updateUrl;
   if ((env.TV_OTA_SIGNING_REQUIRED || 'true').toLowerCase() === 'false') {
     throw new Error('unsigned OTA publication is forbidden');
   }
   const privateKeyPath = env.TV_OTA_PRIVATE_KEY_PATH ? resolve(env.TV_OTA_PRIVATE_KEY_PATH) : null;
   const certificatePath = config.certificatePath;
   if (!privateKeyPath || !existsSync(privateKeyPath)) throw new Error('TV_OTA_PRIVATE_KEY_PATH is unavailable');
-  if (!certificatePath || !existsSync(certificatePath)) throw new Error('NANOCLOUD_TV_OTA_CERTIFICATE is unavailable');
+  if (!certificatePath || !existsSync(certificatePath)) throw new Error('NUBARCA_TV_OTA_CERTIFICATE is unavailable');
   validateCodeSigningCertificate(certificatePath);
   const privatePublic = createPublicKey(readFileSync(privateKeyPath)).export({ type: 'spki', format: 'der' });
   const certificatePublic = new X509Certificate(readFileSync(certificatePath)).publicKey.export({ type: 'spki', format: 'der' });

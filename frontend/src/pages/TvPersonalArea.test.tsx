@@ -259,7 +259,7 @@ describe('/tv Personal Area', () => {
       'POST /api/tv/pairing/start': () => jsonResponse({
         publicCode: 'NEWCODE1',
         pairingSecret: 'a'.repeat(43),
-        approvalUrl: `https://nanocloud.test/tv/pair?code=NEWCODE1#secret=${'a'.repeat(43)}`,
+        approvalUrl: `https://nubarca.test/tv/pair?code=NEWCODE1#secret=${'a'.repeat(43)}`,
         expiresAt: '2026-07-05T12:10:00Z',
       }),
     });
@@ -281,7 +281,7 @@ describe('/tv Personal Area', () => {
     handlers['POST /api/tv/pairing/start'] = () => jsonResponse({
       publicCode: 'NEWCODE1',
       pairingSecret: 'a'.repeat(43),
-      approvalUrl: `https://nanocloud.test/tv/pair?code=NEWCODE1#secret=${'a'.repeat(43)}`,
+      approvalUrl: `https://nubarca.test/tv/pair?code=NEWCODE1#secret=${'a'.repeat(43)}`,
       expiresAt: '2026-07-05T12:10:00Z',
     });
     const fetchMock = installFetchMock(handlers);

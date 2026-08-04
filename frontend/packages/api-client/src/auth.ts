@@ -1,6 +1,6 @@
 import { api } from './client';
 
-// Mirrors NanoCloud.Api.Auth.CurrentUserResponse on the backend. Adding fields
+// Mirrors NubArca.Api.Auth.CurrentUserResponse on the backend. Adding fields
 // here when the backend grows the response is the only thing the client needs
 // to do — the API never returns PasswordHash, DisabledAt, or any storage
 // internals. `isAdmin` (slice 47) lets the UI decide whether to render the

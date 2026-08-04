@@ -7,6 +7,6 @@
 // space (react-native does not declare `process`, and neither does expo/types).
 declare const process: {
   env: {
-    EXPO_PUBLIC_NANOCLOUD_API_BASE_URL?: string;
+    EXPO_PUBLIC_NUBARCA_API_BASE_URL?: string;
   } & Record<string, string | undefined>;
 };

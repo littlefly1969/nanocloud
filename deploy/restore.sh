@@ -12,7 +12,7 @@
 #      ONCE so the named volumes exist (this also gives you an empty schema
 #      via `db migrate` if you ran that first — either way is fine; the
 #      restore overwrites everything).
-#   3. Run `deploy/restore.sh /path/to/nanocloud-YYYYMMDDTHHMMSSZ --yes`.
+#   3. Run `deploy/restore.sh /path/to/nubarca-YYYYMMDDTHHMMSSZ --yes`.
 #
 # DANGER: running this on a host that already has live data will permanently
 # destroy that data. The script stops the stack, replaces both volumes, and
@@ -40,8 +40,8 @@ Usage: $0 <backup-dir> [--yes]
                  only prints what it would do (dry-run).
 
 Examples:
-  $0 ./backups/nanocloud-20260524T120000Z              # dry-run
-  $0 ./backups/nanocloud-20260524T120000Z --yes        # do it
+  $0 ./backups/nubarca-20260524T120000Z              # dry-run
+  $0 ./backups/nubarca-20260524T120000Z --yes        # do it
 EOF
     exit 64
 fi
@@ -96,7 +96,7 @@ sed -n 's/^/[restore]    /p' "$BACKUP_DIR/manifest.json"
 log
 log "would restore into:"
 log "  postgres database '$POSTGRES_DB' as '$POSTGRES_USER'"
-log "  named volume 'nanocloud-storage-data'"
+log "  named volume 'nubarca-storage-data'"
 
 if [ "$CONFIRM" != "--yes" ]; then
     log
@@ -115,10 +115,10 @@ docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" stop api frontend postg
 # explicitly call `docker volume rm` for clarity.
 log "REMOVING old postgres volume contents..."
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" rm -fsv postgres >/dev/null || true
-docker volume rm nanocloud-postgres-data >/dev/null 2>&1 || true
+docker volume rm nubarca-postgres-data >/dev/null 2>&1 || true
 
 log "REMOVING old storage volume contents..."
-docker volume rm nanocloud-storage-data >/dev/null 2>&1 || true
+docker volume rm nubarca-storage-data >/dev/null 2>&1 || true
 
 log "starting postgres (empty)..."
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d postgres >/dev/null
@@ -142,9 +142,9 @@ gunzip -c "$BACKUP_DIR/postgres.sql.gz" \
 
 # -------- restore storage --------------------------------------------------
 
-log "untar storage.tar.gz into nanocloud-storage-data..."
+log "untar storage.tar.gz into nubarca-storage-data..."
 docker run --rm \
-    -v nanocloud-storage-data:/storage \
+    -v nubarca-storage-data:/storage \
     -v "$(cd "$BACKUP_DIR" && pwd):/in:ro" \
     alpine:3 sh -c "cd /storage && tar xzf /in/storage.tar.gz"
 

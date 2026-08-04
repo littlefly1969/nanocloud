@@ -58,7 +58,7 @@ describe('PartyFaceSearch (public "find your face")', () => {
   });
 
   it('shows English copy when the language is English', async () => {
-    window.localStorage.setItem('nanocloud.lang', 'en');
+    window.localStorage.setItem('nubarca.lang', 'en');
     installFetchMock({});
     renderPanel();
     await userEvent.setup().click(screen.getByTestId('party-face-open'));

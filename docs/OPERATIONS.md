@@ -23,9 +23,9 @@ There is no public registration. Manage users with the operator CLI:
 ```bash
 # Create or ensure a user (add --admin to grant the admin role).
 $DC run --rm \
-  -e NANO_CLOUD_ADMIN_EMAIL=you@example.com \
-  -e NANO_CLOUD_ADMIN_DISPLAY_NAME="You" \
-  -e NANO_CLOUD_ADMIN_PASSWORD='<strong-password>' \
+  -e NUBARCA_ADMIN_EMAIL=you@example.com \
+  -e NUBARCA_ADMIN_DISPLAY_NAME="You" \
+  -e NUBARCA_ADMIN_PASSWORD='<strong-password>' \
   api users ensure --admin
 
 # Toggle the admin role on an existing user.
@@ -145,7 +145,7 @@ self-repair displaced bytes with a plain copy on first request).
 **B. Audit placement** (read-only, counts only):
 
 ```bash
-$DC exec api dotnet NanoCloud.Api.dll media derivatives verify-bytes
+$DC exec api dotnet NubArca.Api.dll media derivatives verify-bytes
 # checked / present_in_derived_root / only_in_original_root /
 # missing_from_both, plus per-size lines (small / medium / poster).
 # --size small|medium|poster and --limit N narrow the walk.
@@ -154,9 +154,9 @@ $DC exec api dotnet NanoCloud.Api.dll media derivatives verify-bytes
 **C. If `only_in_original_root` > 0 — repair placement:**
 
 ```bash
-$DC exec api dotnet NanoCloud.Api.dll media derivatives repair-bytes --dry-run
-$DC exec api dotnet NanoCloud.Api.dll media derivatives repair-bytes
-$DC exec api dotnet NanoCloud.Api.dll media derivatives verify-bytes
+$DC exec api dotnet NubArca.Api.dll media derivatives repair-bytes --dry-run
+$DC exec api dotnet NubArca.Api.dll media derivatives repair-bytes
+$DC exec api dotnet NubArca.Api.dll media derivatives verify-bytes
 ```
 
 The repair is a streaming copy (re-hash + temp file + atomic rename): **no
@@ -181,7 +181,7 @@ derivatives that have **no** row at all — the "Images missing small/medium" /
 diagnostics. After a backfill has attempted the missing files:
 
 ```sh
-$DC exec api dotnet NanoCloud.Api.dll media derivatives failures
+$DC exec api dotnet NubArca.Api.dll media derivatives failures
 ```
 
 It prints aggregate reasons by size / status / error code / detected format
@@ -198,7 +198,7 @@ load). It is the default (`MediaDerivatives__ImageBackend=auto`); force the
 managed path with `=imagesharp`. Compare them on your data:
 
 ```sh
-$DC exec api dotnet NanoCloud.Api.dll media derivatives benchmark --limit 50
+$DC exec api dotnet NubArca.Api.dll media derivatives benchmark --limit 50
 ```
 
 If the native library can't load, startup logs `libvips backend unavailable`
@@ -221,9 +221,9 @@ mismatches / leaked refs / zero-ref-with-owners); the same numbers come from the
 CLI:
 
 ```bash
-$DC exec api dotnet NanoCloud.Api.dll storage blobs audit-references
-$DC exec api dotnet NanoCloud.Api.dll storage blobs repair-references --dry-run
-$DC exec api dotnet NanoCloud.Api.dll storage blobs repair-references
+$DC exec api dotnet NubArca.Api.dll storage blobs audit-references
+$DC exec api dotnet NubArca.Api.dll storage blobs repair-references --dry-run
+$DC exec api dotnet NubArca.Api.dll storage blobs repair-references
 ```
 
 Repair recomputes each mismatched count from the owner tables (guarded
@@ -281,6 +281,48 @@ Autovacuum handles routine maintenance. After a large import, a one-off
 only if an index is visibly bloated after heavy churn. See
 [deploy/FIRST_DEPLOY.md](../deploy/FIRST_DEPLOY.md) for the detailed
 maintenance section.
+
+## AI runtime placement (OpenVINO)
+
+AI inference runs in-process in the api and worker containers. The execution
+provider and per-model device are configuration, and invalid configuration is
+rejected **at startup** by `AiOnnxOptionsValidator` rather than silently
+degrading to CPU:
+
+```jsonc
+{
+  "Ai": {
+    "Onnx": {
+      "ModelDir": "/models/ai",
+      "ExecutionProvider": "openvino-direct",
+      "OpenVino": {
+        "NativeDir": "/opt/nubarca/ort-openvino",  // baked into the runtime-openvino image
+        "CacheDir": "/tmp/ov-cache",               // bounded writable compile cache
+        "FaceDetectorDevice": "GPU",               // CPU | GPU, independent per model
+        "FaceRecognizerDevice": "CPU",
+        "GpuPrecision": "FP32"                     // required for equivalence with CPU
+      }
+    }
+  }
+}
+```
+
+Environment form: `Ai__Onnx__ExecutionProvider`,
+`Ai__Onnx__OpenVino__FaceDetectorDevice`, and so on. Valid direct devices are
+**`CPU`** and **`GPU`** only; `DUAL` / `AUTO` / `MULTI` / `HETERO` are rejected.
+
+Confirm what is actually running rather than what is configured:
+
+```bash
+# provider + device + native/OpenVINO versions + ABI match + loaded providers
+$DC exec api dotnet NubArca.Api.dll ai onnx runtime-info
+# → configuredProvider=openvino-direct, providers=[…,OpenVINOExecutionProvider], abiMatch=True
+
+# resource use while a backfill runs
+docker stats --no-stream nubarca-api nubarca-worker
+$DC exec api sh -c 'grep VmRSS /proc/1/status'
+intel_gpu_top
+```
 
 ## Troubleshooting
 

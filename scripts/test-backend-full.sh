@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-project="$repo_dir/tests/NanoCloud.Api.Tests/NanoCloud.Api.Tests.csproj"
+project="$repo_dir/tests/NubArca.Api.Tests/NubArca.Api.Tests.csproj"
 
 # Run deterministic/local coverage first. Keeping Docker, real FFmpeg and live
 # sidecar tests in a second process prevents resource-heavy fixtures from

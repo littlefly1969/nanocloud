@@ -1,7 +1,7 @@
 # Optional internal-only HumanAesExpert sidecar for the Aesthetics Lab
 # (Laboratorio estetico). Compose it ALONGSIDE the prod files (never alone):
 #
-#   HUMANAES_MODEL_DIR=/srv/nanocloud/models/human-aesexpert/human-aesexpert-1b \
+#   HUMANAES_MODEL_DIR=/srv/nubarca/models/human-aesexpert/human-aesexpert-1b \
 #   docker compose -f docker-compose.prod.yml \
 #                  -f docker-compose.prod.local.yml \
 #                  -f docker-compose.human-aesexpert.yml \
@@ -20,8 +20,8 @@ services:
     build:
       context: ./scripts/human-aesexpert-sidecar
       dockerfile: Dockerfile
-    image: nanocloud-human-aesexpert:local
-    container_name: nanocloud-human-aesexpert
+    image: nubarca-human-aesexpert:local
+    container_name: nubarca-human-aesexpert
     restart: unless-stopped
     # Optional host-topology affinity. Empty keeps Docker's normal scheduler;
     # production may pin one logical CPU per physical P-core (for example
@@ -34,7 +34,7 @@ services:
     expose:
       - "8091"
     networks:
-      - nanocloud-internal
+      - nubarca-internal
     # Weights mounted READ-ONLY from the operator-installed host dir. Never baked
     # into the image, never committed to git. NO blob-store mount is ever added.
     volumes:
@@ -90,8 +90,11 @@ services:
       start_period: 300s
 
 # Composed together with docker-compose.prod.yml, this merges with the
-# nanocloud-internal network defined there (same key). (Defined here too so
+# nubarca-internal network defined there (same key). (Defined here too so
 # `-f docker-compose.human-aesexpert.yml` is valid standalone in `config`.)
 networks:
-  nanocloud-internal:
+  nubarca-internal:
+    # Pinned so the created network is exactly `nubarca-internal`. Without it
+    # Compose prefixes the project name and produces `nubarca_nubarca-internal`.
+    name: nubarca-internal
     driver: bridge

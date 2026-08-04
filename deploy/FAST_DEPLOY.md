@@ -7,7 +7,8 @@ This runbook describes the current deployment at:
 
 - SSH: `stefano@192.168.1.180`
 - checkout: `/opt/nanocloud`
-- public URL: `https://nanocloud.littlefly.it`
+- public origin: `NUBARCA_PUBLIC_ORIGIN` in the production `.env`
+  (`grep '^NUBARCA_PUBLIC_ORIGIN=' .env` — never `source` the file)
 
 ## Invariants
 
@@ -95,12 +96,12 @@ Backend changes always require both API and worker to use the same image bytes:
 docker build --pull=false \
   --target runtime-openvino \
   --build-arg GIT_SHA=<fullsha> \
-  -f src/NanoCloud.Api/Dockerfile \
-  -t nanocloud-api:release-<shortsha> .
+  -f src/NubArca.Api/Dockerfile \
+  -t nubarca-api:release-<shortsha> .
 
 docker tag \
-  nanocloud-api:release-<shortsha> \
-  nanocloud-worker:release-<shortsha>
+  nubarca-api:release-<shortsha> \
+  nubarca-worker:release-<shortsha>
 ```
 
 The `--target runtime-openvino` and `GIT_SHA` build argument are mandatory.
@@ -112,7 +113,7 @@ Frontend changes:
 ```bash
 docker build --pull=false \
   -f frontend/Dockerfile \
-  -t nanocloud-frontend:release-<shortsha> \
+  -t nubarca-frontend:release-<shortsha> \
   frontend
 ```
 
@@ -126,9 +127,12 @@ succeeded.
 
 For a backend image, verify:
 
-- `NANOCLOUD_GIT_SHA` equals the full release SHA;
+- `NUBARCA_GIT_SHA` equals the full release SHA;
 - `ffmpeg` and `ffprobe` exist;
-- `/opt/nanocloud/ort-openvino` contains `libonnxruntime.so`;
+- `/opt/nubarca/ort-openvino` contains the ONNX Runtime native library. It ships
+  under its SONAME, so match the versioned name (`ls
+  /opt/nubarca/ort-openvino/libonnxruntime.so*`) — a bare `libonnxruntime.so`
+  does not exist and checking for it fails a good image;
 - API and worker tags resolve to the same image ID.
 
 For a frontend image, the Docker build must complete `tsc -b` and Vite
@@ -156,11 +160,11 @@ Update only the relevant image entries in
 ```yaml
 services:
   api:
-    image: "nanocloud-api:release-<shortsha>"
+    image: "nubarca-api:release-<shortsha>"
   worker:
-    image: "nanocloud-worker:release-<shortsha>"
+    image: "nubarca-worker:release-<shortsha>"
   frontend:
-    image: "nanocloud-frontend:release-<shortsha>"
+    image: "nubarca-frontend:release-<shortsha>"
 ```
 
 Then recreate only affected services with the complete Compose stack:
@@ -186,7 +190,7 @@ Rules:
 ## 6. Mandatory smoke checks
 
 Confirm the effective image tag and running state of every changed container.
-For the backend also confirm the running `NANOCLOUD_GIT_SHA`.
+For the backend also confirm the running `NUBARCA_GIT_SHA`.
 
 ```bash
 curl -fsS http://127.0.0.1:8080/health
@@ -250,7 +254,7 @@ enqueue if an equivalent gallery-regeneration job is already queued/running.
 To force only video derivatives:
 
 ```bash
-dotnet NanoCloud.Api.dll jobs enqueue \
+dotnet NubArca.Api.dll jobs enqueue \
   media-gallery-derivatives-regenerate \
   --sizes poster,video-preview-strip \
   --force

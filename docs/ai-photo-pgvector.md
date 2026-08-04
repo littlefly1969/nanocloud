@@ -72,8 +72,8 @@ existing text indexes after the first start on the old volume. If it does:
 
 ```sql
 -- inspect, then refresh affected collations / rebuild text indexes:
-REINDEX DATABASE nanocloud;            -- or target specific indexes
-ALTER DATABASE nanocloud REFRESH COLLATION VERSION;
+REINDEX DATABASE nubarca;            -- or target specific indexes
+ALTER DATABASE nubarca REFRESH COLLATION VERSION;
 ```
 
 This is a one-time maintenance step, not a data risk. Back up first (per the

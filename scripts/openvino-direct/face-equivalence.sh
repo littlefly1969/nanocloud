@@ -23,7 +23,7 @@
 # Isolation: every container is --read-only, --cap-drop ALL, no-new-privileges,
 # mem/CPU limited, models + fixture read-only; the CLI harness needs no DB (an
 # unused connection string only makes AddAiSubstrate register — nothing connects).
-# The candidate image entrypoint is `dotnet NanoCloud.Api.dll`, so containers are
+# The candidate image entrypoint is `dotnet NubArca.Api.dll`, so containers are
 # given ONLY the CLI args.
 # =============================================================================
 set -euo pipefail
@@ -42,16 +42,16 @@ done
 
 cd "$(git rev-parse --show-toplevel)"
 GIT_SHA="$(git rev-parse HEAD)"
-IMAGE_TAG="nanocloud-api:facecanary-${GIT_SHA:0:12}"
+IMAGE_TAG="nubarca-api:facecanary-${GIT_SHA:0:12}"
 [[ -e /dev/dri/renderD128 ]] && RENDER_GID="$(stat -c '%g' /dev/dri/renderD128)" || true
 OUT="$(mktemp -d)"
 cleanup() { rm -rf "$OUT"; }
 trap cleanup EXIT
 
-docker build -f src/NanoCloud.Api/Dockerfile --target runtime-openvino \
+docker build -f src/NubArca.Api/Dockerfile --target runtime-openvino \
   --build-arg "GIT_SHA=${GIT_SHA}" -t "$IMAGE_TAG" . 1>&2
 
-# Shared flags. NOTE: entrypoint already runs `dotnet NanoCloud.Api.dll`, so the
+# Shared flags. NOTE: entrypoint already runs `dotnet NubArca.Api.dll`, so the
 # container command is ONLY the CLI verb + args.
 CMD=(ai onnx face-embed --file /fixture/face.jpg --detect --concurrency 1 --iterations 1 --timeout-seconds 300)
 common=(--rm --read-only --tmpfs /tmp:size=512m,mode=1777
@@ -59,7 +59,7 @@ common=(--rm --read-only --tmpfs /tmp:size=512m,mode=1777
   -v "${MODELS}:/models/ai:ro" -v "${FIXTURE}:/fixture/face.jpg:ro"
   -e Ai__Enabled=true -e Ai__Onnx__ModelDir=/models/ai
   -e Ai__FaceProfileKey=face-insightface-antelopev2-v1
-  -e "NANOCLOUD_GIT_SHA=${GIT_SHA}"
+  -e "NUBARCA_GIT_SHA=${GIT_SHA}"
   # Unused connection string: registers AddAiSubstrate; face-embed never connects.
   -e "ConnectionStrings__Postgres=Host=127.0.0.1;Port=1;Database=x;Username=x;Password=x")
 
@@ -73,7 +73,7 @@ docker run "${common[@]}" --network none \
 echo "== OpenVINO CPU =="
 docker run "${common[@]}" --network none \
   -e Ai__Onnx__ExecutionProvider=openvino-direct \
-  -e Ai__Onnx__OpenVino__NativeDir=/opt/nanocloud/ort-openvino \
+  -e Ai__Onnx__OpenVino__NativeDir=/opt/nubarca/ort-openvino \
   -e Ai__Onnx__OpenVino__FaceDetectorDevice=CPU -e Ai__Onnx__OpenVino__FaceRecognizerDevice=CPU \
   -e Ai__Onnx__OpenVino__CacheDir=/tmp/ov-cache \
   "$IMAGE_TAG" "${CMD[@]}" | tee >(grep -vE '^vec=') | save ovcpu
@@ -82,7 +82,7 @@ if [[ -n "$RENDER_GID" ]]; then
   echo "== OpenVINO GPU FP32 =="
   docker run "${common[@]}" --network none --device /dev/dri:/dev/dri --group-add "$RENDER_GID" \
     -e Ai__Onnx__ExecutionProvider=openvino-direct \
-    -e Ai__Onnx__OpenVino__NativeDir=/opt/nanocloud/ort-openvino \
+    -e Ai__Onnx__OpenVino__NativeDir=/opt/nubarca/ort-openvino \
     -e Ai__Onnx__OpenVino__FaceDetectorDevice=GPU -e Ai__Onnx__OpenVino__FaceRecognizerDevice=GPU \
     -e Ai__Onnx__OpenVino__GpuPrecision=FP32 -e Ai__Onnx__OpenVino__CacheDir=/tmp/ov-cache \
     "$IMAGE_TAG" "${CMD[@]}" | tee >(grep -vE '^vec=') | save ovgpu

@@ -9,9 +9,6 @@ app and NOT a full NubArca client — see the architecture strategy in
 
 ## Application identity
 
-The product was renamed from **NanoCloud** to **NubArca** on 2026-07-31, and
-TV-ID-01 then reset this app's installed identity to match.
-
 **NubArca and NubArca TV are separate applications sharing one backend and one
 account ecosystem.** There is no universal mobile/TV binary. The mobile app will
 sync and upload through the shared backend; this app stays remote-first and uses
@@ -32,38 +29,22 @@ only the limited TV pairing and `/api/tv/*` contracts.
 
 `tv/scripts/appIdentity.test.mjs` pins every value in the left column.
 
-### The retired TV identity
+An Android `applicationId` has **no in-place rename**. Changing it is a new
+application with its own private storage sandbox, so there is no upgrade path and
+no way to carry a session across: every install of a new package id starts
+unpaired and pairs once. Install fresh rather than with `install -r` whenever the
+package id differs from what is on the device.
 
-This app previously shipped as `it.littlefly.nanocloudtv` (slug `nanocloud-tv`,
-version 0.2.0, versionCode 3, runtime `tv-native-3`, storage key
-`nanocloud.tv.session.cookie`, artifact `nanocloud-tv.apk`).
+### Identifiers that must match the backend exactly
 
-An Android applicationId has **no in-place rename**, so there is no upgrade path
-across this change. The one private device holding that install was migrated by
-uninstalling and installing fresh:
+These are server contracts, not local choices. Changing one here without changing
+it in the backend un-pairs the fleet:
 
-```bash
-adb uninstall it.littlefly.nanocloudtv
-adb install <signed-nubarca-tv-apk>     # never `install -r` across a package change
-```
-
-There is deliberately **no** migration of the old AsyncStorage key: the new
-applicationId gets its own private storage sandbox, so the old value is not
-reachable. Every install starts unpaired and pairs once.
-
-## Retained legacy-brand identifiers (do not rename)
-
-These keep their old spelling because they are backend wire contracts or
-operator configuration, not user-visible application identity:
-
-| Identifier | Where | Why it must not change |
+| Identifier | Where | Contract |
 | --- | --- | --- |
-| `NanoCloud.TvSession` | server cookie, `src/api/client.ts` | Wire contract with the backend `/api/tv` endpoints. |
-| `NanoCloud.Auth` | server cookie (never received here) | Wire contract with the backend owner endpoints. |
-| `EXPO_PUBLIC_NANOCLOUD_API_BASE_URL`, `NANOCLOUD_TV_*` | build/runtime env vars | Operators already have them set in production `.env` files and CI. |
-
-The user-visible strings (launcher name, pairing title, in-app copy) **are**
-rebranded — see `src/i18n/it.ts` (canonical) and `src/i18n/en.ts`.
+| `NubArca.TvSession` | `src/api/client.ts`, `TvPairingService.CookieName` | Limited TV session cookie for `/api/tv/*`. |
+| `NubArca.Auth` | server cookie, never received here | Owner session cookie. The TV app must never send or store it. |
+| `nubarca.tv.session.cookie` | `src/api/client.ts` AsyncStorage key | Package-local; immutable for in-place upgrades. |
 
 ## TV runtime decision
 
@@ -281,13 +262,13 @@ Native project directories (`android/`, `ios/`) are **generated** by prebuild
 - Uses **only** `/api/tv/*` endpoints (enforced by an `assertTvPath` guard in
   `src/api/client.ts`). No normal owner APIs, no token auth, no full user
   session.
-- The limited TV **session cookie** (`NanoCloud.TvSession` — a *retained legacy
+- The limited TV **session cookie** (`NubArca.TvSession` — a *retained legacy
   identifier*, see the table above; the cookie name is a backend wire contract and
   was not rebranded to NubArca) is captured from
   `Set-Cookie` and re-sent via the `Cookie` header (RN has no cookie jar). It is
   **persisted across app restarts** via AsyncStorage (see *Session persistence*
   below) and rehydrated + re-validated on launch. Only that one limited cookie is
-  persisted — never the owner `NanoCloud.Auth` cookie (also a retained legacy
+  persisted — never the owner `NubArca.Auth` cookie (also a retained legacy
   identifier; never received here), the
   pairing secret (travels in a header, not a cookie), or party tokens (in URLs,
   not cookies).
@@ -371,14 +352,14 @@ npm start           # Expo dev server (phone form factor)
 ## API base URL configuration (dev + Fire Stick test builds)
 
 The API base URL is resolved (in `App.tsx` `resolveBaseUrl()` +
-`app.config.js`), in order. The `*_NANOCLOUD_*` variable names are *retained
+`app.config.js`), in order. The `*_NUBARCA_*` variable names are *retained
 legacy identifiers* — they kept their pre-NubArca spelling because operators
 already have them set in production environments and CI:
 
-1. `EXPO_PUBLIC_NANOCLOUD_API_BASE_URL` — preferred; an `EXPO_PUBLIC_*` var is
+1. `EXPO_PUBLIC_NUBARCA_API_BASE_URL` — preferred; an `EXPO_PUBLIC_*` var is
    inlined by Expo at build time and read at runtime, so a Fire Stick test build
    can target production **without editing source**.
-2. `NANOCLOUD_TV_API_BASE_URL` — build-time alias (config only).
+2. `NUBARCA_TV_API_BASE_URL` — build-time alias (config only).
 3. `expo.extra.apiBaseUrl` from `app.config.js` — a LAN dev default
    (`http://192.168.1.100:5177`).
 
@@ -391,7 +372,7 @@ Point a Fire Stick debug build at production:
 
 ```bash
 cd tv
-EXPO_PUBLIC_NANOCLOUD_API_BASE_URL=https://nanocloud.littlefly.it npm run tv:prebuild
+EXPO_PUBLIC_NUBARCA_API_BASE_URL=https://nubarca.example.com npm run tv:prebuild
 cd android && ./gradlew assembleDebug
 # → android/app/build/outputs/apk/debug/app-debug.apk  (cleartext disabled)
 ```
@@ -407,7 +388,7 @@ The limited TV session cookie is persisted with
 written by the 1.0.0 NubArca TV package; it remains byte-identical so the 1.0.1
 in-place upgrade does not sign the device out:
 
-- **Only** the `NanoCloud.TvSession` cookie string is stored — by construction
+- **Only** the `NubArca.TvSession` cookie string is stored — by construction
   `_cookieJar` can hold nothing else (owner auth is never received on `/api/tv`,
   the pairing secret is header-only, party tokens are in URLs).
 - On **launch** the cookie is rehydrated (`restoreSession()`) then **validated**
@@ -536,7 +517,7 @@ NDK 27) — all green:
 
 - `npm run lint` (`tsc --noEmit`, TS 6.0.3) clean; `npx expo-doctor` **21/21**.
 - `expo config --type introspect` default + `EXPO_TV=1` + the
-  `EXPO_PUBLIC_NANOCLOUD_API_BASE_URL=https://…` prod override (apiBaseUrl → prod,
+  `EXPO_PUBLIC_NUBARCA_API_BASE_URL=https://…` prod override (apiBaseUrl → prod,
   `usesCleartextTraffic` → **false**).
 - `npx expo export --platform android` (Metro bundled **613 modules**, incl.
   `expo-file-system`).
@@ -545,7 +526,7 @@ NDK 27) — all green:
   `android/app/build/outputs/apk/release/app-release.apk` (~65 MB) whose
   `assets/index.android.bundle` contains the new media loader and whose native
   libs include the `expo-file-system` download module. Built against
-  `https://nanocloud.littlefly.it` (cleartext disabled).
+  `https://nubarca.example.com` (cleartext disabled).
 - Safety audit clean: only `/api/tv/*` (JSON via `assertTvPath`; media via
   `resolveTvMediaUrl`, same-origin `/api/tv/` only), no console/secret logging, no
   originals.
@@ -565,7 +546,7 @@ On Node v22.22.3, all green:
 - `npm run lint` (`tsc --noEmit`, **TypeScript 6.0.3**) clean.
 - `expo config --type introspect` default **and** `EXPO_TV=1`: `sdkVersion 56.0.0`,
   `isTV`, `android.software.leanback`, and the `expo-status-bar` plugin present;
-  the `EXPO_PUBLIC_NANOCLOUD_API_BASE_URL=https://…` override flips `apiBaseUrl` to
+  the `EXPO_PUBLIC_NUBARCA_API_BASE_URL=https://…` override flips `apiBaseUrl` to
   production and `usesCleartextTraffic` to **`false`**.
 - `npx expo export --platform android` (Metro bundled **595 modules**) succeeds.
 - `EXPO_TV=1 expo prebuild --platform android --clean` **succeeds** and generates a
@@ -590,7 +571,7 @@ npm install                              # uses tv/.npmrc (legacy-peer-deps)
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk   # JDK 17 — NOT 26 (foojay resolver fails)
 export ANDROID_HOME="$HOME/Android/Sdk"; export PATH="$JAVA_HOME/bin:$PATH"
 # production target (cleartext disabled); omit the env var for the LAN dev default:
-EXPO_PUBLIC_NANOCLOUD_API_BASE_URL=https://nanocloud.littlefly.it npm run tv:prebuild
+EXPO_PUBLIC_NUBARCA_API_BASE_URL=https://nubarca.example.com npm run tv:prebuild
 cd android
 ./gradlew assembleRelease   # → app/build/outputs/apk/release/app-release.apk  (built here ✔)
 # or a debug variant:
