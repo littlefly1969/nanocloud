@@ -7,6 +7,8 @@ baseline and active work; do not use it as a chronological work log.
 
 - Release: `0.2.0`
 - Branch: `main`
+- Deployed commit: `8e72328d6b37` (`main` and production are in step)
+- Active development: none in flight; every slice below is released or superseded
 - Backend: ASP.NET Core / .NET 10, EF Core and PostgreSQL
 - Frontend: React, TypeScript and Vite
 - Runtime: Docker Compose with separate API, worker and frontend services
@@ -31,11 +33,11 @@ baseline and active work; do not use it as a chronological work log.
 - Read `deploy/FAST_DEPLOY.md` in full immediately before any production
   deployment, rebuild, release-pin change or production migration.
 
-## Active slice — SEARCH-SEM-01 semantic coverage, video markers and library organization
+## Released slice — SEARCH-SEM-01 semantic coverage, video markers and library organization
 
-Branch `feat/semantic-search-coverage`, from `main` (`d06605e`). Uncommitted.
-No migration, no backfill, no new embeddings, no model change. The sharing
-stack that preceded it is merged and released — see the sections below.
+Released from `8e72328d6b37`; `main` and production both run that commit. No
+migration, no backfill, no embedding regeneration, no semantic reindex and no TV
+rebuild — the release rebuilt only the API, worker and frontend images.
 
 ### The defect: truncation in GUID order
 
@@ -80,15 +82,22 @@ against the old partial ranking is rejected rather than honoured.
 `strongResultScore` / `absoluteSafetyLimit=1000`, structurally shared by both
 modalities with per-modality overrides available.
 
-Thresholds are DISABLED and effective behaviour is a plain top-300 cut, exactly
-as before. Cosine similarity in a SigLIP2 space has no universal "good" value,
-and the automated fixtures run the deterministic 32-dimension backend, whose
-scores cannot calibrate the real 1152-dimension profile. A fabricated default
-would silently hide real matches from a live library. Disabled means disabled —
-never an implicit zero, which would look calibrated while being arbitrary.
-`IsCalibrated` reports the mode. **Turning this on is the one remaining
-product-operational task and needs a measured distribution against the real
-profile.**
+Thresholds are DISABLED and effective behaviour is a deterministic top-300 cut.
+**This is the approved production policy for the current release, not unfinished
+work.**
+
+Live search runs the real 1152-dimension SigLIP2 profile, while the automated
+fixtures run the deterministic 32-dimension backend, whose scores cannot
+calibrate it. Cosine values are model- and corpus-dependent, so a guessed
+threshold would silently hide valid matches from a personal library — a failure
+nobody would notice. Complete candidate coverage and deterministic ranking are
+implemented, tested and deployed; a score gate is a separate quality question,
+not a completeness one. Disabled means disabled — never an implicit zero, which
+would look calibrated while being arbitrary. `IsCalibrated` reports the mode.
+
+**Future optional tuning.** Score-threshold calibration may be evaluated later,
+and only with a representative corpus plus human relevance judgements. It is not
+a blocker, defect, active slice or release follow-up.
 
 ### Profile resolution and `ai status`
 
@@ -185,8 +194,7 @@ client-side notion of membership.
 
 ### Verification
 
-Backend 3161 passed / 0 failed (+28 over the pre-slice 3133). The proofs that
-matter, both green:
+The proofs that matter, both green:
 
 ```text
 Photo_After_The_Former_20k_Cutoff_Can_Rank_First      20,050 candidates
@@ -200,12 +208,28 @@ Test-environment latency (SQLite fixture, exact-cosine fallback path — not
 production pgvector): ~10 s to rank 20,050 photo candidates cold, ~14 s for
 21,000 temporal samples cold, and 47–83 ms for a cache-hit later page.
 
-Backend 3,171 passed / 0 failed. Frontend 1,209 passed (up from 1,161: +48),
-typecheck clean, production build succeeds. Browser matrix green across
-Chromium, Firefox and WebKit x desktop, mobile and 200% zoom — 252/252 checks,
-36 screenshots — covering both the markers and the organization toggle
-(hide/restore, deep link, reload, Back/Forward, scope composition, and absence
-on album pages). The matrix drives the
+```text
+backend        3171 passed
+frontend       1209 passed
+browser matrix  252/252  Chromium, Firefox, WebKit x desktop, mobile, 200% zoom
+```
+
+Typecheck clean and the production build succeeds. The matrix covers both the
+video markers and the organization toggle: hide/restore, deep link, reload,
+Back/Forward, scope composition, and absence on album pages.
+
+Production was verified after deployment: service health, HTTP routing,
+authentication gates on the new filter parameters, the shipped frontend assets
+carrying the new UI, AI profile reporting, and API/worker stability with no
+fail/crit log lines.
+
+Two verification boundaries, recorded for accuracy rather than as open work:
+
+- No authenticated production walkthrough was performed — no production user
+  credentials were available, and the equivalent end-to-end behaviour passed
+  252 browser checks against a real API locally.
+- Ranking-session expiration is covered by automated tests; the 60-second TTL
+  could not be forced from the browser harness. The matrix drives the
 production bundle against the real API through the filter sheet (the visual
 query is deliberately session state, never a URL parameter) and verifies marker
 count and order, duration-proportional placement, hit-target size, focus,
@@ -478,10 +502,13 @@ Decisions worth remembering:
 - ~~The similar-photo DTO carries no pixel dimensions.~~ CLOSED: the DTO now
   carries DISPLAY width/height, resolved exactly as the library resolves them.
 
-## Active slice — VFACE-01 canonical video face tracks
+## Released slice — VFACE-01 canonical video face tracks
 
-Branch `feat/video-face-tracks`, started from `main` (`8d49d4c`). Not pushed,
-not merged, not deployed; no production backfill and no janitor run.
+Merged into `main` (`f325e8c`) and deployed; migration `AddVideoFaceTracks` is
+applied in production. Generation stays **flag-off** —
+`Ai:VideoFaceAnalysis:Enabled` is disabled, so nothing is analysed until an
+operator turns it on. No production backfill and no janitor run have been
+performed.
 
 Adds the canonical, blob-level face-track substrate for videos:
 
@@ -521,11 +548,12 @@ Decisions worth remembering:
 - Tracks are evidence only. No `OwnerUserId`, `FileItemId`, `PersonId` or person
   name is stored, and cross-track / cross-video clustering is VFACE-02.
 
-## Active slice — VFACE-02 owner-level video identity
+## Released slice — VFACE-02 owner-level video identity
 
-Branch `feat/video-face-people`, **stacked on `feat/video-face-tracks`** (`f325e8c`),
-not on `main`. Not pushed, not merged, not deployed; no production backfill and
-no janitor run.
+Merged into `main` (`b898acc`, stacked on VFACE-01) and deployed; migration
+`AddVideoFaceTrackPersonDecisions` is applied in production. Like VFACE-01,
+track GENERATION remains flag-off; the read, review and assignment paths are
+live and unaffected by the flag.
 
 Connects canonical `VideoFaceTrack` evidence to the existing owner-level People
 model:
@@ -575,5 +603,6 @@ Decisions worth remembering:
 - Deep EF compositions over the visibility predicate do not translate on SQLite;
   the person-media path deliberately uses two flat queries instead.
 
-Next: production enablement planning for VFACE-01/02 (still flag-off), and real
-footage validation of tracker quality and suggestion accuracy.
+Enabling video face analysis in production is an operator decision, not
+outstanding development: it needs a capacity plan and real-footage validation of
+tracker quality and suggestion accuracy before the flag is turned on.
