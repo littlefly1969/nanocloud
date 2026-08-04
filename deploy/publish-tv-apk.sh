@@ -75,8 +75,8 @@ badging="$("$aapt2" dump badging "$apk_path")"
 for required in \
   "package: name='$expected_package' versionCode='$expected_version_code' versionName='$expected_version'" \
   "application-label:'NubArca TV'" \
-  "uses-feature:'android.software.leanback'" \
-  "uses-feature-not-required:'android.hardware.touchscreen'" \
+  "uses-feature: name='android.software.leanback'" \
+  "uses-feature-not-required: name='android.hardware.touchscreen'" \
   "leanback-launchable-activity:"; do
   if ! grep -Fq "$required" <<<"$badging"; then
     echo "Refusing to publish: APK manifest check failed: $required" >&2
@@ -147,6 +147,13 @@ echo "OTA certificate SHA-256: $expected_ota_cert_sha (embedded)"
 
 local_sha="$(sha256sum "$apk_path" | awk '{print $1}')"
 local_bytes="$(stat -c %s "$apk_path")"
+
+if [[ "${NANOCLOUD_TV_APK_VALIDATE_ONLY:-false}" == "true" ]]; then
+  echo "Validation only: no upload performed."
+  echo "Bytes: $local_bytes"
+  echo "SHA-256: $local_sha"
+  exit 0
+fi
 
 ssh -F /dev/null -o BatchMode=yes "$target" "install -d -m 0755 '$remote_dir'"
 scp -F /dev/null -q "$apk_path" "$target:$remote_dir/$temporary_name"
