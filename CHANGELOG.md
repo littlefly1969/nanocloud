@@ -60,11 +60,11 @@ One product name, applied everywhere it can be applied:
 - persisted logical container keys are `__nubarca_plates_` and
   `__nubarca_aesthetics_` (migration `RenameLogicalContainerKeyPrefixes`).
 
-`scripts/check-identity-cleanliness.sh` enforces this, and
-`IdentityCleanlinessTests` runs it inside `dotnet test`. There is no
-compatibility allowlist: the single permitted exception is the exact production
-deployment checkout path `/opt/nanocloud`, a live filesystem location on the
-running host rather than a product identifier.
+`scripts/check-nubarca-identity.sh` asserts this as a positive contract, and
+`NubArcaIdentityTests` runs it inside `dotnet test`. The contract states what the
+product is — solution, assembly, namespaces, package identifiers, cookie prefix,
+Compose resource names, release version — so any drift fails, and it carries no
+compatibility allowlist.
 
 Installation-specific values are operator configuration rather than source
 constants — the public origin, the PostgreSQL credentials, the hash peppers and

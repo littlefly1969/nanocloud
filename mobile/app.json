@@ -6,7 +6,7 @@
     "orientation": "default",
     "platforms": ["ios", "android"],
     "extra": {
-      "apiBaseUrl": "http://192.168.1.100:5177"
+      "apiBaseUrl": "http://localhost:5177"
     },
     "android": {
       "usesCleartextTraffic": true

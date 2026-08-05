@@ -166,7 +166,7 @@ Ai__PhotoSimilarityProfileKey=photo-siglip2-base-patch16-384-v1
 ```
 
 ```bash
-cd /opt/nanocloud
+cd "$NUBARCA_PRODUCTION_CHECKOUT"
 DC="docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml --env-file .env"
 $DC up -d api frontend
 $DC --profile worker up -d worker

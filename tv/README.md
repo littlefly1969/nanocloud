@@ -360,8 +360,11 @@ already have them set in production environments and CI:
    inlined by Expo at build time and read at runtime, so a Fire Stick test build
    can target production **without editing source**.
 2. `NUBARCA_TV_API_BASE_URL` — build-time alias (config only).
-3. `expo.extra.apiBaseUrl` from `app.config.js` — a LAN dev default
-   (`http://192.168.1.100:5177`).
+3. `expo.extra.apiBaseUrl` from `app.config.js` — a loopback dev default
+   (`http://localhost:5177`). A physical Fire Stick cannot reach the
+   workstation's loopback address, so device testing sets variable 1 or 2 to the
+   workstation's LAN address. That address is yours, not the product's, so it is
+   never committed.
 
 There are **no secrets** in config — only a base URL. `app.config.js` also
 derives `usesCleartextTraffic`: cleartext (unencrypted `http`) is enabled **only**

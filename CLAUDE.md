@@ -100,12 +100,25 @@ Owner-private APIs may expose rich derived data to the owner. Privacy boundary:
   production command. It is the source of truth for the current four-file
   Compose stack, immutable image builds, OpenVINO target, smoke checks and
   rollback. Do not deploy from remembered chat commands.
-- SSH target: `stefano@192.168.1.180`
-- Repo path: `/opt/nanocloud` — the one place the former product name is
-  deliberately retained; see the identity rule below
+- **Before deploying to an existing installation, obtain the production checkout
+  location and connection settings from the operator. Never infer or hardcode a
+  host path.** A host, login, directory and public origin belong to one
+  installation, not to NubArca, so they are never written into tracked source.
+- Required operator configuration, validated by
+  [scripts/lib/operator-config.sh](scripts/lib/operator-config.sh):
+  `NUBARCA_PRODUCTION_SSH`, `NUBARCA_PRODUCTION_CHECKOUT`, and where relevant
+  `NUBARCA_PUBLIC_ORIGIN`, `NUBARCA_STORAGE_ROOT`, `NUBARCA_SERVICE_ROOT`,
+  `NUBARCA_IMPORT_ROOT`, `NUBARCA_TV_APK_DIR`,
+  `NUBARCA_ENCRYPTED_BACKUP_TARGET`. Missing values fail closed.
+- Use them generically:
+
+  ```bash
+  ssh "$NUBARCA_PRODUCTION_SSH"
+  cd "$NUBARCA_PRODUCTION_CHECKOUT"
+  ```
+
 - Public origin: read `NUBARCA_PUBLIC_ORIGIN` from the production `.env`
-  (`grep '^NUBARCA_PUBLIC_ORIGIN=' .env`). The installation host is operator
-  configuration and is never written into tracked source.
+  (`grep '^NUBARCA_PUBLIC_ORIGIN=' .env`), never by sourcing the file.
 
 The current release deployment always uses all four Compose files:
 
@@ -133,24 +146,32 @@ shows the FULL string (incl. `Password=`).
 
 ## Product identity
 
-The product is **NubArca**. `scripts/check-identity-cleanliness.sh` fails when a
-former product name appears anywhere in tracked source, and
-`IdentityCleanlinessTests` runs it inside `dotnet test`.
+The product is **NubArca**. `scripts/check-nubarca-identity.sh` asserts a
+**positive identity contract** over tracked source, and `NubArcaIdentityTests`
+runs it inside `dotnet test`.
 
-There is no allowlist, and adding one is not the remedy: an identifier that truly
-cannot be renamed belongs in operator configuration outside Git. The single
-permitted textual exception is the exact production deployment checkout path
-`/opt/nanocloud`, a live filesystem location on the running host. It is permitted
-only as that exact path — a nested path, a suffixed variant or a longer word built
-on it is rejected.
+The contract states what the product *is* — `NubArca.sln`, the `NubArca.Api`
+assembly and namespaces, `NubArca.Api.Tests`, the `nubarca-frontend` package,
+the `it.littlefly.nubarca.tv` TV package, the `NubArca.` cookie prefix,
+`nubarca`-named Compose resources, one agreed release version — and fails when
+any of that stops being true. It carries no denylist: asserting the current
+truth catches a drift to *any* other spelling, and keeps the repository from
+having to remember what it used to be called.
+
+Its second half is that source describes the **product**, never one
+installation. IP literals, `login@host` targets, this installation's public
+hostname, a `NUBARCA_*` variable that falls back to a path or URL, and `cd` into
+a host checkout directory are all contract failures. Run
+`scripts/check-nubarca-identity.sh --self-test` to see the exact boundaries.
 
 ## Validation commands
 
 Identity:
 
 ```bash
-scripts/check-identity-cleanliness.sh
-scripts/check-identity-cleanliness.sh --self-test
+scripts/check-nubarca-identity.sh
+scripts/check-nubarca-identity.sh --verbose     # list every assertion
+scripts/check-nubarca-identity.sh --self-test   # prove the detectors work
 ```
 
 Backend:

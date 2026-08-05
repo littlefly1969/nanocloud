@@ -42,10 +42,10 @@ local content-addressed blob storage and Docker Compose deployment.
 | --- | --- |
 | server / web release | `0.3.0` |
 | NubArca TV | `1.0.1`, `versionCode` 2, runtime `nubarca-tv-native-2` (not advanced) |
-| tracked files | 1,676 |
-| tracked bytes | 46,367,868 (44.2 MiB) |
-| identity scan | clean — 1,587 tracked text files, 13 permitted occurrences, all `/opt/nanocloud` |
-| identity checker self-test | 49/49 (40 rejected, 9 allowed) |
+| tracked files | 1,677 |
+| tracked bytes | 46,394,244 (44.2 MiB) |
+| identity contract | holds over all tracked text files; zero installation-specific values |
+| identity contract self-test | 35/35 (13 rejected, 22 allowed) |
 | secret scan | no keys, tokens, certificates or filled `.env`; `.env.example` is a template |
 | large-file scan | largest tracked files are the approved brand asset package |
 | backend tests | 3,174 local + 98 external passed, 2 skipped (unavailable external dependencies) |
@@ -62,13 +62,15 @@ images and bind host paths (`docker-compose.prod.local.yml`,
 `docker-compose.release.local.yml`) — those are operator files that necessarily
 differ per installation.
 
-## The one retained legacy path
+## Installation locations are operator configuration
 
-`/opt/nanocloud` is the production deployment checkout. It is a live filesystem
-location on the running host, not a product identifier, and it is the single
-textual exception `scripts/check-identity-cleanliness.sh` permits — as that exact
-path only. Everything else, including every path *inside* the checkout and inside
-the images, is `nubarca`.
+The deployment checkout, storage mount, service root, import root, APK directory
+and encrypted-backup target are properties of one installation, not of NubArca.
+They reach the tooling through `NUBARCA_*` variables validated by
+`scripts/lib/operator-config.sh`, which fails closed when one is missing. No
+tracked file supplies any of them as a default, and
+`scripts/check-nubarca-identity.sh` fails the build if one reappears. Every path
+that *is* ours — inside the images and inside the checkout — is `nubarca`.
 
 See `ARCHITECTURE.md` for the complete design and invariants, `README.md` for
 setup and usage, and `docs/current-work.md` for the current baseline.

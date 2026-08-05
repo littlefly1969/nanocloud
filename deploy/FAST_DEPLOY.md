@@ -3,12 +3,31 @@
 > **Mandatory agent gate:** read this file immediately before every production
 > deploy. Do not rely on commands remembered from an earlier chat.
 
-This runbook describes the current deployment at:
+## Operator configuration
 
-- SSH: `stefano@192.168.1.180`
-- checkout: `/opt/nanocloud`
-- public origin: `NUBARCA_PUBLIC_ORIGIN` in the production `.env`
-  (`grep '^NUBARCA_PUBLIC_ORIGIN=' .env` — never `source` the file)
+Before deploying to an existing installation, obtain the production checkout
+location and connection settings from the operator. Never infer or hardcode a
+host path.
+
+This runbook is written against operator-supplied configuration, because a host,
+a login and a directory belong to one installation and not to NubArca:
+
+| variable | meaning |
+| --- | --- |
+| `NUBARCA_PRODUCTION_SSH` | ssh destination of the installation, e.g. `user@host` |
+| `NUBARCA_PRODUCTION_CHECKOUT` | absolute path of the deployment checkout on that host |
+| `NUBARCA_PUBLIC_ORIGIN` | externally reachable HTTPS origin, read from the production `.env` with `grep '^NUBARCA_PUBLIC_ORIGIN=' .env` — never `source` the file |
+
+`scripts/lib/operator-config.sh` validates these and fails closed when one is
+missing, so a script can never quietly act on the wrong machine. Export them, or
+pass them inline, before running anything below:
+
+```bash
+export NUBARCA_PRODUCTION_SSH="…"        # from the operator
+export NUBARCA_PRODUCTION_CHECKOUT="…"   # from the operator
+ssh "$NUBARCA_PRODUCTION_SSH"
+cd "$NUBARCA_PRODUCTION_CHECKOUT"
+```
 
 ## Invariants
 
@@ -74,7 +93,7 @@ On the server, inspect the current checkout, release pins, container state and
 active jobs before pulling. Never overwrite a dirty server checkout.
 
 ```bash
-cd /opt/nanocloud
+cd "$NUBARCA_PRODUCTION_CHECKOUT"
 git status --short
 git rev-parse HEAD
 docker compose \

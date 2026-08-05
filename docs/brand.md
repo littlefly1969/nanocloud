@@ -176,22 +176,28 @@ width of the **visible lockup** in either theme and the 120 px minimum is real.
 Reference boards are documentation only. They are never copied into
 `public/` or `tv/assets/`, and the production build contains none.
 
-## Identity cleanliness
+## Identity contract
 
-[`scripts/check-identity-cleanliness.sh`](../scripts/check-identity-cleanliness.sh)
-fails when a former product name appears anywhere in tracked source. There is no
-allowlist file, and adding one is not the remedy: an identifier that genuinely
-cannot be renamed belongs in operator configuration outside Git.
+[`scripts/check-nubarca-identity.sh`](../scripts/check-nubarca-identity.sh)
+asserts a **positive** identity contract: `NubArca.sln`, the `NubArca.Api`
+assembly and namespaces, `NubArca.Api.Tests`, the `nubarca-frontend` package, the
+`it.littlefly.nubarca.tv` TV package, the `NubArca.` cookie prefix,
+`nubarca`-named Compose containers, volumes and networks, and one agreed release
+version across backend and frontend.
 
-The single permitted textual exception is the exact production deployment
-checkout path `/opt/nanocloud` — a live filesystem location on the running host,
-not a product identifier. It is permitted only as that exact path; a nested path,
-a suffixed variant, or any longer word built on it is rejected.
+Stating what the product *is* beats listing what it must not be called. A
+denylist has to carry the forbidden name forever, and every exception argues for
+one more; a positive contract fails on drift to *any* other spelling and leaves
+the repository with no memory to maintain.
 
-`--self-test` proves the checker's own engine, and `IdentityCleanlinessTests`
-runs both the self-test and the tree scan inside `dotnet test`, so a
-reintroduced identifier fails the canonical test matrix rather than only a step
-somebody can forget.
+The contract's second half is that source describes the product and never one
+installation. An IP literal, a `login@host` target, this installation's public
+hostname, a `NUBARCA_*` variable falling back to a path or URL, and a `cd` into a
+host checkout directory are all failures.
+
+`--self-test` proves the detectors themselves, and `NubArcaIdentityTests` runs
+both the self-test and the tree scan inside `dotnet test`, so a regression fails
+the canonical test matrix rather than only a step somebody can forget.
 
 Installation-specific values — the public origin, database credentials, hash
 peppers and TV signing material — are operator configuration, never source

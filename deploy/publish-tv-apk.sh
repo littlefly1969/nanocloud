@@ -2,12 +2,22 @@
 set -euo pipefail
 
 # Publish an already-built NubArca TV APK without ever exposing a partial
-# upload. Override these only when deploying to a different installation.
+# upload.
+#
+# The destination is operator configuration and is never defaulted:
+#
+#   NUBARCA_PRODUCTION_SSH   ssh destination of the installation
+#   NUBARCA_TV_APK_DIR       directory the APK is published into
+#   NUBARCA_PUBLIC_ORIGIN    https origin the published APK must talk to
 #
 # The canonical artifact is nubarca-tv.apk.
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scripts/lib/operator-config.sh"
+require_production_ssh
+require_tv_apk_dir
+
 apk_path="${1:-tv/android/app/build/outputs/apk/release/app-release.apk}"
-target="${NUBARCA_PRODUCTION_SSH:-stefano@192.168.1.180}"
-remote_dir="${NUBARCA_TV_APK_DIR:-/srv/nubarca/tv-apk}"
+target="$NUBARCA_PRODUCTION_SSH"
+remote_dir="$NUBARCA_TV_APK_DIR"
 remote_name="nubarca-tv.apk"
 temporary_name=".${remote_name}.$$.upload"
 expected_signer_sha256="d79cc09c3df0df09a279633c728d6d753e3290d74f309ced7bf73344d2ab3547"
@@ -22,16 +32,8 @@ expected_channel="production"
 # source. FAIL-CLOSED: an unset or non-https origin refuses the publication
 # rather than skipping the check — this guard exists because a release APK once
 # passed every manifest check while pointing at a LAN dev default.
-release_origin="${NUBARCA_PUBLIC_ORIGIN:-}"
-release_origin="${release_origin%/}"
-if [[ -z "$release_origin" ]]; then
-  echo "NUBARCA_PUBLIC_ORIGIN is required: set it to this installation's public https origin." >&2
-  exit 1
-fi
-if [[ "$release_origin" != https://* ]]; then
-  echo "NUBARCA_PUBLIC_ORIGIN must be an https:// origin." >&2
-  exit 1
-fi
+require_public_origin
+release_origin="$NUBARCA_PUBLIC_ORIGIN"
 expected_update_url="${release_origin}/api/tv-app/updates"
 
 if [[ ! -f "$apk_path" ]]; then

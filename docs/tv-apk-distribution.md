@@ -10,9 +10,11 @@ Its canonical URL is
 
 The adjacent `nubarca-tv.apk.sha256` file contains its SHA-256 checksum. The
 APK is a deployment artifact and is deliberately not committed to Git. The
-frontend container mounts `${NUBARCA_TV_APK_DIR:-/srv/nubarca/tv-apk}`
-read-only at `/download/tv`; nginx serves the APK with the Android package MIME
-type, an attachment filename, and no-cache headers.
+frontend container mounts `${NUBARCA_TV_APK_DIR}` read-only at `/download/tv`;
+nginx serves the APK with the Android package MIME type, an attachment
+filename, and no-cache headers. `NUBARCA_TV_APK_DIR` is required — Compose
+refuses to start the frontend when it is unset, rather than inventing a
+directory that happens to match one installation.
 
 `https://nubarca.example.com/download/tv/nubarca-tv.apk` remains as an
 **unadvertised compatibility alias** so links and QR codes handed out before the
@@ -122,9 +124,11 @@ From the repository root:
 ```
 
 Publication is permitted only after `adb install -r` over 1.0.0 proves the
-package data and pairing survive. The default production target is
-`stefano@192.168.1.180`; override
-`NUBARCA_PRODUCTION_SSH` for a different server. The script re-verifies the
+package data and pairing survive. The destination is operator configuration and
+has no default: `NUBARCA_PRODUCTION_SSH`, `NUBARCA_TV_APK_DIR` and
+`NUBARCA_PUBLIC_ORIGIN` must all be set, and the script refuses to run
+otherwise. Obtain them from the operator of the installation you are publishing
+to — never infer them. The script re-verifies the
 package/version/runtime/channel/endpoint, definitive signer fingerprint,
 embedded OTA certificate and signatures; it then uploads to a temporary name,
 atomically replaces the public APK and

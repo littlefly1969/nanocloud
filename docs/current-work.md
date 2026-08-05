@@ -13,6 +13,12 @@ is built is described by `ARCHITECTURE.md`.
 - Frontend: React, TypeScript, Vite
 - Runtime: Docker Compose with separate API, worker and frontend services
 - Storage: local content-addressed blobs with database-owned logical paths
+- Installation locations are operator configuration, never source constants:
+  `NUBARCA_PRODUCTION_SSH`, `NUBARCA_PRODUCTION_CHECKOUT`,
+  `NUBARCA_PUBLIC_ORIGIN`, `NUBARCA_STORAGE_ROOT`, `NUBARCA_SERVICE_ROOT`,
+  `NUBARCA_IMPORT_ROOT`, `NUBARCA_TV_APK_DIR` and
+  `NUBARCA_ENCRYPTED_BACKUP_TARGET`, validated by
+  `scripts/lib/operator-config.sh`, which fails closed on a missing value.
 
 ## Development rules
 
@@ -22,9 +28,10 @@ is built is described by `ARCHITECTURE.md`.
 - Add migrations for schema changes and verify both the upgrade and runtime paths.
 - Keep fast tests representative; do not weaken assertions or coverage to make
   the suite faster.
-- Run `scripts/check-identity-cleanliness.sh` before committing. The product is
-  NubArca; the only permitted former-name occurrence is the exact production
-  checkout path `/opt/nanocloud`.
+- Run `scripts/check-nubarca-identity.sh` before committing. It asserts the
+  NubArca identity contract and fails on any installation-specific value — an IP
+  literal, a `login@host` target, a public hostname, a `NUBARCA_*` variable that
+  falls back to a path or URL, or a `cd` into a host checkout directory.
 - Read `deploy/FAST_DEPLOY.md` in full immediately before any production
   deployment, rebuild, release-pin change or production migration.
 

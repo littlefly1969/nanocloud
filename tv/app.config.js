@@ -7,8 +7,13 @@
 //                                       process.env.* since it is an EXPO_PUBLIC_ var)
 //   NUBARCA_TV_API_BASE_URL            (build-time alias, config only)
 //
-// When neither is set, a LAN dev default is used (plain http, cleartext) so the
-// normal dev workflow keeps working. Point the app at production with:
+// When neither is set, a loopback dev default is used (plain http, cleartext) so
+// the normal dev workflow keeps working. A physical Fire Stick / Android TV
+// cannot reach the workstation's loopback address, so device testing always sets
+// one of the variables above to the workstation's own LAN address — that address
+// belongs to whoever is developing and is never baked into source.
+//
+// Point the app at production with:
 //
 //   EXPO_PUBLIC_NUBARCA_API_BASE_URL="$NUBARCA_PUBLIC_ORIGIN" \
 //     npm run tv:prebuild && (cd android && ./gradlew assembleRelease)
@@ -20,7 +25,7 @@
 // URL is http:// (dev on the LAN). An https:// production base URL builds with
 // cleartext DISABLED — production never requires cleartext.
 
-const DEV_DEFAULT_BASE_URL = 'http://192.168.1.100:5177';
+const DEV_DEFAULT_BASE_URL = 'http://localhost:5177';
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');

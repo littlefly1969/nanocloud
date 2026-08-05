@@ -507,7 +507,7 @@ services:
     volumes:
       # APKs are release artifacts, not source files. The publishing helper
       # replaces nubarca-tv.apk atomically in this host directory.
-      - ${NUBARCA_TV_APK_DIR:-/srv/nubarca/tv-apk}:/usr/share/nginx/html/download/tv:ro
+      - ${NUBARCA_TV_APK_DIR:?set NUBARCA_TV_APK_DIR in .env to this installation's APK directory}:/usr/share/nginx/html/download/tv:ro
     networks:
       - nubarca-internal
 
