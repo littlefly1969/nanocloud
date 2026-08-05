@@ -3,10 +3,10 @@
 The production APK is available without authentication at the short Fire TV
 Downloader URL:
 
-`https://nubarca.example.com/tv.apk`
+`${NUBARCA_PUBLIC_ORIGIN}/tv.apk`
 
 Its canonical URL is
-`https://nubarca.example.com/download/tv/nubarca-tv.apk`.
+`${NUBARCA_PUBLIC_ORIGIN}/download/tv/nubarca-tv.apk`.
 
 The adjacent `nubarca-tv.apk.sha256` file contains its SHA-256 checksum. The
 APK is a deployment artifact and is deliberately not committed to Git. The
@@ -16,12 +16,10 @@ filename, and no-cache headers. `NUBARCA_TV_APK_DIR` is required — Compose
 refuses to start the frontend when it is unset, rather than inventing a
 directory that happens to match one installation.
 
-`https://nubarca.example.com/download/tv/nubarca-tv.apk` remains as an
-**unadvertised compatibility alias** so links and QR codes handed out before the
-rename do not 404. It is not the canonical download, nothing publishes to it,
-and it serves whatever file is still on disk under the old name. Remove the two
-alias `location` blocks from `frontend/nginx.conf` once no traffic reaches
-either path.
+Both routes serve the same bytes: `${NUBARCA_PUBLIC_ORIGIN}/tv.apk` is the short
+form that is practical to type on a TV remote, and
+`${NUBARCA_PUBLIC_ORIGIN}/download/tv/nubarca-tv.apk` is the canonical one. There
+is no third route and no other filename.
 
 ## Application identity
 
@@ -74,10 +72,12 @@ where the key is held. Never record the passwords or the private key.
 
 ## Build
 
-Native dependency or configuration changes require a new APK and runtime. The
-1.0.1 release contract is Android `versionCode` 2 and runtime
-`nubarca-tv-native-2`. The public artifact remains 1.0.0 until the encrypted
-off-machine backup and physical in-place Fire Stick validation gates pass.
+Native dependency or configuration changes require a new APK and runtime.
+
+The current public artifact is **NubArca TV 1.0.1**, Android `versionCode` 2,
+runtime `nubarca-tv-native-2`. It is published and is the release both canonical
+routes serve. JavaScript-only changes ship as signed OTA updates under that same
+runtime and do not need a new APK.
 
 Before `expo prebuild --clean`, preserve the public Expo Updates certificate
 outside `tv/android/`, because that directory is regenerated. The release
@@ -123,8 +123,8 @@ From the repository root:
   tv/android/app/build/outputs/apk/release/app-release.apk
 ```
 
-Publication is permitted only after `adb install -r` over 1.0.0 proves the
-package data and pairing survive. The destination is operator configuration and
+Publication of a *new* APK is permitted only after `adb install -r` over the
+currently installed release proves the package data and pairing survive. The destination is operator configuration and
 has no default: `NUBARCA_PRODUCTION_SSH`, `NUBARCA_TV_APK_DIR` and
 `NUBARCA_PUBLIC_ORIGIN` must all be set, and the script refuses to run
 otherwise. Obtain them from the operator of the installation you are publishing

@@ -74,7 +74,7 @@ chmod 0600 /secure/nubarca-tv-ota/keys/private-key.pem
 openssl req -x509 -new -sha256 \
   -key /secure/nubarca-tv-ota/keys/private-key.pem \
   -out /secure/nubarca-tv-ota/cert/certificate.pem \
-  -days 1825 -subj '/CN=NubArca TV OTA' \
+  -days 1825 -subj '/CN=<your OTA trust root>' \
   -addext 'basicConstraints=critical,CA:FALSE' \
   -addext 'keyUsage=critical,digitalSignature' \
   -addext 'extendedKeyUsage=critical,codeSigning' \
@@ -88,6 +88,51 @@ openssl verify -purpose codesign \
 
 For the bootstrap APK set
 `NUBARCA_TV_OTA_CERTIFICATE=/secure/nubarca-tv-ota/cert/certificate.pem`.
+
+## The trust contract
+
+Three things must agree, and they are identified by **fingerprint**, never by
+certificate subject or CN:
+
+```text
+OTA trust certificate embedded in the APK
+  == OTA trust certificate mounted into the API
+  == certificate derived from the OTA signing key used to publish
+```
+
+Verify with full SHA-256 fingerprints over DER:
+
+```bash
+# certificate identity
+openssl x509 -in "$cert" -outform DER | sha256sum
+# key identity: compare the certificate's public key with the signing key's
+openssl x509 -in "$cert" -noout -pubkey | openssl pkey -pubin -outform DER | sha256sum
+openssl pkey -in "$signing_key" -pubout -outform DER | sha256sum
+```
+
+A subject or CN is a label. It carries no authority, it is not compared by
+`expo-updates`, and treating it as the contract hides exactly the failure this
+check exists to catch: a certificate that looks right and verifies nothing.
+
+If the three do not agree, publication is not safe — devices verify against the
+certificate compiled into the APK they are already running.
+
+## Rotating the OTA trust root
+
+Rotation is a **native transition**, not a configuration change. Devices only
+trust the certificate embedded in the APK they are running, so a new trust root
+requires all of:
+
+- a new native runtime version;
+- a new APK embedding the new public certificate;
+- retaining the matching private key under operator custody;
+- a deliberate in-place device transition onto that APK.
+
+Until a device installs the new APK it keeps verifying against the old root, so
+there is no way to "switch" the trust root remotely.
+
+This is documented so the procedure is known — **not** as something to perform.
+Do not rotate unless a release explicitly calls for it.
 Only
 that public certificate is embedded. Publication uses
 `TV_OTA_PRIVATE_KEY_PATH=/secure/nubarca-tv-ota/keys/private-key.pem`; the private
