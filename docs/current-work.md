@@ -87,6 +87,16 @@ These describe current behaviour, not history. Each is easy to "fix" wrongly.
   `FileMetadata.effective.dateTakenSource` distinguishes a real capture date, so
   the viewer suppresses the `uploaded` source rather than presenting it as a
   Date Taken.
+- **A reverse proxy must forward `Host $http_host`, never `$host`.** The CSRF
+  middleware rejects a state-changing `/api` request whose `Origin` disagrees
+  with the request's own scheme/host/port, so `Request.Host` has to be the
+  address the browser actually used. `$host` drops the port: the API then infers
+  80/443, disagrees with a browser on any other port, and answers `403` to every
+  write — login included, which presents as a login form that silently does
+  nothing. An installation on `:443` never sees it, because the stripped port and
+  the inferred one agree. `deploy/nginx.conf.example` and `nginx.e2e.conf` both
+  carry `$http_host`; the browser E2E gate runs on `:5273` precisely so a
+  regression here fails a test instead of an operator's first login.
 - **A production TV build fails closed without its pinned origin.**
   `app.config.js` is evaluated twice — once by `expo prebuild` and again by the
   Gradle JS-bundling step — and only the second decides what the shipped app

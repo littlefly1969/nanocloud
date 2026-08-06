@@ -142,6 +142,60 @@ public sealed class CsrfProtectionTests : IDisposable
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    // ---- the port is part of the origin ------------------------------------
+    //
+    // These pin the contract a reverse proxy has to honour. An installation
+    // served on a non-default port shipped broken because the documented nginx
+    // config forwarded `Host $host`, which drops the port: the API then inferred
+    // port 80, disagreed with the browser's Origin, and rejected every write —
+    // login included — with 403. On :443 the bug is invisible, because the
+    // stripped port and the inferred one agree. Only the port was untested.
+
+    [Fact]
+    public async Task NonDefaultPort_SameOrigin_Succeeds()
+    {
+        // What a proxy forwarding the full Host produces: the API sees the
+        // address the browser actually used, so the Origin matches.
+        var (_, client) = await _factory.CreateAuthenticatedClientAsync();
+        var request = Request(HttpMethod.Post, "/api/folders",
+            origin: "http://localhost:8443", content: Json(new { name = "f" }));
+        request.Headers.Host = "localhost:8443";
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task NonDefaultPort_Origin_Against_PortStripped_Host_Is_Rejected_403()
+    {
+        // The shipped failure, reproduced: proxy stripped the port from Host,
+        // browser's Origin still carries it. Rejecting is correct given the
+        // inputs — which is why the fix belongs in the proxy, not here.
+        var (_, client) = await _factory.CreateAuthenticatedClientAsync();
+        var request = Request(HttpMethod.Post, "/api/folders",
+            origin: "http://localhost:8443", content: Json(new { name = "f" }));
+        request.Headers.Host = "localhost";
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DifferentPort_SameHost_Is_Rejected_403()
+    {
+        // A neighbouring service on the same hostname is still cross-origin.
+        var (_, client) = await _factory.CreateAuthenticatedClientAsync();
+        var request = Request(HttpMethod.Post, "/api/folders",
+            origin: "http://localhost:9999", content: Json(new { name = "f" }));
+        request.Headers.Host = "localhost:8443";
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     // ---- safe methods are never blocked ------------------------------------
 
     [Fact]

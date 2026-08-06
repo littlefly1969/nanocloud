@@ -105,3 +105,24 @@ Native clients version independently of the server and were not advanced:
 
 The released TV package `it.littlefly.nubarca.tv`, its signing certificate, its
 OTA runtime contract and its published APK are unchanged.
+
+### Verification
+
+- **Browser end-to-end gate.** `tests/e2e` drives real browser engines against
+  an ephemeral, self-contained stack that needs no credentials and never
+  contacts an installation. The release gate is 72 Chromium tests across
+  desktop, mobile and effective-200% layout, run against the *production-built*
+  frontend behind a same-origin nginx front door rather than a development
+  server. A run counts as passed only when the Playwright exit code, the JSON
+  report's own totals and the required test count all agree.
+
+### Fixed
+
+- **Login on an installation served from a non-default port.** A reverse proxy
+  configured from `deploy/nginx.conf.example` forwarded `Host $host`, which
+  drops the port. The CSRF origin check then compared the browser's `Origin`
+  against an inferred port 80/443, disagreed, and rejected every state-changing
+  `/api` request with `403` — so the login form appeared to do nothing at all.
+  Both the example proxy and the E2E front door now forward `$http_host`. An
+  installation on `:443` was never affected. The check itself is unchanged: it
+  was being given a host that had lost the port, not applying the wrong rule.
